@@ -9,67 +9,74 @@
       "description": "As a developer, I need the base project scaffolded with Vite, React, Tailwind CSS, and the Pucho brand system configured so all subsequent stories build on a working foundation.",
       "acceptanceCriteria": [
         "Vite + React + TypeScript project initialized in src/dashboard/",
-        "Tailwind CSS configured with Pucho brand colors as custom theme tokens (#5922c6, #af3db8, #ffffff, #000000, #fffac0, #91ffd0, #93d6ff)",
+        "Tailwind CSS v4 configured with @tailwindcss/vite plugin and @theme block containing Pucho brand tokens",
         "Google Fonts loaded: Anek Latin (600-700), Lato (300-500), Chivo Mono (600-700)",
-        "Global CSS applies brand visual rules: 12px card radius, 8px button radius, 6px input radius, shadow 0 1px 3px rgba(89,34,198,0.08)",
+        "Global CSS: headings use Anek Latin 700 in #5922c6, body uses Lato 400 in #000000",
         "Pucho logo rendered in sidebar header from CDN URL",
-        "Sidebar uses bg #f8f5ff with gradient header linear-gradient(135deg, #5922c6, #af3db8)",
+        "Sidebar: bg #f8f5ff, gradient header linear-gradient(135deg, #5922c6, #af3db8), active nav = Violet text + 3px left border",
         "Footer displays 'Powered by Pucho.ai'",
-        "npm run dev starts the dev server without errors",
+        "React Router with Layout wrapper and 3 routes: /, /workflows, /connections",
         "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 1,
       "passes": true,
-      "notes": "Logo URL: https://cdn.prod.website-files.com/690ec911550adb97c4a56495/69399fa4c6253325791cd9ce_pucho%20logo.webp"
+      "notes": "Completed. Logo URL: https://cdn.prod.website-files.com/690ec911550adb97c4a56495/69399fa4c6253325791cd9ce_pucho%20logo.webp"
     },
     {
       "id": "SETUP-002",
       "title": "Install and configure Recharts and TanStack libraries",
       "description": "As a developer, I need Recharts for charts and TanStack Table/Query for data handling so the dashboard can display data-driven visualizations.",
       "acceptanceCriteria": [
-        "Recharts installed and importable",
-        "TanStack Table (@tanstack/react-table) installed and importable",
-        "TanStack Query (@tanstack/react-query) installed with QueryClientProvider wrapping the app",
-        "A sample chart component renders using Pucho brand colors (Pucho Violet primary, Violet Blossom secondary, Sky Blue, Mint Green)",
-        "TypeScript typecheck passes"
+        "recharts package installed and importable in TypeScript",
+        "@tanstack/react-table package installed and importable",
+        "@tanstack/react-query package installed and importable",
+        "QueryClientProvider wraps the app in main.tsx or App.tsx",
+        "A smoke-test AreaChart component renders in DashboardPage using Pucho Violet (#5922c6) as the primary fill color",
+        "The chart is wrapped in a card with 12px border-radius, white bg, and shadow 0 1px 3px rgba(89,34,198,0.08)",
+        "npm run build completes without errors",
+        "TypeScript typecheck passes (npx tsc --noEmit)"
       ],
       "priority": 2,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Chart color sequence: #5922c6 (primary), #af3db8 (secondary), #93d6ff (tertiary), #91ffd0 (quaternary)"
     },
     {
       "id": "SETUP-003",
       "title": "Create reusable Pucho UI component library",
       "description": "As a developer, I need reusable branded UI components so all dashboard pages have consistent Pucho styling.",
       "acceptanceCriteria": [
-        "PuchoCard component: white bg, 12px rounded corners, brand shadow, 16px padding, 24px gap between cards",
-        "PuchoButton component: primary (#5922c6), secondary (#af3db8), 8px rounded corners, hover states",
-        "PuchoKPI component: displays label (Lato), value (Chivo Mono 600-700 in Pucho Violet), optional trend indicator",
-        "PuchoTable component: wraps TanStack Table with Pucho styling (Black body text, Pucho Violet headers)",
-        "PuchoSidebar component: bg #f8f5ff, logo at top, nav items with active state (Violet text + left border)",
-        "Loading state shows 'Pucho is thinking...'",
-        "Empty state shows 'No data yet — your workflows will populate this'",
+        "PuchoCard component: white bg, rounded-card (12px), shadow 0 1px 3px rgba(89,34,198,0.08), p-4 (16px padding), accepts children",
+        "PuchoButton component: variant='primary' uses bg #5922c6 text white, variant='secondary' uses bg #af3db8 text white, rounded-button (8px), hover darkens 10%",
+        "PuchoKPI component: props {label, value, trend?}. Label in Lato 400 text-black/60, value in Chivo Mono 700 text-pucho-violet text-2xl, optional trend arrow (green up, red down)",
+        "PuchoTable component: generic wrapper accepting TanStack table instance. Header cells in Anek Latin 600 text-pucho-violet uppercase text-xs. Body cells in Lato 400 text-black. Row hover bg-gray-50. Borders between rows.",
+        "StatusBadge component: props {status: 'success'|'failed'|'running'|'connected'|'disconnected'|'error'}. green bg for success/connected, red for failed/error, yellow (#fffac0) for running, gray for disconnected. Rounded-full pill shape.",
+        "PuchoLoading component: renders 'Pucho is thinking...' text in Pucho Violet with a pulsing animation",
+        "PuchoEmpty component: renders 'No data yet — your workflows will populate this' in text-black/50 centered",
+        "All components exported from src/components/index.ts barrel file",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 3,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "These components are used by DASH-001 through HOOK-002. Build them generically."
     },
     {
       "id": "DASH-001",
       "title": "Build KPI summary row with sample data",
       "description": "As a user, I want to see key metrics at a glance in a row of KPI cards at the top of the dashboard so I can quickly assess performance.",
       "acceptanceCriteria": [
-        "KPI row renders 4 PuchoKPI cards in a responsive grid",
-        "KPI values displayed in Chivo Mono font in Pucho Violet",
-        "KPI labels displayed in Lato font",
-        "Cards have proper spacing (24px gap) and brand shadows",
-        "Sample data: Total Workflows (42), Active Users (1,284), Success Rate (98.7%), Avg Response (1.2s)",
+        "DashboardPage renders a responsive grid row of 4 PuchoCard components at the top",
+        "Each card contains a PuchoKPI with these values: Total Workflows (42, trend up), Active Users (1,284, trend up), Success Rate (98.7%, trend up), Avg Response (1.2s, trend down/good)",
+        "KPI values displayed in Chivo Mono 700 in Pucho Violet (#5922c6), font-size ~1.5rem/text-2xl",
+        "KPI labels displayed in Lato 400 in text-black/60, font-size ~0.875rem/text-sm",
+        "Grid: 4 columns on lg+, 2 columns on md, 1 column on sm. Gap 24px (gap-6)",
+        "Sample data defined in src/data/sample-data.ts and imported",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -77,32 +84,38 @@
       "title": "Build interactive charts section",
       "description": "As a user, I want to see workflow execution trends and distribution charts so I can analyze patterns over time.",
       "acceptanceCriteria": [
-        "Area chart showing 'Workflow Executions' over 7 days using Recharts",
-        "Pie/donut chart showing 'Workflow Distribution' by category",
-        "Charts use Pucho color sequence: Pucho Violet -> Violet Blossom -> Sky Blue -> Mint Green",
-        "Charts wrapped in PuchoCard components",
-        "Responsive layout: 2 charts side-by-side on desktop, stacked on mobile",
-        "Sample data hardcoded for demo purposes",
+        "Two charts render below the KPI row on DashboardPage, each inside a PuchoCard with an h3 title",
+        "Left chart: Recharts AreaChart titled 'Workflow Executions' showing 7 data points (Mon-Sun) with area fill using Pucho Violet (#5922c6) at 20% opacity and stroke in Pucho Violet",
+        "Right chart: Recharts PieChart (donut style with innerRadius) titled 'Workflow Distribution' with 4 segments: API Workflows (Pucho Violet), Email Workflows (Violet Blossom), Scheduled Tasks (Sky Blue), Data Pipelines (Mint Green)",
+        "Charts use ResponsiveContainer for auto-sizing",
+        "Layout: 2 columns side-by-side on md+ (grid-cols-2), stacked on small screens. Gap 24px",
+        "Sample chart data defined in src/data/sample-data.ts",
+        "Recharts Tooltip styled with white bg, rounded-card border-radius, brand shadow",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
       "id": "DASH-003",
       "title": "Build data table with workflow execution logs",
-      "description": "As a user, I want to see a sortable and filterable table of recent workflow executions so I can drill into specific runs.",
+      "description": "As a user, I want to see a sortable table of recent workflow executions so I can drill into specific runs.",
       "acceptanceCriteria": [
-        "PuchoTable renders workflow execution logs with columns: Workflow, Status, Duration, Timestamp",
-        "Table supports sorting by clicking column headers",
-        "Status column shows colored badges (green=success, red=failed, yellow=running)",
-        "At least 10 sample rows of data",
-        "Table body text in Black (Lato), header text in Pucho Violet (Anek Latin)",
+        "PuchoTable renders below the charts on DashboardPage inside a PuchoCard with h3 title 'Recent Executions'",
+        "Columns: Workflow Name (string), Status (badge), Duration (string, e.g. '1.2s'), Timestamp (formatted date string)",
+        "Table built with @tanstack/react-table useReactTable hook with sorting enabled (getSortedRowModel)",
+        "Clicking a column header toggles sort (asc -> desc -> none). Sort indicator arrow shown in header.",
+        "Status column renders StatusBadge component: 'success' (green), 'failed' (red), 'running' (yellow)",
+        "At least 10 sample rows defined in src/data/sample-data.ts with a mix of success/failed/running statuses",
+        "Table header text in Anek Latin 600, Pucho Violet, uppercase, text-xs tracking-wider",
+        "Table body text in Lato 400, Black (#000000), text-sm",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -110,16 +123,18 @@
       "title": "Create Pucho workflow JSON generator utility",
       "description": "As a developer, I need a utility that generates valid Pucho AI Studio workflow JSON (schemaVersion 7) so the dashboard can create backend API endpoints.",
       "acceptanceCriteria": [
-        "createWorkflow() function generates valid schemaVersion '7' JSON",
-        "Workflow JSON includes trigger with @puchoaistudio/tool-webhook pieceName and ~0.4.8 version",
-        "Supports chaining actions via nextAction pattern",
-        "Utility supports key tools: webhook, http, code, schedule, google-sheets, gmail, slack",
-        "Tool pieceName follows pattern: @puchoaistudio/tool-{name}",
-        "Generated JSON matches the schema provided in the PRD",
+        "src/lib/workflow.ts exports TypeScript types: PuchoWorkflow, PuchoTrigger, PuchoAction, PuchoToolName",
+        "PuchoToolName is a union type: 'webhook' | 'http' | 'code' | 'schedule' | 'google-sheets' | 'gmail' | 'slack'",
+        "createAction(toolName, actionName, input?) returns a valid PuchoAction object with pieceName '@puchoaistudio/tool-{toolName}', pieceVersion '~0.4.8'",
+        "chainActions(...actions) links actions via nextAction pointers, last action has nextAction: null",
+        "createWorkflow(name, trigger, firstAction) returns full PuchoWorkflow object with schemaVersion '7'",
+        "createWebhookTrigger(firstAction) creates a trigger with pieceName '@puchoaistudio/tool-webhook', triggerName 'catch_webhook'",
+        "All exported functions are properly typed — no 'any' types",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 7,
-      "passes": false,
+      "passes": true,
       "notes": "Schema: { name, template: { trigger: { type: 'PIECE_TRIGGER', settings: { pieceName, pieceVersion, triggerName }, nextAction }, schemaVersion: '7' } }"
     },
     {
@@ -127,14 +142,19 @@
       "title": "Build workflow template library with preset workflows",
       "description": "As a user, I want preset workflow templates so I can quickly deploy common automation patterns without building from scratch.",
       "acceptanceCriteria": [
-        "At least 3 preset workflow templates: 'Webhook to Google Sheets', 'Scheduled Email Report', 'Slack Notification on Webhook'",
-        "Each template generates valid schemaVersion 7 JSON using the createWorkflow utility",
-        "Templates displayed in a card grid in the UI with Pucho branding",
-        "Clicking a template shows the generated JSON in a code viewer",
+        "src/lib/templates.ts exports an array of at least 3 workflow templates, each with: id, name, description, icon (emoji), and a generate() function returning a PuchoWorkflow",
+        "Template 1: 'Webhook to Google Sheets' — webhook trigger -> google-sheets append_row action",
+        "Template 2: 'Scheduled Email Report' — webhook trigger -> code run_code action -> gmail send_email action (chained)",
+        "Template 3: 'Slack Notification on Webhook' — webhook trigger -> slack send_message action",
+        "WorkflowsPage renders a responsive card grid (3 cols on lg, 2 on md, 1 on sm) of PuchoCards, one per template",
+        "Each card shows: emoji icon, template name (Anek Latin 600, Pucho Violet), description (Lato 400, text-black/70)",
+        "Clicking a card expands/shows a JSON code viewer panel below the grid displaying the generated workflow JSON",
+        "JSON viewer has monospace font (Chivo Mono), light purple bg (#f8f5ff), rounded-card, overflow-x-auto, JSON.stringify with 2-space indent",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 8,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -142,14 +162,18 @@
       "title": "Create webhook connection manager",
       "description": "As a developer, I need a webhook connection manager that auto-wires frontend dashboard data sources to Pucho workflow webhook triggers.",
       "acceptanceCriteria": [
-        "WebhookManager class/module that maps dashboard data endpoints to workflow webhook URLs",
-        "registerConnection(dashboardId, workflowWebhookUrl) stores the mapping",
-        "triggerWebhook(dashboardId, payload) sends data to the connected workflow",
-        "Connection status tracked: connected, disconnected, error",
+        "src/lib/webhooks.ts exports TypeScript types: WebhookConnection, ConnectionStatus ('connected' | 'disconnected' | 'error')",
+        "useWebhookManager() custom React hook using useState, returns: { connections, addConnection, removeConnection, triggerWebhook }",
+        "addConnection(sourceName, workflowName, webhookUrl) adds a new WebhookConnection with status 'connected' and auto-generated id",
+        "removeConnection(id) removes a connection by id",
+        "triggerWebhook(id, payload) is a mock function that logs to console and returns a Promise<boolean> (simulates sending data to workflow)",
+        "Each WebhookConnection has: id, sourceName, workflowName, webhookUrl, status, createdAt (ISO string)",
+        "3 sample connections pre-populated: 'KPI Dashboard -> Daily Report Workflow', 'Execution Logs -> Error Alert Workflow', 'Chart Data -> Analytics Pipeline'",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 9,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -157,15 +181,19 @@
       "title": "Build webhook connections UI panel",
       "description": "As a user, I want a UI panel showing all webhook connections between my dashboard and Pucho workflows so I can manage integrations visually.",
       "acceptanceCriteria": [
-        "Connections panel accessible from sidebar navigation",
-        "Each connection shows: dashboard source name, workflow name, status badge (green=connected, red=error, gray=disconnected)",
-        "Add Connection form with dashboard source and webhook URL fields",
-        "Connection cards use PuchoCard styling",
-        "Tagline 'Pucho Toh Sahi!' displayed in the panel header",
+        "ConnectionsPage header: h1 'Connections' with tagline 'Pucho Toh Sahi!' in Violet Blossom text below it",
+        "Connection list: each connection rendered as a PuchoCard showing sourceName -> workflowName with a StatusBadge and webhookUrl in Chivo Mono text-xs truncated",
+        "Each connection card has a 'Remove' PuchoButton (secondary variant) that calls removeConnection",
+        "Add Connection form at the top in a PuchoCard: 3 text inputs (Source Name, Workflow Name, Webhook URL) with labels in Lato, inputs with rounded-input (6px), 1px border #e0d8f0",
+        "Submit button: PuchoButton primary variant labeled 'Add Connection'",
+        "Form validates: all 3 fields required, webhookUrl must start with 'http://' or 'https://', shows inline error messages in red text-sm",
+        "After adding, form clears and new connection appears in list with status 'connected'",
+        "If no connections exist, show PuchoEmpty component",
+        "npm run build completes without errors",
         "TypeScript typecheck passes"
       ],
       "priority": 10,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -173,20 +201,22 @@
       "title": "Full integration test and polish",
       "description": "As a user, I want the complete dashboard to work end-to-end with all sections integrated, all brand rules applied, and all components connected.",
       "acceptanceCriteria": [
-        "Dashboard renders with sidebar navigation: Dashboard, Workflows, Connections",
-        "Dashboard page shows KPI row, charts section, and data table",
-        "Workflows page shows template library",
-        "Connections page shows webhook connections panel",
-        "All pages follow Pucho brand rules: colors, fonts, spacing, shadows",
-        "Loading states show 'Pucho is thinking...'",
-        "Empty states show 'No data yet — your workflows will populate this'",
-        "Footer shows 'Powered by Pucho.ai' on every page",
+        "Dashboard page (/) renders: KPI row (4 cards) + Charts section (2 charts) + Execution log table — no blank/broken sections",
+        "Workflows page (/workflows) renders: template card grid (3+ templates) + JSON viewer on click",
+        "Connections page (/connections) renders: 'Pucho Toh Sahi!' tagline + Add Connection form + connection list with status badges",
+        "Sidebar: all 3 nav links work, active state shows Pucho Violet text + left border, Pucho logo visible in gradient header",
+        "Footer 'Powered by Pucho.ai' visible on every page",
+        "All headings use Anek Latin font in Pucho Violet",
+        "All body text uses Lato font in Black",
+        "All KPI/data values use Chivo Mono font in Pucho Violet",
+        "All cards have 12px radius, brand shadow, 16px padding, 24px gaps",
+        "No console errors, no TypeScript errors, no broken imports",
         "npm run build completes without errors",
-        "TypeScript typecheck passes"
+        "TypeScript typecheck passes (npx tsc --noEmit)"
       ],
       "priority": 11,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Final verification story. Fix any remaining brand violations or broken UI."
     }
   ]
 }

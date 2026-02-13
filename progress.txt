@@ -11,26 +11,67 @@ Started: 2026-02-13
 - Layout: Sidebar (240px) + main content area with Footer
 - Routing via react-router-dom with Layout wrapper
 - TypeScript strict mode enabled
+- Reusable components exported from `src/components/index.ts` barrel
+- Sample data centralized in `src/data/sample-data.ts`
+- Workflow generator in `src/lib/workflow.ts`, templates in `src/lib/templates.ts`
+- Webhook manager hook in `src/lib/webhooks.ts`
+- PuchoCard applies brand shadow via inline style (Tailwind arbitrary values don't support rgba with decimal)
+- TanStack Table useReactTable triggers a React Compiler lint warning — safe to ignore
 
 ---
 
 ## 2026-02-13 - SETUP-001
 - What was implemented: Full project scaffolding with Vite + React + TypeScript + Tailwind CSS v4
-- Files changed:
-  - src/dashboard/ — entire Vite project scaffolded
-  - src/dashboard/vite.config.ts — added Tailwind CSS plugin
-  - src/dashboard/index.html — Google Fonts (Anek Latin, Lato, Chivo Mono), title updated
-  - src/dashboard/src/index.css — Tailwind v4 with @theme block for all Pucho brand tokens
-  - src/dashboard/src/App.tsx — React Router with Layout wrapper and 3 routes
-  - src/dashboard/src/components/Sidebar.tsx — brand sidebar with gradient header, logo, nav
-  - src/dashboard/src/components/Footer.tsx — "Powered by Pucho.ai"
-  - src/dashboard/src/components/Layout.tsx — sidebar + main + footer layout
-  - src/dashboard/src/pages/DashboardPage.tsx — placeholder
-  - src/dashboard/src/pages/WorkflowsPage.tsx — placeholder
-  - src/dashboard/src/pages/ConnectionsPage.tsx — placeholder
-- **Learnings for future iterations:**
-  - Tailwind v4 uses `@theme` blocks instead of tailwind.config.js for custom tokens
-  - Pucho logo is loaded from CDN, no local asset needed
-  - `border-l-3` works in Tailwind v4 for 3px left border on active nav items
-  - App.css was removed — all styling goes through Tailwind utilities and index.css
+- Files changed: vite.config.ts, index.html, index.css, App.tsx, Sidebar.tsx, Footer.tsx, Layout.tsx, page placeholders
+- **Learnings:** Tailwind v4 uses @theme blocks, Pucho logo from CDN, border-l-3 for active nav
+---
+
+## 2026-02-13 - SETUP-002
+- What was implemented: Installed recharts, @tanstack/react-table, @tanstack/react-query. Added QueryClientProvider. Smoke-test AreaChart renders.
+- Files changed: package.json, main.tsx, DashboardPage.tsx
+---
+
+## 2026-02-13 - SETUP-003
+- What was implemented: 7 reusable branded components: PuchoCard, PuchoButton, PuchoKPI, PuchoTable, StatusBadge, PuchoLoading, PuchoEmpty. Barrel export via index.ts.
+- Files changed: 7 new component files + index.ts barrel
+---
+
+## 2026-02-13 - DASH-001
+- What was implemented: KPI summary row with 4 cards (Total Workflows, Active Users, Success Rate, Avg Response). Sample data module created.
+- Files changed: DashboardPage.tsx, src/data/sample-data.ts (new)
+---
+
+## 2026-02-13 - DASH-002
+- What was implemented: AreaChart (7-day execution trend) + PieChart (donut, workflow distribution). Both in PuchoCards with brand colors and styled tooltips.
+- Files changed: DashboardPage.tsx, sample-data.ts (added chart data)
+---
+
+## 2026-02-13 - DASH-003
+- What was implemented: Sortable execution log table with TanStack Table. 12 sample rows. StatusBadge for status column. Sort arrows in headers.
+- Files changed: DashboardPage.tsx, sample-data.ts (added execution log data)
+---
+
+## 2026-02-13 - WF-001
+- What was implemented: Workflow JSON generator (schemaVersion 7). Types: PuchoWorkflow, PuchoTrigger, PuchoAction, PuchoToolName. Functions: createAction, chainActions, createWebhookTrigger, createWorkflow.
+- Files changed: src/lib/workflow.ts (new)
+---
+
+## 2026-02-13 - WF-002
+- What was implemented: 3 workflow templates (Webhook to Sheets, Email Report, Slack Notification). WorkflowsPage card grid with JSON viewer on click.
+- Files changed: src/lib/templates.ts (new), WorkflowsPage.tsx
+---
+
+## 2026-02-13 - HOOK-001
+- What was implemented: useWebhookManager hook with addConnection, removeConnection, triggerWebhook. 3 pre-populated sample connections.
+- Files changed: src/lib/webhooks.ts (new)
+---
+
+## 2026-02-13 - HOOK-002
+- What was implemented: ConnectionsPage with "Pucho Toh Sahi!" tagline, Add Connection form (3 inputs, validation), connection list with StatusBadge, Remove buttons.
+- Files changed: ConnectionsPage.tsx
+---
+
+## 2026-02-13 - FINAL-001
+- What was implemented: Full integration verification. All 3 pages render correctly. All brand rules verified. TypeScript, build, and lint all pass.
+- Verification: tsc --noEmit (clean), npm run build (clean), npm run lint (0 errors, 1 TanStack warning)
 ---
