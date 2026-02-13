@@ -1,0 +1,36 @@
+# Ralph Progress Log — Pucho Dashboard Vibe Coder
+Started: 2026-02-13
+---
+
+## Codebase Patterns
+- Dashboard source lives in `src/dashboard/` — all npm commands run from there
+- Tailwind v4 with `@tailwindcss/vite` plugin — custom tokens defined in `@theme` block in `src/index.css`
+- Pucho brand colors available as Tailwind utilities: `text-pucho-violet`, `bg-sidebar-bg`, `text-violet-blossom`, etc.
+- Font families: `font-heading` (Anek Latin), `font-body` (Lato), `font-mono` (Chivo Mono)
+- Radius tokens: `rounded-card` (12px), `rounded-button` (8px), `rounded-input` (6px)
+- Layout: Sidebar (240px) + main content area with Footer
+- Routing via react-router-dom with Layout wrapper
+- TypeScript strict mode enabled
+
+---
+
+## 2026-02-13 - SETUP-001
+- What was implemented: Full project scaffolding with Vite + React + TypeScript + Tailwind CSS v4
+- Files changed:
+  - src/dashboard/ — entire Vite project scaffolded
+  - src/dashboard/vite.config.ts — added Tailwind CSS plugin
+  - src/dashboard/index.html — Google Fonts (Anek Latin, Lato, Chivo Mono), title updated
+  - src/dashboard/src/index.css — Tailwind v4 with @theme block for all Pucho brand tokens
+  - src/dashboard/src/App.tsx — React Router with Layout wrapper and 3 routes
+  - src/dashboard/src/components/Sidebar.tsx — brand sidebar with gradient header, logo, nav
+  - src/dashboard/src/components/Footer.tsx — "Powered by Pucho.ai"
+  - src/dashboard/src/components/Layout.tsx — sidebar + main + footer layout
+  - src/dashboard/src/pages/DashboardPage.tsx — placeholder
+  - src/dashboard/src/pages/WorkflowsPage.tsx — placeholder
+  - src/dashboard/src/pages/ConnectionsPage.tsx — placeholder
+- **Learnings for future iterations:**
+  - Tailwind v4 uses `@theme` blocks instead of tailwind.config.js for custom tokens
+  - Pucho logo is loaded from CDN, no local asset needed
+  - `border-l-3` works in Tailwind v4 for 3px left border on active nav items
+  - App.css was removed — all styling goes through Tailwind utilities and index.css
+---

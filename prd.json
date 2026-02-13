@@ -1,0 +1,192 @@
+{
+  "project": "Pucho Dashboard Vibe Coder",
+  "branchName": "claude/setup-opencode-repo-m7KDV",
+  "description": "A vibe coding tool that generates React dashboards with Pucho branding, Pucho AI Studio workflow JSONs (schemaVersion 7), and auto-wired webhook connections between frontend and backend workflows.",
+  "userStories": [
+    {
+      "id": "SETUP-001",
+      "title": "Project scaffolding with Vite + React + Tailwind + Pucho brand system",
+      "description": "As a developer, I need the base project scaffolded with Vite, React, Tailwind CSS, and the Pucho brand system configured so all subsequent stories build on a working foundation.",
+      "acceptanceCriteria": [
+        "Vite + React + TypeScript project initialized in src/dashboard/",
+        "Tailwind CSS configured with Pucho brand colors as custom theme tokens (#5922c6, #af3db8, #ffffff, #000000, #fffac0, #91ffd0, #93d6ff)",
+        "Google Fonts loaded: Anek Latin (600-700), Lato (300-500), Chivo Mono (600-700)",
+        "Global CSS applies brand visual rules: 12px card radius, 8px button radius, 6px input radius, shadow 0 1px 3px rgba(89,34,198,0.08)",
+        "Pucho logo rendered in sidebar header from CDN URL",
+        "Sidebar uses bg #f8f5ff with gradient header linear-gradient(135deg, #5922c6, #af3db8)",
+        "Footer displays 'Powered by Pucho.ai'",
+        "npm run dev starts the dev server without errors",
+        "npm run build completes without errors",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Logo URL: https://cdn.prod.website-files.com/690ec911550adb97c4a56495/69399fa4c6253325791cd9ce_pucho%20logo.webp"
+    },
+    {
+      "id": "SETUP-002",
+      "title": "Install and configure Recharts and TanStack libraries",
+      "description": "As a developer, I need Recharts for charts and TanStack Table/Query for data handling so the dashboard can display data-driven visualizations.",
+      "acceptanceCriteria": [
+        "Recharts installed and importable",
+        "TanStack Table (@tanstack/react-table) installed and importable",
+        "TanStack Query (@tanstack/react-query) installed with QueryClientProvider wrapping the app",
+        "A sample chart component renders using Pucho brand colors (Pucho Violet primary, Violet Blossom secondary, Sky Blue, Mint Green)",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "SETUP-003",
+      "title": "Create reusable Pucho UI component library",
+      "description": "As a developer, I need reusable branded UI components so all dashboard pages have consistent Pucho styling.",
+      "acceptanceCriteria": [
+        "PuchoCard component: white bg, 12px rounded corners, brand shadow, 16px padding, 24px gap between cards",
+        "PuchoButton component: primary (#5922c6), secondary (#af3db8), 8px rounded corners, hover states",
+        "PuchoKPI component: displays label (Lato), value (Chivo Mono 600-700 in Pucho Violet), optional trend indicator",
+        "PuchoTable component: wraps TanStack Table with Pucho styling (Black body text, Pucho Violet headers)",
+        "PuchoSidebar component: bg #f8f5ff, logo at top, nav items with active state (Violet text + left border)",
+        "Loading state shows 'Pucho is thinking...'",
+        "Empty state shows 'No data yet — your workflows will populate this'",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "DASH-001",
+      "title": "Build KPI summary row with sample data",
+      "description": "As a user, I want to see key metrics at a glance in a row of KPI cards at the top of the dashboard so I can quickly assess performance.",
+      "acceptanceCriteria": [
+        "KPI row renders 4 PuchoKPI cards in a responsive grid",
+        "KPI values displayed in Chivo Mono font in Pucho Violet",
+        "KPI labels displayed in Lato font",
+        "Cards have proper spacing (24px gap) and brand shadows",
+        "Sample data: Total Workflows (42), Active Users (1,284), Success Rate (98.7%), Avg Response (1.2s)",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "DASH-002",
+      "title": "Build interactive charts section",
+      "description": "As a user, I want to see workflow execution trends and distribution charts so I can analyze patterns over time.",
+      "acceptanceCriteria": [
+        "Area chart showing 'Workflow Executions' over 7 days using Recharts",
+        "Pie/donut chart showing 'Workflow Distribution' by category",
+        "Charts use Pucho color sequence: Pucho Violet -> Violet Blossom -> Sky Blue -> Mint Green",
+        "Charts wrapped in PuchoCard components",
+        "Responsive layout: 2 charts side-by-side on desktop, stacked on mobile",
+        "Sample data hardcoded for demo purposes",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "DASH-003",
+      "title": "Build data table with workflow execution logs",
+      "description": "As a user, I want to see a sortable and filterable table of recent workflow executions so I can drill into specific runs.",
+      "acceptanceCriteria": [
+        "PuchoTable renders workflow execution logs with columns: Workflow, Status, Duration, Timestamp",
+        "Table supports sorting by clicking column headers",
+        "Status column shows colored badges (green=success, red=failed, yellow=running)",
+        "At least 10 sample rows of data",
+        "Table body text in Black (Lato), header text in Pucho Violet (Anek Latin)",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "WF-001",
+      "title": "Create Pucho workflow JSON generator utility",
+      "description": "As a developer, I need a utility that generates valid Pucho AI Studio workflow JSON (schemaVersion 7) so the dashboard can create backend API endpoints.",
+      "acceptanceCriteria": [
+        "createWorkflow() function generates valid schemaVersion '7' JSON",
+        "Workflow JSON includes trigger with @puchoaistudio/tool-webhook pieceName and ~0.4.8 version",
+        "Supports chaining actions via nextAction pattern",
+        "Utility supports key tools: webhook, http, code, schedule, google-sheets, gmail, slack",
+        "Tool pieceName follows pattern: @puchoaistudio/tool-{name}",
+        "Generated JSON matches the schema provided in the PRD",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Schema: { name, template: { trigger: { type: 'PIECE_TRIGGER', settings: { pieceName, pieceVersion, triggerName }, nextAction }, schemaVersion: '7' } }"
+    },
+    {
+      "id": "WF-002",
+      "title": "Build workflow template library with preset workflows",
+      "description": "As a user, I want preset workflow templates so I can quickly deploy common automation patterns without building from scratch.",
+      "acceptanceCriteria": [
+        "At least 3 preset workflow templates: 'Webhook to Google Sheets', 'Scheduled Email Report', 'Slack Notification on Webhook'",
+        "Each template generates valid schemaVersion 7 JSON using the createWorkflow utility",
+        "Templates displayed in a card grid in the UI with Pucho branding",
+        "Clicking a template shows the generated JSON in a code viewer",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "HOOK-001",
+      "title": "Create webhook connection manager",
+      "description": "As a developer, I need a webhook connection manager that auto-wires frontend dashboard data sources to Pucho workflow webhook triggers.",
+      "acceptanceCriteria": [
+        "WebhookManager class/module that maps dashboard data endpoints to workflow webhook URLs",
+        "registerConnection(dashboardId, workflowWebhookUrl) stores the mapping",
+        "triggerWebhook(dashboardId, payload) sends data to the connected workflow",
+        "Connection status tracked: connected, disconnected, error",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "HOOK-002",
+      "title": "Build webhook connections UI panel",
+      "description": "As a user, I want a UI panel showing all webhook connections between my dashboard and Pucho workflows so I can manage integrations visually.",
+      "acceptanceCriteria": [
+        "Connections panel accessible from sidebar navigation",
+        "Each connection shows: dashboard source name, workflow name, status badge (green=connected, red=error, gray=disconnected)",
+        "Add Connection form with dashboard source and webhook URL fields",
+        "Connection cards use PuchoCard styling",
+        "Tagline 'Pucho Toh Sahi!' displayed in the panel header",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "FINAL-001",
+      "title": "Full integration test and polish",
+      "description": "As a user, I want the complete dashboard to work end-to-end with all sections integrated, all brand rules applied, and all components connected.",
+      "acceptanceCriteria": [
+        "Dashboard renders with sidebar navigation: Dashboard, Workflows, Connections",
+        "Dashboard page shows KPI row, charts section, and data table",
+        "Workflows page shows template library",
+        "Connections page shows webhook connections panel",
+        "All pages follow Pucho brand rules: colors, fonts, spacing, shadows",
+        "Loading states show 'Pucho is thinking...'",
+        "Empty states show 'No data yet — your workflows will populate this'",
+        "Footer shows 'Powered by Pucho.ai' on every page",
+        "npm run build completes without errors",
+        "TypeScript typecheck passes"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    }
+  ]
+}

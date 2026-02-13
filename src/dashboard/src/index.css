@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  /* Pucho Brand Colors */
+  --color-pucho-violet: #5922c6;
+  --color-violet-blossom: #af3db8;
+  --color-sunshine-yellow: #fffac0;
+  --color-mint-green: #91ffd0;
+  --color-sky-blue: #93d6ff;
+  --color-sidebar-bg: #f8f5ff;
+
+  /* Font Families */
+  --font-heading: "Anek Latin", sans-serif;
+  --font-body: "Lato", sans-serif;
+  --font-mono: "Chivo Mono", monospace;
+
+  /* Border Radius */
+  --radius-card: 12px;
+  --radius-button: 8px;
+  --radius-input: 6px;
+}
+
+/* Global Styles */
+body {
+  margin: 0;
+  font-family: "Lato", sans-serif;
+  font-weight: 400;
+  color: #000000;
+  background-color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Anek Latin", sans-serif;
+  font-weight: 700;
+  color: #5922c6;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+}
