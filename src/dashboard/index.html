@@ -5,12 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pucho Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Anek+Latin:wght@600;700&family=Lato:wght@300;400;500&family=Chivo+Mono:wght@600;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Google Fonts loaded dynamically to avoid blocking when offline -->
+    <script>
+      (function() {
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://fonts.googleapis.com/css2?family=Anek+Latin:wght@600;700&family=Lato:wght@300;400;500&family=Chivo+Mono:wght@600;700&display=swap';
+        link.onerror = function() { this.remove(); };
+        document.head.appendChild(link);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

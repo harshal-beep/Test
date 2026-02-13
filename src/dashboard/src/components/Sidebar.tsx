@@ -19,7 +19,15 @@ export default function Sidebar() {
           background: "linear-gradient(135deg, #5922c6, #af3db8)",
         }}
       >
-        <img src={PUCHO_LOGO} alt="Pucho" className="h-8" />
+        <img
+          src={PUCHO_LOGO}
+          alt="Pucho"
+          className="h-8"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+        <span className="text-white font-heading font-bold text-lg">Pucho</span>
       </div>
 
       {/* Navigation */}
