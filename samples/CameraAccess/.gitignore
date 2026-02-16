@@ -1,0 +1,17 @@
+*.xcframework/
+.DS_Store
+xcuserdata/
+
+# FastVLM model files (large binaries, download separately)
+CameraAccess/FastVLM/models/
+
+# Local secrets (API keys, tokens)
+# NOTE: Secrets.swift is committed with placeholder values so the project compiles.
+# Configure real API keys via the in-app Settings screen (stored in UserDefaults, not in this file).
+
+# Xcode workspace metadata
+*.xcworkspace/
+
+# Node server
+server/node_modules/
+server/package-lock.json
