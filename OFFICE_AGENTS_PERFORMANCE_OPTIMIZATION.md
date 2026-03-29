@@ -571,3 +571,206 @@ async function cachedFetch(url: string): Promise<string> {
 6. **Cache theme detection** — ~10 lines of code
 
 These 6 changes alone should noticeably improve responsiveness during beta testing.
+
+---
+
+## Additional SDK-Level Bottlenecks (Deep Dive Findings)
+
+The following bottlenecks were found in the SDK core (`packages/sdk/src/`) and affect all Office apps equally.
+
+### 13. CRITICAL: Image Resize Blocks Main Thread
+
+**File**: `packages/sdk/src/image-resize.ts`
+
+The `resizeImage()` function performs CPU-intensive canvas rendering **synchronously on the main thread**. It tries both PNG and JPEG formats via `tryBothFormats()` — encoding the image twice just to compare sizes — then progressively reduces quality (0.85 → 0.4) and dimensions (100% → 25%) in a sequential loop.
+
+**Fix**: Move to a Web Worker + try JPEG first (skip PNG if under size limit):
+```typescript
+// web-worker approach
+const worker = new Worker(new URL('./image-worker.ts', import.meta.url));
+
+async function resizeImageAsync(blob: Blob, maxBytes: number): Promise<Blob> {
+  return new Promise((resolve) => {
+    worker.postMessage({ blob, maxBytes });
+    worker.onmessage = (e) => resolve(e.data.result);
+  });
+}
+
+// Smarter format selection — avoid double-encoding
+async function smartEncode(canvas: OffscreenCanvas, maxBytes: number): Promise<Blob> {
+  // Try JPEG first (almost always smaller)
+  const jpeg = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.85 });
+  if (jpeg.size <= maxBytes) return jpeg;
+  // Only try PNG if JPEG fails (rare for photos)
+  const png = await canvas.convertToBlob({ type: 'image/png' });
+  return png.size < jpeg.size ? png : jpeg;
+}
+```
+
+### 14. CRITICAL: PDF Loading Buffers Entire Document
+
+**File**: `packages/sdk/src/pdf.ts`
+
+`loadPdfDocument()` copies the entire PDF into memory with `slice()` and disables the PDF.js worker (`useWorkerFetch: false`), forcing synchronous parsing.
+
+**Fix**: Enable worker fetch and implement page-level lazy loading:
+```typescript
+async function loadPdfDocument(data: ArrayBuffer) {
+  const pdf = await pdfjsLib.getDocument({
+    data,
+    useWorkerFetch: true,  // Enable async worker parsing
+    disableAutoFetch: true, // Don't preload all pages
+    disableStream: false,   // Enable streaming
+  }).promise;
+  return pdf;
+}
+
+// Load pages on demand, not all at once
+async function getPageText(pdf: PDFDocumentProxy, pageNum: number): Promise<string> {
+  const page = await pdf.getPage(pageNum);
+  const content = await page.getTextContent();
+  return content.items.map(item => item.str).join(' ');
+}
+```
+
+### 15. HIGH: `truncateTail()` Uses O(n²) Array Pattern
+
+**File**: `packages/sdk/src/truncate.ts`
+
+`truncateTail()` uses `unshift()` to prepend each line, which is O(n) per call (shifts entire array). Over 2000 lines, this becomes O(n²).
+
+**Fix**: Collect in reverse with `push()`, then `reverse()` once:
+```typescript
+// Before (O(n²)):
+for (const line of lines) {
+  result.unshift(line); // O(n) each time
+}
+
+// After (O(n)):
+const result: string[] = [];
+for (let i = lines.length - 1; i >= 0; i--) {
+  if (byteCount + lines[i].length > maxBytes) break;
+  byteCount += lines[i].length;
+  result.push(lines[i]); // O(1)
+}
+result.reverse(); // O(n) once
+```
+
+### 16. HIGH: IndexedDB Missing Compound Indexes
+
+**File**: `packages/sdk/src/storage/db.ts`
+
+Session and file queries lack proper compound indexes, causing full table scans for lookups like "get all files for session X."
+
+**Fix**: Add compound indexes:
+```typescript
+// In IndexedDB schema upgrade
+const fileStore = db.createObjectStore('files', { keyPath: 'id' });
+fileStore.createIndex('sessionPath', ['sessionId', 'path'], { unique: true });
+fileStore.createIndex('sessionId', 'sessionId', { unique: false });
+
+const skillStore = db.createObjectStore('skills', { keyPath: 'id' });
+skillStore.createIndex('skillPath', ['skillName', 'path'], { unique: true });
+```
+
+### 17. HIGH: VFS Has No File Metadata Cache
+
+**File**: `packages/sdk/src/vfs/index.ts`
+
+`readFile()`, `fileExists()`, and `detectImageMimeType()` have no caching. MIME detection reads file headers every access. Session restore reads all files from IndexedDB eagerly.
+
+**Fix**: Cache metadata + lazy content loading:
+```typescript
+class CachedVFS {
+  private metadataCache = new Map<string, { size: number; mimeType: string; modified: number }>();
+
+  async getMetadata(path: string) {
+    if (this.metadataCache.has(path)) return this.metadataCache.get(path)!;
+    const meta = await this.computeMetadata(path);
+    this.metadataCache.set(path, meta);
+    return meta;
+  }
+
+  // On session restore: load metadata only, defer content to first read
+  async restoreSession(sessionId: string) {
+    const entries = await this.db.getAllMetadata(sessionId); // New: metadata-only query
+    for (const entry of entries) {
+      this.metadataCache.set(entry.path, entry);
+    }
+    // File contents loaded lazily on first readFile() call
+  }
+}
+```
+
+### 18. MEDIUM: OAuth Token Refresh Race Condition
+
+**File**: `packages/sdk/src/oauth/index.ts`
+
+Multiple concurrent API calls can trigger simultaneous `refreshOAuthToken()` calls with no mutex.
+
+**Fix**: Deduplicate with a shared promise:
+```typescript
+let refreshPromise: Promise<OAuthTokens> | null = null;
+
+async function refreshOAuthTokenSafe(provider: string): Promise<OAuthTokens> {
+  if (refreshPromise) return refreshPromise; // Reuse in-flight refresh
+
+  refreshPromise = (async () => {
+    try {
+      return await refreshOAuthToken(provider);
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+```
+
+### 19. MEDIUM: Web Search Results Not Cached
+
+**File**: `packages/sdk/src/web/search.ts`
+
+The fallback chain (DuckDuckGo → Brave → Serper → Exa) retries on failure without caching successful results. HTML-to-Markdown conversion via Readability + TurndownService runs on every fetch.
+
+**Fix**: Add 1-hour result cache + memoize conversions:
+```typescript
+const searchCache = new Map<string, { results: SearchResult[]; ts: number }>();
+const SEARCH_CACHE_TTL = 3_600_000; // 1 hour
+
+async function cachedSearch(query: string, provider: string): Promise<SearchResult[]> {
+  const key = `${provider}:${query}`;
+  const cached = searchCache.get(key);
+  if (cached && Date.now() - cached.ts < SEARCH_CACHE_TTL) return cached.results;
+
+  const results = await executeSearch(query, provider);
+  searchCache.set(key, { results, ts: Date.now() });
+  return results;
+}
+```
+
+---
+
+## Updated Priority Matrix (All 19 Optimizations)
+
+| # | Optimization | Impact | Effort | Priority |
+|---|-------------|--------|--------|----------|
+| 1 | Batch Office.js API calls | 🔴 Very High | Medium | **P0** |
+| 2 | Cache document metadata | 🔴 Very High | Low | **P0** |
+| 3 | Parallel tool execution | 🔴 Very High | Medium | **P0** |
+| 13 | Move image resize to Web Worker | 🔴 Very High | Medium | **P0** |
+| 14 | Lazy PDF page loading + enable worker | 🔴 Very High | Low | **P0** |
+| 4 | Optimize searchData | 🟠 High | Low | **P1** |
+| 5 | Debounce navigation/emissions | 🟠 High | Low | **P1** |
+| 6 | Optimize screenshots | 🟠 High | Low | **P1** |
+| 7 | Tool result caching | 🟠 High | Medium | **P1** |
+| 15 | Fix O(n²) truncateTail | 🟠 High | Low | **P1** |
+| 16 | Add IndexedDB compound indexes | 🟠 High | Low | **P1** |
+| 17 | VFS metadata cache + lazy restore | 🟠 High | Medium | **P1** |
+| 8 | Reduce LLM token usage | 🟡 Medium | Low | **P2** |
+| 9 | Lazy SES lockdown | 🟡 Medium | Low | **P2** |
+| 10 | Message compaction | 🟡 Medium | High | **P2** |
+| 11 | Cache theme detection | 🟡 Medium | Low | **P2** |
+| 18 | OAuth token refresh mutex | 🟡 Medium | Low | **P2** |
+| 19 | Web search result caching | 🟡 Medium | Low | **P2** |
+| 12 | Web fetch optimizations | 🟢 Low | Low | **P3** |
