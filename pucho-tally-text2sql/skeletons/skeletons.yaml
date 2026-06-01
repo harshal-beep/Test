@@ -275,9 +275,10 @@
   - mst_ledger
   - trn_voucher
   slots: {}
-  sql: "SELECT ml.name AS customer,\n  COUNT(tb.guid) AS pending_bills,\n  SUM(ABS(tb.amount)) AS total_overdue\nFROM trn_bill\
-    \ tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\nWHERE tb.due_date < CURRENT_DATE\n\
-    \  AND tb.closing_balance <> 0\n  AND tv.is_invoice = 1\nGROUP BY ml.name\nORDER BY total_overdue DESC;"
+  sql: "SELECT ml.name AS customer,\n  COUNT(tb.guid) AS pending_bills,\n  SUM(ABS(tb.amount)) AS total_outstanding\nFROM\
+    \ trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\nWHERE (tv.date\
+    \ + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date < CURRENT_DATE\n  AND tv.is_invoice = 1\nGROUP BY ml.name\n\
+    ORDER BY total_outstanding DESC;"
   nl_en: Which customers have overdue payments?
 - id: overdue_customers_days
   question_bank_id: Q009
@@ -289,10 +290,11 @@
   - mst_ledger
   - trn_voucher
   slots: {}
-  sql: "SELECT ml.name AS customer,\n  tv.voucher_number,\n  tv.date AS invoice_date,\n  tb.due_date,\n  CURRENT_DATE - tb.due_date\
-    \ AS days_overdue,\n  ABS(tb.amount) AS bill_amount,\n  ABS(tb.closing_balance) AS outstanding\nFROM trn_bill tb\nJOIN\
-    \ trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\nWHERE tb.due_date < CURRENT_DATE\n\
-    \  AND tb.closing_balance <> 0\nORDER BY days_overdue DESC;"
+  sql: "SELECT ml.name AS customer,\n  tv.voucher_number,\n  tv.date AS invoice_date,\n  (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,\
+    \ 30))::date AS due_date,\n  CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS\
+    \ days_overdue,\n  ABS(tb.amount) AS bill_amount\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger\
+    \ ml ON tv._party_name = ml.guid\nWHERE (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date < CURRENT_DATE\n\
+    ORDER BY days_overdue DESC;"
   nl_en: List overdue invoices with days past due.
 - id: daily_collection_total
   question_bank_id: Q010
@@ -351,11 +353,11 @@
   - trn_inventory
   - trn_voucher
   slots: {}
-  sql: "SELECT msi.tax_rate,\n  SUM(ABS(ti.quantity)) AS qty_sold,\n  -SUM(ti.amount) AS taxable_value,\n  (-SUM(ti.amount))\
-    \ * msi.tax_rate / 100 AS estimated_gst\nFROM trn_inventory ti\nJOIN mst_stock_item msi ON ti._item = msi.guid\nJOIN trn_voucher\
+  sql: "SELECT msi.gst_rate,\n  SUM(ABS(ti.quantity)) AS qty_sold,\n  -SUM(ti.amount) AS taxable_value,\n  (-SUM(ti.amount))\
+    \ * msi.gst_rate / 100 AS estimated_gst\nFROM trn_inventory ti\nJOIN mst_stock_item msi ON ti._item = msi.guid\nJOIN trn_voucher\
     \ tv ON ti.guid = tv.guid\nWHERE tv.is_invoice = 1\n  AND ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM\
-    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msi.tax_rate\n\
-    ORDER BY msi.tax_rate;"
+    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msi.gst_rate\n\
+    ORDER BY msi.gst_rate;"
   nl_en: Show GST output tax breakdown by tax rate.
 - id: gst_input_tax_total
   question_bank_id: Q012
@@ -436,11 +438,11 @@
   - trn_inventory
   - trn_voucher
   slots: {}
-  sql: "SELECT msi.tax_rate AS gst_rate_pct,\n  COUNT(DISTINCT tv.guid) AS invoice_count,\n  SUM(ABS(ti.quantity)) AS total_qty,\n\
+  sql: "SELECT msi.gst_rate AS gst_rate_pct,\n  COUNT(DISTINCT tv.guid) AS invoice_count,\n  SUM(ABS(ti.quantity)) AS total_qty,\n\
     \  -SUM(ti.amount) AS taxable_value\nFROM trn_inventory ti\nJOIN mst_stock_item msi ON ti._item = msi.guid\nJOIN trn_voucher\
     \ tv ON ti.guid = tv.guid\nWHERE tv.is_invoice = 1\n  AND ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM\
-    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msi.tax_rate\n\
-    ORDER BY msi.tax_rate;"
+    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msi.gst_rate\n\
+    ORDER BY msi.gst_rate;"
   nl_en: Show sales broken down by GST rate slab.
 - id: sales_by_gst_rate_item
   question_bank_id: Q014
@@ -452,10 +454,10 @@
   - trn_inventory
   - trn_voucher
   slots: {}
-  sql: "SELECT msi.name AS item_name, msi.tax_rate AS gst_pct,\n  -SUM(ti.amount) AS sales_value\nFROM trn_inventory ti\n\
+  sql: "SELECT msi.name AS item_name, msi.gst_rate AS gst_pct,\n  -SUM(ti.amount) AS sales_value\nFROM trn_inventory ti\n\
     JOIN mst_stock_item msi ON ti._item = msi.guid\nJOIN trn_voucher tv ON ti.guid = tv.guid\nWHERE tv.is_invoice = 1 AND\
     \ ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT value::date\
-    \ FROM config WHERE name = 'Period To')\nGROUP BY msi.name, msi.tax_rate\nORDER BY msi.tax_rate, sales_value DESC;"
+    \ FROM config WHERE name = 'Period To')\nGROUP BY msi.name, msi.gst_rate\nORDER BY msi.gst_rate, sales_value DESC;"
   nl_en: List items sold this period with their GST rates.
 - id: b2b_vs_b2c
   question_bank_id: Q015
@@ -495,8 +497,8 @@
     party:
       type: party_name
       source: mst_ledger.name
-  sql: "SELECT ml.name AS party, ml.gstn, ml.gst_registration_type,\n  ml.place_of_supply\nFROM mst_ledger ml\nWHERE ml.name\
-    \ ILIKE '%{party}%'\n  AND ml.gstn IS NOT NULL;"
+  sql: "SELECT ml.name AS party, ml.gstn, ml.gst_registration_type,\n  ml.mailing_state AS state\nFROM mst_ledger ml\nWHERE\
+    \ ml.name ILIKE '%{party}%'\n  AND ml.gstn IS NOT NULL;"
   nl_en: What is the GSTIN for party {party}?
 - id: missing_gstin
   question_bank_id: Q017
@@ -520,26 +522,25 @@
   - mst_ledger
   slots: {}
   sql: "SELECT COUNT(DISTINCT tv.guid) AS interstate_invoices,\n  -SUM(ta.amount) AS total_interstate_sales\nFROM trn_voucher\
-    \ tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nJOIN mst_ledger ml ON ta._ledger = ml.guid\nWHERE tv.is_invoice = 1\n\
-    \  AND ta.ledger = tv.party_name AND ta.amount < 0\n  AND ml.place_of_supply IS NOT NULL\n  AND ml.place_of_supply <>\
-    \ (SELECT value FROM config WHERE name = 'State')\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name =\
-    \ 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To');"
+    \ tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nWHERE tv.is_invoice = 1\n  AND ta.ledger = tv.party_name AND ta.amount\
+    \ < 0\n  AND tv.place_of_supply IS NOT NULL\n  AND tv.place_of_supply <> (SELECT value FROM config WHERE name = 'State')\n\
+    \  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config\
+    \ WHERE name = 'Period To');"
   nl_en: What is the total interstate sales this period?
 - id: interstate_sales_by_state
   question_bank_id: Q018
   persona: Accountant / Munim
   intent: interstate_sales
-  join_depth: 3
+  join_depth: 2
   tables:
   - trn_voucher
   - trn_accounting
-  - mst_ledger
   slots: {}
-  sql: "SELECT ml.place_of_supply AS state,\n  COUNT(DISTINCT tv.guid) AS invoices,\n  -SUM(ta.amount) AS sales_value\nFROM\
-    \ trn_voucher tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nJOIN mst_ledger ml ON ta._ledger = ml.guid\nWHERE tv.is_invoice\
-    \ = 1\n  AND ta.ledger = tv.party_name AND ta.amount < 0\n  AND ml.place_of_supply IS NOT NULL\n  AND tv.date BETWEEN\
-    \ (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period\
-    \ To')\nGROUP BY ml.place_of_supply\nORDER BY sales_value DESC;"
+  sql: "SELECT COALESCE(tv.place_of_supply, 'Not Set') AS state,\n  COUNT(DISTINCT tv.guid) AS invoices,\n  -SUM(ta.amount)\
+    \ AS sales_value\nFROM trn_voucher tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nWHERE tv.is_invoice = 1\n  AND ta.ledger\
+    \ = tv.party_name AND ta.amount < 0\n  AND tv.place_of_supply IS NOT NULL\n  AND tv.date BETWEEN (SELECT value::date FROM\
+    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY tv.place_of_supply\n\
+    ORDER BY sales_value DESC;"
   nl_en: Show interstate sales grouped by state.
 - id: ledger_balance_single
   question_bank_id: Q019
@@ -611,9 +612,9 @@
     voucher_number:
       type: voucher_number
       source: trn_voucher.voucher_number
-  sql: "SELECT tv.voucher_number, tv.date, tv.party_name,\n  tv.amount AS voucher_amount, mvt.name AS voucher_type,\n  ta.ledger,\
-    \ ta.amount AS line_amount\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid\nJOIN trn_accounting\
-    \ ta ON ta.guid = tv.guid\nWHERE tv.voucher_number = '{voucher_number}'\nORDER BY ta.amount;"
+  sql: "SELECT tv.voucher_number, tv.date, tv.party_name,\n  mvt.name AS voucher_type,\n  ta.ledger, ta.amount AS line_amount\n\
+    FROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid\nJOIN trn_accounting ta ON ta.guid = tv.guid\n\
+    WHERE tv.voucher_number = '{voucher_number}'\nORDER BY ta.amount;"
   nl_en: Show details of voucher {voucher_number}.
 - id: voucher_lookup_by_date
   question_bank_id: Q021
@@ -627,8 +628,8 @@
     date:
       type: date
       source: trn_voucher.date
-  sql: "SELECT tv.voucher_number, tv.date, tv.party_name,\n  mvt.name AS voucher_type, tv.amount\nFROM trn_voucher tv\nJOIN\
-    \ mst_vouchertype mvt ON tv._voucher_type = mvt.guid\nWHERE tv.date = '{date}'::date\nORDER BY mvt.name, tv.voucher_number;"
+  sql: "SELECT tv.voucher_number, tv.date, tv.party_name,\n  mvt.name AS voucher_type\nFROM trn_voucher tv\nJOIN mst_vouchertype\
+    \ mvt ON tv._voucher_type = mvt.guid\nWHERE tv.date = '{date}'::date\nORDER BY mvt.name, tv.voucher_number;"
   nl_en: List all vouchers on date {date}.
 - id: voucher_lookup_by_party
   question_bank_id: Q021
@@ -642,10 +643,9 @@
     party:
       type: party_name
       source: trn_voucher.party_name
-  sql: "SELECT tv.voucher_number, tv.date, mvt.name AS voucher_type,\n  tv.amount\nFROM trn_voucher tv\nJOIN mst_vouchertype\
-    \ mvt ON tv._voucher_type = mvt.guid\nWHERE tv.party_name ILIKE '%{party}%'\n  AND tv.date BETWEEN (SELECT value::date\
-    \ FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nORDER BY tv.date\
-    \ DESC;"
+  sql: "SELECT tv.voucher_number, tv.date, mvt.name AS voucher_type\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type\
+    \ = mvt.guid\nWHERE tv.party_name ILIKE '%{party}%'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name\
+    \ = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nORDER BY tv.date DESC;"
   nl_en: Show all vouchers for party {party} this period.
 - id: bank_recon_entries
   question_bank_id: Q022
@@ -657,9 +657,10 @@
   - trn_voucher
   - mst_ledger
   slots: {}
-  sql: "SELECT tv.date, tv.voucher_number, tv.party_name,\n  tb.bank_date, tb.transaction_type, tb.instrument_number,\n  tb.amount\
-    \ AS bank_amount\nFROM trn_bank tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tv.date BETWEEN (SELECT value::date\
-    \ FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nORDER BY tv.date;"
+  sql: "SELECT tv.date, tv.voucher_number, tv.party_name,\n  tb.bankers_date, tb.transaction_type, tb.instrument_number,\n\
+    \  tb.amount AS bank_amount\nFROM trn_bank tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tv.date BETWEEN (SELECT\
+    \ value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\n\
+    ORDER BY tv.date;"
   nl_en: Show bank transaction entries for reconciliation this period.
 - id: bank_recon_uncleared
   question_bank_id: Q022
@@ -670,10 +671,10 @@
   - trn_bank
   - trn_voucher
   slots: {}
-  sql: "SELECT tv.date, tv.voucher_number, tv.party_name,\n  tb.instrument_number, tb.amount AS amount,\n  tb.bank_date\n\
-    FROM trn_bank tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE (tb.bank_date IS NULL OR tb.is_reconciled = 0)\n  AND\
-    \ tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE\
-    \ name = 'Period To')\nORDER BY tv.date;"
+  sql: "SELECT tv.date, tv.voucher_number, tv.party_name,\n  tb.instrument_number, tb.amount AS amount,\n  tb.bankers_date\n\
+    FROM trn_bank tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tb.bankers_date IS NULL\n  AND tv.date BETWEEN (SELECT\
+    \ value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\n\
+    ORDER BY tv.date;"
   nl_en: List uncleared/unreconciled bank entries.
 - id: cheques_pending
   question_bank_id: Q023
@@ -687,7 +688,7 @@
   slots: {}
   sql: "SELECT tv.date AS issue_date, tv.party_name,\n  tb.instrument_number AS cheque_number, tb.amount,\n  CURRENT_DATE\
     \ - tv.date AS days_pending\nFROM trn_bank tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tb.transaction_type = 'Cheque'\n\
-    \  AND (tb.bank_date IS NULL OR tb.is_reconciled = 0)\nORDER BY days_pending DESC;"
+    \  AND tb.bankers_date IS NULL\nORDER BY days_pending DESC;"
   nl_en: Which cheques are still pending clearance?
 - id: contra_entries_list
   question_bank_id: Q024
@@ -698,7 +699,7 @@
   - trn_voucher
   - mst_vouchertype
   slots: {}
-  sql: "SELECT tv.date, tv.voucher_number, tv.amount,\n  tv.narration\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type\
+  sql: "SELECT tv.date, tv.voucher_number,\n  tv.narration\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type\
     \ = mvt.guid\nWHERE mvt.name = 'Contra'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From')\
     \ AND (SELECT value::date FROM config WHERE name = 'Period To')\nORDER BY tv.date DESC;"
   nl_en: Show all contra entries (cash/bank transfers) this period.
@@ -726,7 +727,7 @@
   - trn_voucher
   - mst_vouchertype
   slots: {}
-  sql: "SELECT tv.date, tv.voucher_number, tv.amount, tv.narration\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type\
+  sql: "SELECT tv.date, tv.voucher_number, tv.narration\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type\
     \ = mvt.guid\nWHERE mvt.name = 'Journal'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From')\
     \ AND (SELECT value::date FROM config WHERE name = 'Period To')\nORDER BY tv.date DESC;"
   nl_en: List all journal entries this period.
@@ -807,9 +808,9 @@
     party:
       type: party_name
       source: mst_ledger.name
-  sql: "SELECT tv.voucher_number, tv.date, tb.due_date,\n  ABS(tb.amount) AS bill_amount,\n  ABS(tb.closing_balance) AS outstanding\n\
-    FROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\nWHERE ml.name\
-    \ ILIKE '%{party}%'\n  AND tb.closing_balance <> 0\nORDER BY tb.due_date;"
+  sql: "SELECT tv.voucher_number, tv.date,\n  (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS\
+    \ due_date,\n  ABS(tb.amount) AS bill_amount\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger\
+    \ ml ON tv._party_name = ml.guid\nWHERE ml.name ILIKE '%{party}%'\nORDER BY due_date;"
   nl_en: What is the outstanding amount for party {party}?
 - id: party_outstanding_all
   question_bank_id: Q028
@@ -821,10 +822,10 @@
   - mst_ledger
   - trn_voucher
   slots: {}
-  sql: "SELECT ml.name AS party,\n  COUNT(tb.guid) AS open_bills,\n  SUM(ABS(tb.closing_balance)) AS total_outstanding\nFROM\
-    \ trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\nWHERE tb.closing_balance\
-    \ <> 0\nGROUP BY ml.name\nORDER BY total_outstanding DESC;"
-  nl_en: Show outstanding bills for all parties.
+  sql: "SELECT ml.name AS party,\n  COUNT(tb.guid) AS bills,\n  SUM(ABS(tb.amount)) AS total_billed\nFROM trn_bill tb\nJOIN\
+    \ trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\nGROUP BY ml.name\nORDER BY total_billed\
+    \ DESC;"
+  nl_en: Show billed amounts for all parties.
 - id: ageing_buckets
   question_bank_id: Q029
   persona: Sales / Marketing
@@ -835,12 +836,14 @@
   - mst_ledger
   - trn_voucher
   slots: {}
-  sql: "SELECT ml.name AS customer,\n  SUM(CASE WHEN CURRENT_DATE - tb.due_date <= 30 THEN ABS(tb.closing_balance) ELSE 0\
-    \ END) AS \"0-30_days\",\n  SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 31 AND 60 THEN ABS(tb.closing_balance) ELSE\
-    \ 0 END) AS \"31-60_days\",\n  SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 61 AND 90 THEN ABS(tb.closing_balance)\
-    \ ELSE 0 END) AS \"61-90_days\",\n  SUM(CASE WHEN CURRENT_DATE - tb.due_date > 90 THEN ABS(tb.closing_balance) ELSE 0\
-    \ END) AS \"90plus_days\"\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name\
-    \ = ml.guid\nWHERE tb.closing_balance <> 0\n  AND tv.is_invoice = 1\nGROUP BY ml.name\nORDER BY \"90plus_days\" DESC;"
+  sql: "SELECT ml.name AS customer,\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date\
+    \ <= 30\n           THEN ABS(tb.amount) ELSE 0 END) AS \"0-30_days\",\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL\
+    \ '1 day' * COALESCE(tb.bill_credit_period,30))::date BETWEEN 31 AND 60\n           THEN ABS(tb.amount) ELSE 0 END) AS\
+    \ \"31-60_days\",\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date\
+    \ BETWEEN 61 AND 90\n           THEN ABS(tb.amount) ELSE 0 END) AS \"61-90_days\",\n  SUM(CASE WHEN CURRENT_DATE - (tv.date\
+    \ + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date > 90\n           THEN ABS(tb.amount) ELSE 0 END) AS \"\
+    90plus_days\"\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name = ml.guid\n\
+    WHERE tv.is_invoice = 1\nGROUP BY ml.name\nORDER BY \"90plus_days\" DESC;"
   nl_en: Show receivable ageing in 30/60/90 day buckets by customer.
 - id: ageing_summary
   question_bank_id: Q029
@@ -852,12 +855,13 @@
   - mst_ledger
   - trn_voucher
   slots: {}
-  sql: "SELECT\n  SUM(CASE WHEN CURRENT_DATE - tb.due_date <= 30 THEN ABS(tb.closing_balance) ELSE 0 END) AS \"0-30\",\n \
-    \ SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 31 AND 60 THEN ABS(tb.closing_balance) ELSE 0 END) AS \"31-60\",\n\
-    \  SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 61 AND 90 THEN ABS(tb.closing_balance) ELSE 0 END) AS \"61-90\",\n\
-    \  SUM(CASE WHEN CURRENT_DATE - tb.due_date > 90 THEN ABS(tb.closing_balance) ELSE 0 END) AS \"90+\",\n  SUM(ABS(tb.closing_balance))\
-    \ AS total_outstanding\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tb.closing_balance <> 0 AND\
-    \ tv.is_invoice = 1;"
+  sql: "SELECT\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date <=\
+    \ 30\n           THEN ABS(tb.amount) ELSE 0 END) AS \"0-30\",\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day'\
+    \ * COALESCE(tb.bill_credit_period,30))::date BETWEEN 31 AND 60\n           THEN ABS(tb.amount) ELSE 0 END) AS \"31-60\"\
+    ,\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date BETWEEN 61 AND\
+    \ 90\n           THEN ABS(tb.amount) ELSE 0 END) AS \"61-90\",\n  SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1\
+    \ day' * COALESCE(tb.bill_credit_period,30))::date > 90\n           THEN ABS(tb.amount) ELSE 0 END) AS \"90+\",\n  SUM(ABS(tb.amount))\
+    \ AS total_billed\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tv.is_invoice = 1;"
   nl_en: What is the total receivables ageing summary?
 - id: ageing_overdue_90plus
   question_bank_id: Q029
@@ -869,10 +873,11 @@
   - mst_ledger
   - trn_voucher
   slots: {}
-  sql: "SELECT ml.name AS customer,\n  tv.voucher_number, tv.date AS invoice_date, tb.due_date,\n  CURRENT_DATE - tb.due_date\
-    \ AS days_overdue,\n  ABS(tb.closing_balance) AS outstanding\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\n\
-    JOIN mst_ledger ml ON tv._party_name = ml.guid\nWHERE tb.closing_balance <> 0\n  AND CURRENT_DATE - tb.due_date > 90\n\
-    ORDER BY days_overdue DESC;"
+  sql: "SELECT ml.name AS customer,\n  tv.voucher_number, tv.date AS invoice_date,\n  (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date\
+    \ AS due_date,\n  CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date AS days_overdue,\n\
+    \  ABS(tb.amount) AS bill_amount\nFROM trn_bill tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nJOIN mst_ledger ml ON tv._party_name\
+    \ = ml.guid\nWHERE CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date > 90\nORDER\
+    \ BY days_overdue DESC;"
   nl_en: Which invoices are more than 90 days overdue?
 - id: top_item_sales_by_value
   question_bank_id: Q030
@@ -998,17 +1003,15 @@
   question_bank_id: Q034
   persona: Sales / Marketing
   intent: sales_by_state
-  join_depth: 3
+  join_depth: 2
   tables:
-  - mst_ledger
-  - trn_accounting
   - trn_voucher
+  - trn_accounting
   slots: {}
-  sql: "SELECT COALESCE(ml.place_of_supply, 'Unknown') AS state,\n  COUNT(DISTINCT tv.guid) AS invoices,\n  -SUM(ta.amount)\
-    \ AS total_sales\nFROM trn_voucher tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nJOIN mst_ledger ml ON ta._ledger =\
-    \ ml.guid\nWHERE tv.is_invoice = 1\n  AND ta.ledger = tv.party_name AND ta.amount < 0\n  AND tv.date BETWEEN (SELECT value::date\
-    \ FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY ml.place_of_supply\n\
-    ORDER BY total_sales DESC;"
+  sql: "SELECT COALESCE(tv.place_of_supply, 'Not Set') AS state,\n  COUNT(DISTINCT tv.guid) AS invoices,\n  -SUM(ta.amount)\
+    \ AS total_sales\nFROM trn_voucher tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nWHERE tv.is_invoice = 1\n  AND ta.ledger\
+    \ = tv.party_name AND ta.amount < 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From')\
+    \ AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY tv.place_of_supply\nORDER BY total_sales DESC;"
   nl_en: Show sales broken down by customer state.
 - id: discount_given_total
   question_bank_id: Q035
@@ -1019,10 +1022,10 @@
   - trn_inventory
   - trn_voucher
   slots: {}
-  sql: "SELECT SUM(ti.discount) AS total_discount_given,\n  -SUM(ti.amount) AS gross_sales,\n  ROUND(SUM(ti.discount) / NULLIF(-SUM(ti.amount),\
-    \ 0) * 100, 2) AS discount_pct\nFROM trn_inventory ti\nJOIN trn_voucher tv ON ti.guid = tv.guid\nWHERE tv.is_invoice =\
-    \ 1 AND ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT\
-    \ value::date FROM config WHERE name = 'Period To');"
+  sql: "SELECT SUM(ti.discount_amount) AS total_discount_given,\n  -SUM(ti.amount) AS gross_sales,\n  ROUND(SUM(ti.discount_amount)\
+    \ / NULLIF(-SUM(ti.amount), 0) * 100, 2) AS discount_pct\nFROM trn_inventory ti\nJOIN trn_voucher tv ON ti.guid = tv.guid\n\
+    WHERE tv.is_invoice = 1 AND ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period\
+    \ From') AND (SELECT value::date FROM config WHERE name = 'Period To');"
   nl_en: How much discount was given on sales this period?
 - id: discount_given_by_item
   question_bank_id: Q035
@@ -1034,10 +1037,11 @@
   - mst_stock_item
   - trn_voucher
   slots: {}
-  sql: "SELECT msi.name AS item,\n  SUM(ti.discount) AS total_discount,\n  -SUM(ti.amount) AS sales_value\nFROM trn_inventory\
+  sql: "SELECT msi.name AS item,\n  SUM(ti.discount_amount) AS total_discount,\n  -SUM(ti.amount) AS sales_value\nFROM trn_inventory\
     \ ti\nJOIN mst_stock_item msi ON ti._item = msi.guid\nJOIN trn_voucher tv ON ti.guid = tv.guid\nWHERE tv.is_invoice =\
-    \ 1 AND ti.quantity < 0\n  AND ti.discount > 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period\
-    \ From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msi.name\nORDER BY total_discount DESC;"
+    \ 1 AND ti.quantity < 0\n  AND ti.discount_amount > 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name\
+    \ = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msi.name\nORDER BY total_discount\
+    \ DESC;"
   nl_en: Show discount given by item.
 - id: repeat_customers
   question_bank_id: Q036
@@ -1072,9 +1076,9 @@
   tables:
   - mst_stock_item
   slots: {}
-  sql: "SELECT msi.name, msi.closing_balance AS qty, msi.uom\nFROM mst_stock_item msi\nWHERE msi.closing_balance <= msi.reorder_level\n\
-    \  AND msi.closing_balance >= 0\nORDER BY msi.closing_balance ASC;"
-  nl_en: Which items have stock at or below reorder level?
+  sql: "SELECT msi.name, msi.closing_balance AS qty, msi.uom,\n  msi.closing_rate AS unit_rate\nFROM mst_stock_item msi\n\
+    WHERE msi.closing_balance > 0\n  AND msi.closing_balance < 10\nORDER BY msi.closing_balance ASC;"
+  nl_en: Which items are running low on stock (less than 10 units)?
 - id: total_stock_value
   question_bank_id: Q038
   persona: Store / Inventory
@@ -1097,8 +1101,8 @@
   - mst_stock_group
   slots: {}
   sql: "SELECT msg.name AS stock_group,\n  COUNT(msi.guid) AS item_count,\n  SUM(msi.closing_balance) AS total_qty,\n  -SUM(msi.closing_value)\
-    \ AS total_value\nFROM mst_stock_item msi\nJOIN mst_stock_group msg ON msi._stock_group = msg.guid\nGROUP BY msg.name\n\
-    ORDER BY total_value DESC;"
+    \ AS total_value\nFROM mst_stock_item msi\nJOIN mst_stock_group msg ON msi._parent = msg.guid\nGROUP BY msg.name\nORDER\
+    \ BY total_value DESC;"
   nl_en: Show total stock value by stock group.
 - id: stock_by_godown_summary
   question_bank_id: Q039
@@ -1138,8 +1142,8 @@
   - mst_stock_group
   slots: {}
   sql: "SELECT msg.name AS stock_group,\n  COUNT(msi.guid) AS items,\n  SUM(msi.closing_balance) AS total_qty,\n  -SUM(msi.closing_value)\
-    \ AS total_value\nFROM mst_stock_item msi\nJOIN mst_stock_group msg ON msi._stock_group = msg.guid\nGROUP BY msg.name\n\
-    ORDER BY total_value DESC;"
+    \ AS total_value\nFROM mst_stock_item msi\nJOIN mst_stock_group msg ON msi._parent = msg.guid\nGROUP BY msg.name\nORDER\
+    \ BY total_value DESC;"
   nl_en: Show stock quantity and value by stock group.
 - id: stock_by_category
   question_bank_id: Q041
@@ -1211,23 +1215,22 @@
   tables:
   - mst_stock_item
   slots: {}
-  sql: "SELECT msi.name AS item, msi.closing_balance AS qty_on_hand,\n  msi.reorder_level, msi.uom,\n  msi.reorder_level -\
-    \ msi.closing_balance AS qty_to_order\nFROM mst_stock_item msi\nWHERE msi.closing_balance <= msi.reorder_level\n  AND\
-    \ msi.reorder_level > 0\nORDER BY qty_to_order DESC;"
-  nl_en: Which items need to be reordered?
-- id: reorder_by_supplier
+  sql: "SELECT msi.name AS item, msi.closing_balance AS qty_on_hand,\n  msi.uom, msi.closing_rate AS unit_rate\nFROM mst_stock_item\
+    \ msi\nWHERE msi.closing_balance > 0\n  AND msi.closing_balance < 20\nORDER BY msi.closing_balance ASC;"
+  nl_en: Which items are running low and need to be reordered?
+- id: reorder_by_group
   question_bank_id: Q045
   persona: Store / Inventory
   intent: reorder
-  join_depth: 3
+  join_depth: 2
   tables:
   - mst_stock_item
   - mst_stock_group
   slots: {}
-  sql: "SELECT msg.name AS stock_group,\n  COUNT(msi.guid) AS items_below_reorder,\n  SUM(msi.reorder_level - msi.closing_balance)\
-    \ AS total_qty_to_order\nFROM mst_stock_item msi\nJOIN mst_stock_group msg ON msi._stock_group = msg.guid\nWHERE msi.closing_balance\
-    \ <= msi.reorder_level\n  AND msi.reorder_level > 0\nGROUP BY msg.name;"
-  nl_en: How many items need reordering per stock group?
+  sql: "SELECT msg.name AS stock_group,\n  COUNT(msi.guid) AS low_stock_items,\n  SUM(msi.closing_balance) AS total_qty_remaining\n\
+    FROM mst_stock_item msi\nJOIN mst_stock_group msg ON msi._parent = msg.guid\nWHERE msi.closing_balance > 0\n  AND msi.closing_balance\
+    \ < 20\nGROUP BY msg.name\nORDER BY low_stock_items DESC;"
+  nl_en: How many items are running low per stock group?
 - id: batch_expiry_upcoming
   question_bank_id: Q046
   persona: Store / Inventory
@@ -1237,11 +1240,9 @@
   - trn_batch
   - mst_stock_item
   slots: {}
-  sql: "SELECT msi.name AS item, tb.batch_name,\n  tb.expiry_date, tb.closing_balance AS qty,\n  tb.expiry_date - CURRENT_DATE\
-    \ AS days_to_expiry\nFROM trn_batch tb\nJOIN mst_stock_item msi ON tb._item = msi.guid\nWHERE tb.expiry_date IS NOT NULL\n\
-    \  AND tb.expiry_date > CURRENT_DATE\n  AND tb.expiry_date <= CURRENT_DATE + INTERVAL '90 days'\n  AND tb.closing_balance\
-    \ > 0\nORDER BY tb.expiry_date;"
-  nl_en: Which batches are expiring in the next 90 days?
+  sql: "SELECT msi.name AS item, tb.name AS batch_name,\n  tb.quantity AS batch_qty, tb.godown\nFROM trn_batch tb\nJOIN mst_stock_item\
+    \ msi ON tb._item = msi.guid\nWHERE tb.quantity > 0\nORDER BY msi.name, tb.name;"
+  nl_en: Show all open batch quantities by item and godown.
 - id: batch_expiry_all
   question_bank_id: Q046
   persona: Store / Inventory
@@ -1251,10 +1252,10 @@
   - trn_batch
   - mst_stock_item
   slots: {}
-  sql: "SELECT msi.name AS item, tb.batch_name,\n  tb.expiry_date, tb.closing_balance AS qty_remaining\nFROM trn_batch tb\n\
-    JOIN mst_stock_item msi ON tb._item = msi.guid\nWHERE tb.expiry_date IS NOT NULL AND tb.closing_balance > 0\nORDER BY\
-    \ tb.expiry_date NULLS LAST;"
-  nl_en: Show all batch expiry dates for items in stock.
+  sql: "SELECT msi.name AS item,\n  COUNT(tb.name) AS batch_count,\n  SUM(tb.quantity) AS total_batch_qty\nFROM trn_batch\
+    \ tb\nJOIN mst_stock_item msi ON tb._item = msi.guid\nWHERE tb.quantity > 0\nGROUP BY msi.name\nORDER BY total_batch_qty\
+    \ DESC;"
+  nl_en: Show batch-wise stock quantity by item.
 - id: item_movement_period
   question_bank_id: Q047
   persona: Store / Inventory
@@ -1360,11 +1361,10 @@
   - mst_godown
   - trn_voucher
   slots: {}
-  sql: "SELECT tv.date, tv.voucher_number,\n  mg_from.name AS from_godown,\n  mg_to.name AS to_godown,\n  ti.quantity, ti.amount\n\
-    FROM trn_inventory ti\nJOIN mst_godown mg_from ON ti._godown = mg_from.guid\nJOIN trn_voucher tv ON ti.guid = tv.guid\n\
-    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid\nWHERE mvt.name ILIKE '%Transfer%'\n  AND tv.date BETWEEN (SELECT\
-    \ value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\n\
-    ORDER BY tv.date DESC;"
+  sql: "SELECT tv.date, tv.voucher_number,\n  mgd.name AS godown,\n  ti.quantity, ti.amount\nFROM trn_inventory ti\nJOIN mst_godown\
+    \ mgd ON ti._godown = mgd.guid\nJOIN trn_voucher tv ON ti.guid = tv.guid\nJOIN mst_vouchertype mvt ON tv._voucher_type\
+    \ = mvt.guid\nWHERE mvt.name ILIKE '%Transfer%'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period\
+    \ From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nORDER BY tv.date DESC;"
   nl_en: Show godown transfer entries this period.
 - id: salary_total_period
   question_bank_id: Q051
@@ -1514,7 +1514,7 @@
 
     FROM mst_employee
 
-    WHERE is_active = 1;'
+    WHERE date_of_release IS NULL;'
   nl_en: How many active employees do we have?
 - id: headcount_by_group
   question_bank_id: Q056
@@ -1528,7 +1528,7 @@
 
     FROM mst_employee
 
-    WHERE is_active = 1
+    WHERE date_of_release IS NULL
 
     GROUP BY parent
 
@@ -1545,11 +1545,10 @@
   - mst_attendance_type
   - trn_voucher
   slots: {}
-  sql: "SELECT me.name AS employee,\n  mat.name AS attendance_type,\n  SUM(ta.attendancevalue) AS days\nFROM mst_employee\
-    \ me\nJOIN trn_attendance ta ON ta._employee_name = me.guid\nJOIN mst_attendance_type mat ON ta._attendancetype_name =\
-    \ mat.guid\nJOIN trn_voucher tv ON ta.guid = tv.guid\nWHERE tv.date BETWEEN (SELECT value::date FROM config WHERE name\
-    \ = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY me.name, mat.name\nORDER BY\
-    \ me.name, mat.name;"
+  sql: "SELECT me.name AS employee,\n  mat.name AS attendance_type,\n  SUM(ta.type_value) AS days\nFROM mst_employee me\n\
+    JOIN trn_attendance ta ON ta._employee_name = me.guid\nJOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid\n\
+    JOIN trn_voucher tv ON ta.guid = tv.guid\nWHERE tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From')\
+    \ AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY me.name, mat.name\nORDER BY me.name, mat.name;"
   nl_en: Show attendance days by type for each employee this period.
 - id: attendance_days_summary
   question_bank_id: Q057
@@ -1561,7 +1560,7 @@
   - trn_attendance
   - trn_voucher
   slots: {}
-  sql: "SELECT mat.name AS attendance_type,\n  SUM(ta.attendancevalue) AS total_days\nFROM trn_attendance ta\nJOIN mst_attendance_type\
+  sql: "SELECT mat.name AS attendance_type,\n  SUM(ta.type_value) AS total_days\nFROM trn_attendance ta\nJOIN mst_attendance_type\
     \ mat ON ta._attendancetype_name = mat.guid\nJOIN trn_voucher tv ON ta.guid = tv.guid\nWHERE tv.date BETWEEN (SELECT value::date\
     \ FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY mat.name\n\
     ORDER BY total_days DESC;"
@@ -1577,10 +1576,10 @@
   - mst_attendance_type
   - trn_voucher
   slots: {}
-  sql: "SELECT me.name AS employee,\n  SUM(ta.attendancevalue) AS absent_days\nFROM mst_employee me\nJOIN trn_attendance ta\
-    \ ON ta._employee_name = me.guid\nJOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid\nJOIN trn_voucher\
-    \ tv ON ta.guid = tv.guid\nWHERE mat.name ILIKE '%Absent%'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE\
-    \ name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY me.name\nORDER BY absent_days\
+  sql: "SELECT me.name AS employee,\n  SUM(ta.type_value) AS absent_days\nFROM mst_employee me\nJOIN trn_attendance ta ON\
+    \ ta._employee_name = me.guid\nJOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid\nJOIN trn_voucher tv\
+    \ ON ta.guid = tv.guid\nWHERE mat.name ILIKE '%Absent%'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name\
+    \ = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY me.name\nORDER BY absent_days\
     \ DESC;"
   nl_en: Who was absent and for how many days this period?
 - id: absent_list_month
@@ -1597,9 +1596,9 @@
     month:
       type: month
       source: voucher_dates
-  sql: "SELECT me.name AS employee,\n  SUM(ta.attendancevalue) AS absent_days\nFROM mst_employee me\nJOIN trn_attendance ta\
-    \ ON ta._employee_name = me.guid\nJOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid\nJOIN trn_voucher\
-    \ tv ON ta.guid = tv.guid\nWHERE mat.name ILIKE '%Absent%'\n  AND EXTRACT(MONTH FROM tv.date) = {month}\nGROUP BY me.name\n\
+  sql: "SELECT me.name AS employee,\n  SUM(ta.type_value) AS absent_days\nFROM mst_employee me\nJOIN trn_attendance ta ON\
+    \ ta._employee_name = me.guid\nJOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid\nJOIN trn_voucher tv\
+    \ ON ta.guid = tv.guid\nWHERE mat.name ILIKE '%Absent%'\n  AND EXTRACT(MONTH FROM tv.date) = {month}\nGROUP BY me.name\n\
     ORDER BY absent_days DESC;"
   nl_en: List employees absent in month {month}.
 - id: overtime_by_employee
@@ -1613,7 +1612,7 @@
   - trn_voucher
   - mst_employee
   slots: {}
-  sql: "SELECT me.name AS employee,\n  SUM(ta.attendancevalue) AS overtime_hours\nFROM trn_attendance ta\nJOIN mst_attendance_type\
+  sql: "SELECT me.name AS employee,\n  SUM(ta.type_value) AS overtime_hours\nFROM trn_attendance ta\nJOIN mst_attendance_type\
     \ mat ON ta._attendancetype_name = mat.guid\nJOIN trn_voucher tv ON ta.guid = tv.guid\nJOIN mst_employee me ON ta._employee_name\
     \ = me.guid\nWHERE mat.name ILIKE '%Overtime%'\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period\
     \ From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY me.name\nORDER BY overtime_hours DESC;"
@@ -1961,10 +1960,9 @@
   - trn_voucher
   - mst_vouchertype
   slots: {}
-  sql: "SELECT mvt.name AS voucher_type,\n  COUNT(tv.guid) AS voucher_count,\n  SUM(ABS(tv.amount)) AS total_amount\nFROM\
-    \ trn_voucher tv\nJOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid\nWHERE tv.date BETWEEN (SELECT value::date FROM\
-    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY mvt.name\n\
-    ORDER BY voucher_count DESC;"
+  sql: "SELECT mvt.name AS voucher_type,\n  COUNT(tv.guid) AS voucher_count\nFROM trn_voucher tv\nJOIN mst_vouchertype mvt\
+    \ ON tv._voucher_type = mvt.guid\nWHERE tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From') AND\
+    \ (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY mvt.name\nORDER BY voucher_count DESC;"
   nl_en: How many vouchers were posted by type this period?
 - id: voucher_count_by_day
   question_bank_id: Q074
@@ -2030,8 +2028,7 @@
   sql: "SELECT\n  SUM(CASE WHEN CURRENT_DATE - tv.date <= 7 THEN ABS(tb.amount) ELSE 0 END) AS \"0-7_days\",\n  SUM(CASE WHEN\
     \ CURRENT_DATE - tv.date BETWEEN 8 AND 15 THEN ABS(tb.amount) ELSE 0 END) AS \"8-15_days\",\n  SUM(CASE WHEN CURRENT_DATE\
     \ - tv.date > 15 THEN ABS(tb.amount) ELSE 0 END) AS \"15plus_days\",\n  COUNT(*) AS total_pending_cheques\nFROM trn_bank\
-    \ tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tb.transaction_type = 'Cheque'\n  AND (tb.bank_date IS NULL OR tb.is_reconciled\
-    \ = 0);"
+    \ tb\nJOIN trn_voucher tv ON tb.guid = tv.guid\nWHERE tb.transaction_type = 'Cheque'\n  AND tb.bankers_date IS NULL;"
   nl_en: Show pending cheques grouped by age bucket.
 - id: round_off_summary
   question_bank_id: Q027
@@ -2064,17 +2061,16 @@
   question_bank_id: Q034
   persona: Sales / Marketing
   intent: sales_by_state
-  join_depth: 3
+  join_depth: 2
   tables:
-  - mst_ledger
-  - trn_accounting
   - trn_voucher
+  - trn_accounting
   slots: {}
-  sql: "SELECT COALESCE(ml.place_of_supply, 'Not Set') AS state,\n  -SUM(ta.amount) AS total_sales,\n  COUNT(DISTINCT tv.guid)\
-    \ AS invoices\nFROM trn_voucher tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nJOIN mst_ledger ml ON ta._ledger = ml.guid\n\
-    WHERE tv.is_invoice = 1\n  AND ta.ledger = tv.party_name AND ta.amount < 0\n  AND tv.date BETWEEN (SELECT value::date\
-    \ FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY ml.place_of_supply\n\
-    ORDER BY total_sales DESC\nLIMIT 10;"
+  sql: "SELECT COALESCE(tv.place_of_supply, 'Not Set') AS state,\n  -SUM(ta.amount) AS total_sales,\n  COUNT(DISTINCT tv.guid)\
+    \ AS invoices\nFROM trn_voucher tv\nJOIN trn_accounting ta ON ta.guid = tv.guid\nWHERE tv.is_invoice = 1\n  AND ta.ledger\
+    \ = tv.party_name AND ta.amount < 0\n  AND tv.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From')\
+    \ AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY tv.place_of_supply\nORDER BY total_sales DESC\n\
+    LIMIT 10;"
   nl_en: Which states are my top 10 markets by sales?
 - id: repeat_customers_cross
   question_bank_id: Q036
@@ -2102,8 +2098,8 @@
   - mst_stock_group
   slots: {}
   sql: "SELECT msg.name AS stock_group, msi.name AS item,\n  msi.closing_balance AS qty, -msi.closing_value AS value\nFROM\
-    \ mst_stock_item msi\nJOIN mst_stock_group msg ON msi._stock_group = msg.guid\nWHERE msi.closing_balance > 0\nORDER BY\
-    \ msg.name, value DESC;"
+    \ mst_stock_item msi\nJOIN mst_stock_group msg ON msi._parent = msg.guid\nWHERE msi.closing_balance > 0\nORDER BY msg.name,\
+    \ value DESC;"
   nl_en: Show item-wise stock by stock group.
 - id: stock_by_category_detail
   question_bank_id: Q041
@@ -2146,10 +2142,10 @@
   - trn_voucher
   slots: {}
   sql: "SELECT msg.name AS group_name, msi.name AS item,\n  SUM(ABS(ti.quantity)) AS qty_sold\nFROM trn_inventory ti\nJOIN\
-    \ mst_stock_item msi ON ti._item = msi.guid\nJOIN mst_stock_group msg ON msi._stock_group = msg.guid\nJOIN trn_voucher\
-    \ tv ON ti.guid = tv.guid\nWHERE tv.is_invoice = 1 AND ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM\
-    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msg.name,\
-    \ msi.name\nORDER BY qty_sold DESC LIMIT 20;"
+    \ mst_stock_item msi ON ti._item = msi.guid\nJOIN mst_stock_group msg ON msi._parent = msg.guid\nJOIN trn_voucher tv ON\
+    \ ti.guid = tv.guid\nWHERE tv.is_invoice = 1 AND ti.quantity < 0\n  AND tv.date BETWEEN (SELECT value::date FROM config\
+    \ WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY msg.name, msi.name\n\
+    ORDER BY qty_sold DESC LIMIT 20;"
   nl_en: Show fast-moving items by stock group.
 - id: negative_stock_trend
   question_bank_id: Q044
@@ -2221,7 +2217,7 @@
   - mst_attendance_type
   - trn_voucher
   slots: {}
-  sql: "SELECT EXTRACT(MONTH FROM tv.date) AS month,\n  COUNT(DISTINCT ta._employee_name) AS employees_with_ot,\n  SUM(ta.attendancevalue)\
+  sql: "SELECT EXTRACT(MONTH FROM tv.date) AS month,\n  COUNT(DISTINCT ta._employee_name) AS employees_with_ot,\n  SUM(ta.type_value)\
     \ AS total_ot_hours\nFROM trn_attendance ta\nJOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid\nJOIN\
     \ trn_voucher tv ON ta.guid = tv.guid\nWHERE mat.name ILIKE '%Overtime%'\n  AND tv.date BETWEEN (SELECT value::date FROM\
     \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY EXTRACT(MONTH\
@@ -2329,16 +2325,15 @@
   - mst_ledger
   - mst_group
   slots: {}
-  sql: "SELECT mg.name AS expense_group,\n  SUM(ta.amount) AS expense_amount,\n  -SUM(CASE WHEN mg2.name = 'Sales Accounts'\
-    \ THEN ta2.amount ELSE 0 END) AS total_sales,\n  ROUND(SUM(ta.amount) /\n    NULLIF(-SUM(CASE WHEN mg2.name = 'Sales Accounts'\
-    \ THEN ta2.amount ELSE 0 END), 0) * 100, 2\n  ) AS expense_ratio_pct\nFROM trn_accounting ta\nJOIN trn_voucher tv ON ta.guid\
-    \ = tv.guid\nJOIN mst_ledger ml ON ta._ledger = ml.guid\nJOIN mst_group mg ON ml._parent = mg.guid\nCROSS JOIN (\n  SELECT\
-    \ -SUM(ta2.amount) AS sales\n  FROM trn_accounting ta2\n  JOIN trn_voucher tv2 ON ta2.guid = tv2.guid\n  JOIN mst_ledger\
-    \ ml2 ON ta2._ledger = ml2.guid\n  JOIN mst_group mg2 ON ml2._parent = mg2.guid\n  WHERE mg2.name = 'Sales Accounts'\n\
-    \    AND tv2.date BETWEEN (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config\
-    \ WHERE name = 'Period To')\n) s\nWHERE mg.name IN ('Direct Expenses','Indirect Expenses')\n  AND tv.date BETWEEN (SELECT\
-    \ value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\n\
-    GROUP BY mg.name, s.sales;"
+  sql: "SELECT mg.name AS expense_group,\n  SUM(ta.amount) AS expense_amount,\n  s.sales AS total_sales,\n  ROUND(SUM(ta.amount)\
+    \ / NULLIF(s.sales, 0) * 100, 2) AS expense_ratio_pct\nFROM trn_accounting ta\nJOIN trn_voucher tv ON ta.guid = tv.guid\n\
+    JOIN mst_ledger ml ON ta._ledger = ml.guid\nJOIN mst_group mg ON ml._parent = mg.guid\nCROSS JOIN (\n  SELECT -SUM(ta2.amount)\
+    \ AS sales\n  FROM trn_accounting ta2\n  JOIN trn_voucher tv2 ON ta2.guid = tv2.guid\n  JOIN mst_ledger ml2 ON ta2._ledger\
+    \ = ml2.guid\n  JOIN mst_group mg2 ON ml2._parent = mg2.guid\n  WHERE mg2.name = 'Sales Accounts'\n    AND tv2.date BETWEEN\
+    \ (SELECT value::date FROM config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period\
+    \ To')\n) s\nWHERE mg.name IN ('Direct Expenses','Indirect Expenses')\n  AND tv.date BETWEEN (SELECT value::date FROM\
+    \ config WHERE name = 'Period From') AND (SELECT value::date FROM config WHERE name = 'Period To')\nGROUP BY mg.name,\
+    \ s.sales;"
   nl_en: Show expense ratio by expense group.
 - id: top_expense_growth_monthly
   question_bank_id: Q073

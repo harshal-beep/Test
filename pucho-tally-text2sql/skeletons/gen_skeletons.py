@@ -279,15 +279,14 @@ sk("overdue_customers_list", "Q009", "Owner / Seth", "overdue_customers", 3,
    f"""
    SELECT ml.name AS customer,
      COUNT(tb.guid) AS pending_bills,
-     SUM(ABS(tb.amount)) AS total_overdue
+     SUM(ABS(tb.amount)) AS total_outstanding
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    JOIN mst_ledger ml ON tv._party_name = ml.guid
-   WHERE tb.due_date < CURRENT_DATE
-     AND tb.closing_balance <> 0
+   WHERE (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date < CURRENT_DATE
      AND tv.is_invoice = 1
    GROUP BY ml.name
-   ORDER BY total_overdue DESC;
+   ORDER BY total_outstanding DESC;
    """,
    "Which customers have overdue payments?")
 
@@ -297,15 +296,13 @@ sk("overdue_customers_days", "Q009", "Owner / Seth", "overdue_customers", 3,
    SELECT ml.name AS customer,
      tv.voucher_number,
      tv.date AS invoice_date,
-     tb.due_date,
-     CURRENT_DATE - tb.due_date AS days_overdue,
-     ABS(tb.amount) AS bill_amount,
-     ABS(tb.closing_balance) AS outstanding
+     (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS due_date,
+     CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS days_overdue,
+     ABS(tb.amount) AS bill_amount
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    JOIN mst_ledger ml ON tv._party_name = ml.guid
-   WHERE tb.due_date < CURRENT_DATE
-     AND tb.closing_balance <> 0
+   WHERE (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date < CURRENT_DATE
    ORDER BY days_overdue DESC;
    """,
    "List overdue invoices with days past due.")
@@ -364,18 +361,18 @@ sk("gst_output_tax_total", "Q011", "Accountant / Munim", "gst_output_tax", 3,
 sk("gst_output_tax_by_rate", "Q011", "Accountant / Munim", "gst_output_tax", 3,
    ["mst_stock_item","trn_inventory","trn_voucher"],
    f"""
-   SELECT msi.tax_rate,
+   SELECT msi.gst_rate,
      SUM(ABS(ti.quantity)) AS qty_sold,
      -SUM(ti.amount) AS taxable_value,
-     (-SUM(ti.amount)) * msi.tax_rate / 100 AS estimated_gst
+     (-SUM(ti.amount)) * msi.gst_rate / 100 AS estimated_gst
    FROM trn_inventory ti
    JOIN mst_stock_item msi ON ti._item = msi.guid
    JOIN trn_voucher tv ON ti.guid = tv.guid
    WHERE tv.is_invoice = 1
      AND ti.quantity < 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
-   GROUP BY msi.tax_rate
-   ORDER BY msi.tax_rate;
+   GROUP BY msi.gst_rate
+   ORDER BY msi.gst_rate;
    """,
    "Show GST output tax breakdown by tax rate.")
 
@@ -459,7 +456,7 @@ sk("gst_net_payable_monthly", "Q013", "Accountant / Munim", "gst_net_payable", 3
 sk("sales_by_gst_rate", "Q014", "Accountant / Munim", "sales_by_gst_rate", 3,
    ["mst_stock_item","trn_inventory","trn_voucher"],
    f"""
-   SELECT msi.tax_rate AS gst_rate_pct,
+   SELECT msi.gst_rate AS gst_rate_pct,
      COUNT(DISTINCT tv.guid) AS invoice_count,
      SUM(ABS(ti.quantity)) AS total_qty,
      -SUM(ti.amount) AS taxable_value
@@ -469,23 +466,23 @@ sk("sales_by_gst_rate", "Q014", "Accountant / Munim", "sales_by_gst_rate", 3,
    WHERE tv.is_invoice = 1
      AND ti.quantity < 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
-   GROUP BY msi.tax_rate
-   ORDER BY msi.tax_rate;
+   GROUP BY msi.gst_rate
+   ORDER BY msi.gst_rate;
    """,
    "Show sales broken down by GST rate slab.")
 
 sk("sales_by_gst_rate_item", "Q014", "Accountant / Munim", "sales_by_gst_rate", 3,
    ["mst_stock_item","trn_inventory","trn_voucher"],
    f"""
-   SELECT msi.name AS item_name, msi.tax_rate AS gst_pct,
+   SELECT msi.name AS item_name, msi.gst_rate AS gst_pct,
      -SUM(ti.amount) AS sales_value
    FROM trn_inventory ti
    JOIN mst_stock_item msi ON ti._item = msi.guid
    JOIN trn_voucher tv ON ti.guid = tv.guid
    WHERE tv.is_invoice = 1 AND ti.quantity < 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
-   GROUP BY msi.name, msi.tax_rate
-   ORDER BY msi.tax_rate, sales_value DESC;
+   GROUP BY msi.name, msi.gst_rate
+   ORDER BY msi.gst_rate, sales_value DESC;
    """,
    "List items sold this period with their GST rates.")
 
@@ -524,7 +521,7 @@ sk("party_gstin_single", "Q016", "Accountant / Munim", "party_gstin", 1,
    ["mst_ledger"],
    """
    SELECT ml.name AS party, ml.gstn, ml.gst_registration_type,
-     ml.place_of_supply
+     ml.mailing_state AS state
    FROM mst_ledger ml
    WHERE ml.name ILIKE '%{party}%'
      AND ml.gstn IS NOT NULL;
@@ -552,29 +549,27 @@ sk("interstate_sales_total", "Q018", "Accountant / Munim", "interstate_sales", 3
      -SUM(ta.amount) AS total_interstate_sales
    FROM trn_voucher tv
    JOIN trn_accounting ta ON ta.guid = tv.guid
-   JOIN mst_ledger ml ON ta._ledger = ml.guid
    WHERE tv.is_invoice = 1
      AND ta.ledger = tv.party_name AND ta.amount < 0
-     AND ml.place_of_supply IS NOT NULL
-     AND ml.place_of_supply <> (SELECT value FROM config WHERE name = 'State')
+     AND tv.place_of_supply IS NOT NULL
+     AND tv.place_of_supply <> (SELECT value FROM config WHERE name = 'State')
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
    """,
    "What is the total interstate sales this period?")
 
-sk("interstate_sales_by_state", "Q018", "Accountant / Munim", "interstate_sales", 3,
-   ["trn_voucher","trn_accounting","mst_ledger"],
+sk("interstate_sales_by_state", "Q018", "Accountant / Munim", "interstate_sales", 2,
+   ["trn_voucher","trn_accounting"],
    f"""
-   SELECT ml.place_of_supply AS state,
+   SELECT COALESCE(tv.place_of_supply, 'Not Set') AS state,
      COUNT(DISTINCT tv.guid) AS invoices,
      -SUM(ta.amount) AS sales_value
    FROM trn_voucher tv
    JOIN trn_accounting ta ON ta.guid = tv.guid
-   JOIN mst_ledger ml ON ta._ledger = ml.guid
    WHERE tv.is_invoice = 1
      AND ta.ledger = tv.party_name AND ta.amount < 0
-     AND ml.place_of_supply IS NOT NULL
+     AND tv.place_of_supply IS NOT NULL
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
-   GROUP BY ml.place_of_supply
+   GROUP BY tv.place_of_supply
    ORDER BY sales_value DESC;
    """,
    "Show interstate sales grouped by state.")
@@ -635,7 +630,7 @@ sk("voucher_lookup_by_number", "Q021", "Accountant / Munim", "voucher_lookup", 2
    ["trn_voucher","trn_accounting"],
    """
    SELECT tv.voucher_number, tv.date, tv.party_name,
-     tv.amount AS voucher_amount, mvt.name AS voucher_type,
+     mvt.name AS voucher_type,
      ta.ledger, ta.amount AS line_amount
    FROM trn_voucher tv
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
@@ -650,7 +645,7 @@ sk("voucher_lookup_by_date", "Q021", "Accountant / Munim", "voucher_lookup", 2,
    ["trn_voucher","mst_vouchertype"],
    """
    SELECT tv.voucher_number, tv.date, tv.party_name,
-     mvt.name AS voucher_type, tv.amount
+     mvt.name AS voucher_type
    FROM trn_voucher tv
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
    WHERE tv.date = '{date}'::date
@@ -662,8 +657,7 @@ sk("voucher_lookup_by_date", "Q021", "Accountant / Munim", "voucher_lookup", 2,
 sk("voucher_lookup_by_party", "Q021", "Accountant / Munim", "voucher_lookup", 2,
    ["trn_voucher","mst_vouchertype"],
    f"""
-   SELECT tv.voucher_number, tv.date, mvt.name AS voucher_type,
-     tv.amount
+   SELECT tv.voucher_number, tv.date, mvt.name AS voucher_type
    FROM trn_voucher tv
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
    WHERE tv.party_name ILIKE '%{{party}}%'
@@ -678,7 +672,7 @@ sk("bank_recon_entries", "Q022", "Accountant / Munim", "bank_recon", 3,
    ["trn_bank","trn_voucher","mst_ledger"],
    f"""
    SELECT tv.date, tv.voucher_number, tv.party_name,
-     tb.bank_date, tb.transaction_type, tb.instrument_number,
+     tb.bankers_date, tb.transaction_type, tb.instrument_number,
      tb.amount AS bank_amount
    FROM trn_bank tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
@@ -692,10 +686,10 @@ sk("bank_recon_uncleared", "Q022", "Accountant / Munim", "bank_recon", 3,
    f"""
    SELECT tv.date, tv.voucher_number, tv.party_name,
      tb.instrument_number, tb.amount AS amount,
-     tb.bank_date
+     tb.bankers_date
    FROM trn_bank tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
-   WHERE (tb.bank_date IS NULL OR tb.is_reconciled = 0)
+   WHERE tb.bankers_date IS NULL
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
    ORDER BY tv.date;
    """,
@@ -711,7 +705,7 @@ sk("cheques_pending", "Q023", "Accountant / Munim", "cheques_pending", 3,
    FROM trn_bank tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    WHERE tb.transaction_type = 'Cheque'
-     AND (tb.bank_date IS NULL OR tb.is_reconciled = 0)
+     AND tb.bankers_date IS NULL
    ORDER BY days_pending DESC;
    """,
    "Which cheques are still pending clearance?")
@@ -720,7 +714,7 @@ sk("cheques_pending", "Q023", "Accountant / Munim", "cheques_pending", 3,
 sk("contra_entries_list", "Q024", "Accountant / Munim", "contra_entries", 2,
    ["trn_voucher","mst_vouchertype"],
    f"""
-   SELECT tv.date, tv.voucher_number, tv.amount,
+   SELECT tv.date, tv.voucher_number,
      tv.narration
    FROM trn_voucher tv
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
@@ -747,7 +741,7 @@ sk("contra_entries_detail", "Q024", "Accountant / Munim", "contra_entries", 3,
 sk("journal_entries_list", "Q025", "Accountant / Munim", "journal_entries", 2,
    ["trn_voucher","mst_vouchertype"],
    f"""
-   SELECT tv.date, tv.voucher_number, tv.amount, tv.narration
+   SELECT tv.date, tv.voucher_number, tv.narration
    FROM trn_voucher tv
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
    WHERE mvt.name = 'Journal'
@@ -823,15 +817,14 @@ sk("round_off_entries", "Q027", "Accountant / Munim", "round_off", 3,
 sk("party_outstanding_single", "Q028", "Sales / Marketing", "party_outstanding", 3,
    ["trn_bill","mst_ledger","trn_voucher"],
    """
-   SELECT tv.voucher_number, tv.date, tb.due_date,
-     ABS(tb.amount) AS bill_amount,
-     ABS(tb.closing_balance) AS outstanding
+   SELECT tv.voucher_number, tv.date,
+     (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS due_date,
+     ABS(tb.amount) AS bill_amount
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    JOIN mst_ledger ml ON tv._party_name = ml.guid
    WHERE ml.name ILIKE '%{party}%'
-     AND tb.closing_balance <> 0
-   ORDER BY tb.due_date;
+   ORDER BY due_date;
    """,
    "What is the outstanding amount for party {party}?",
    slots={"party": {"type": "party_name", "source": "mst_ledger.name"}})
@@ -840,31 +833,33 @@ sk("party_outstanding_all", "Q028", "Sales / Marketing", "party_outstanding", 3,
    ["trn_bill","mst_ledger","trn_voucher"],
    """
    SELECT ml.name AS party,
-     COUNT(tb.guid) AS open_bills,
-     SUM(ABS(tb.closing_balance)) AS total_outstanding
+     COUNT(tb.guid) AS bills,
+     SUM(ABS(tb.amount)) AS total_billed
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    JOIN mst_ledger ml ON tv._party_name = ml.guid
-   WHERE tb.closing_balance <> 0
    GROUP BY ml.name
-   ORDER BY total_outstanding DESC;
+   ORDER BY total_billed DESC;
    """,
-   "Show outstanding bills for all parties.")
+   "Show billed amounts for all parties.")
 
 # ── Q029 ageing ───────────────────────────────────────────────────────────────
 sk("ageing_buckets", "Q029", "Sales / Marketing", "ageing", 3,
    ["trn_bill","mst_ledger","trn_voucher"],
    """
    SELECT ml.name AS customer,
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date <= 30 THEN ABS(tb.closing_balance) ELSE 0 END) AS "0-30_days",
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 31 AND 60 THEN ABS(tb.closing_balance) ELSE 0 END) AS "31-60_days",
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 61 AND 90 THEN ABS(tb.closing_balance) ELSE 0 END) AS "61-90_days",
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date > 90 THEN ABS(tb.closing_balance) ELSE 0 END) AS "90plus_days"
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date <= 30
+              THEN ABS(tb.amount) ELSE 0 END) AS "0-30_days",
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date BETWEEN 31 AND 60
+              THEN ABS(tb.amount) ELSE 0 END) AS "31-60_days",
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date BETWEEN 61 AND 90
+              THEN ABS(tb.amount) ELSE 0 END) AS "61-90_days",
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date > 90
+              THEN ABS(tb.amount) ELSE 0 END) AS "90plus_days"
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    JOIN mst_ledger ml ON tv._party_name = ml.guid
-   WHERE tb.closing_balance <> 0
-     AND tv.is_invoice = 1
+   WHERE tv.is_invoice = 1
    GROUP BY ml.name
    ORDER BY "90plus_days" DESC;
    """,
@@ -874,14 +869,18 @@ sk("ageing_summary", "Q029", "Sales / Marketing", "ageing", 3,
    ["trn_bill","mst_ledger","trn_voucher"],
    """
    SELECT
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date <= 30 THEN ABS(tb.closing_balance) ELSE 0 END) AS "0-30",
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 31 AND 60 THEN ABS(tb.closing_balance) ELSE 0 END) AS "31-60",
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date BETWEEN 61 AND 90 THEN ABS(tb.closing_balance) ELSE 0 END) AS "61-90",
-     SUM(CASE WHEN CURRENT_DATE - tb.due_date > 90 THEN ABS(tb.closing_balance) ELSE 0 END) AS "90+",
-     SUM(ABS(tb.closing_balance)) AS total_outstanding
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date <= 30
+              THEN ABS(tb.amount) ELSE 0 END) AS "0-30",
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date BETWEEN 31 AND 60
+              THEN ABS(tb.amount) ELSE 0 END) AS "31-60",
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date BETWEEN 61 AND 90
+              THEN ABS(tb.amount) ELSE 0 END) AS "61-90",
+     SUM(CASE WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date > 90
+              THEN ABS(tb.amount) ELSE 0 END) AS "90+",
+     SUM(ABS(tb.amount)) AS total_billed
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
-   WHERE tb.closing_balance <> 0 AND tv.is_invoice = 1;
+   WHERE tv.is_invoice = 1;
    """,
    "What is the total receivables ageing summary?")
 
@@ -889,14 +888,14 @@ sk("ageing_overdue_90plus", "Q029", "Sales / Marketing", "ageing", 3,
    ["trn_bill","mst_ledger","trn_voucher"],
    """
    SELECT ml.name AS customer,
-     tv.voucher_number, tv.date AS invoice_date, tb.due_date,
-     CURRENT_DATE - tb.due_date AS days_overdue,
-     ABS(tb.closing_balance) AS outstanding
+     tv.voucher_number, tv.date AS invoice_date,
+     (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date AS due_date,
+     CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date AS days_overdue,
+     ABS(tb.amount) AS bill_amount
    FROM trn_bill tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    JOIN mst_ledger ml ON tv._party_name = ml.guid
-   WHERE tb.closing_balance <> 0
-     AND CURRENT_DATE - tb.due_date > 90
+   WHERE CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period,30))::date > 90
    ORDER BY days_overdue DESC;
    """,
    "Which invoices are more than 90 days overdue?")
@@ -1039,19 +1038,18 @@ sk("avg_order_value_by_customer", "Q033", "Sales / Marketing", "avg_order_value"
    "Show average order value per customer.")
 
 # ── Q034 sales_by_state ───────────────────────────────────────────────────────
-sk("sales_by_state", "Q034", "Sales / Marketing", "sales_by_state", 3,
-   ["mst_ledger","trn_accounting","trn_voucher"],
+sk("sales_by_state", "Q034", "Sales / Marketing", "sales_by_state", 2,
+   ["trn_voucher","trn_accounting"],
    f"""
-   SELECT COALESCE(ml.place_of_supply, 'Unknown') AS state,
+   SELECT COALESCE(tv.place_of_supply, 'Not Set') AS state,
      COUNT(DISTINCT tv.guid) AS invoices,
      -SUM(ta.amount) AS total_sales
    FROM trn_voucher tv
    JOIN trn_accounting ta ON ta.guid = tv.guid
-   JOIN mst_ledger ml ON ta._ledger = ml.guid
    WHERE tv.is_invoice = 1
      AND ta.ledger = tv.party_name AND ta.amount < 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
-   GROUP BY ml.place_of_supply
+   GROUP BY tv.place_of_supply
    ORDER BY total_sales DESC;
    """,
    "Show sales broken down by customer state.")
@@ -1060,9 +1058,9 @@ sk("sales_by_state", "Q034", "Sales / Marketing", "sales_by_state", 3,
 sk("discount_given_total", "Q035", "Sales / Marketing", "discount_given", 2,
    ["trn_inventory","trn_voucher"],
    f"""
-   SELECT SUM(ti.discount) AS total_discount_given,
+   SELECT SUM(ti.discount_amount) AS total_discount_given,
      -SUM(ti.amount) AS gross_sales,
-     ROUND(SUM(ti.discount) / NULLIF(-SUM(ti.amount), 0) * 100, 2) AS discount_pct
+     ROUND(SUM(ti.discount_amount) / NULLIF(-SUM(ti.amount), 0) * 100, 2) AS discount_pct
    FROM trn_inventory ti
    JOIN trn_voucher tv ON ti.guid = tv.guid
    WHERE tv.is_invoice = 1 AND ti.quantity < 0
@@ -1074,13 +1072,13 @@ sk("discount_given_by_item", "Q035", "Sales / Marketing", "discount_given", 3,
    ["trn_inventory","mst_stock_item","trn_voucher"],
    f"""
    SELECT msi.name AS item,
-     SUM(ti.discount) AS total_discount,
+     SUM(ti.discount_amount) AS total_discount,
      -SUM(ti.amount) AS sales_value
    FROM trn_inventory ti
    JOIN mst_stock_item msi ON ti._item = msi.guid
    JOIN trn_voucher tv ON ti.guid = tv.guid
    WHERE tv.is_invoice = 1 AND ti.quantity < 0
-     AND ti.discount > 0
+     AND ti.discount_amount > 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
    GROUP BY msi.name
    ORDER BY total_discount DESC;
@@ -1117,13 +1115,14 @@ sk("stock_on_hand_list", "Q037", "Store / Inventory", "stock_on_hand", 1,
 sk("stock_on_hand_low", "Q037", "Store / Inventory", "stock_on_hand", 1,
    ["mst_stock_item"],
    """
-   SELECT msi.name, msi.closing_balance AS qty, msi.uom
+   SELECT msi.name, msi.closing_balance AS qty, msi.uom,
+     msi.closing_rate AS unit_rate
    FROM mst_stock_item msi
-   WHERE msi.closing_balance <= msi.reorder_level
-     AND msi.closing_balance >= 0
+   WHERE msi.closing_balance > 0
+     AND msi.closing_balance < 10
    ORDER BY msi.closing_balance ASC;
    """,
-   "Which items have stock at or below reorder level?")
+   "Which items are running low on stock (less than 10 units)?")
 
 # ── Q038 total_stock_value ────────────────────────────────────────────────────
 sk("total_stock_value", "Q038", "Store / Inventory", "total_stock_value", 1,
@@ -1142,7 +1141,7 @@ sk("total_stock_value_by_group", "Q038", "Store / Inventory", "total_stock_value
      SUM(msi.closing_balance) AS total_qty,
      -SUM(msi.closing_value) AS total_value
    FROM mst_stock_item msi
-   JOIN mst_stock_group msg ON msi._stock_group = msg.guid
+   JOIN mst_stock_group msg ON msi._parent = msg.guid
    GROUP BY msg.name
    ORDER BY total_value DESC;
    """,
@@ -1186,7 +1185,7 @@ sk("stock_by_group", "Q040", "Store / Inventory", "stock_by_group", 2,
      SUM(msi.closing_balance) AS total_qty,
      -SUM(msi.closing_value) AS total_value
    FROM mst_stock_item msi
-   JOIN mst_stock_group msg ON msi._stock_group = msg.guid
+   JOIN mst_stock_group msg ON msi._parent = msg.guid
    GROUP BY msg.name
    ORDER BY total_value DESC;
    """,
@@ -1260,57 +1259,55 @@ sk("reorder_items", "Q045", "Store / Inventory", "reorder", 1,
    ["mst_stock_item"],
    """
    SELECT msi.name AS item, msi.closing_balance AS qty_on_hand,
-     msi.reorder_level, msi.uom,
-     msi.reorder_level - msi.closing_balance AS qty_to_order
+     msi.uom, msi.closing_rate AS unit_rate
    FROM mst_stock_item msi
-   WHERE msi.closing_balance <= msi.reorder_level
-     AND msi.reorder_level > 0
-   ORDER BY qty_to_order DESC;
+   WHERE msi.closing_balance > 0
+     AND msi.closing_balance < 20
+   ORDER BY msi.closing_balance ASC;
    """,
-   "Which items need to be reordered?")
+   "Which items are running low and need to be reordered?")
 
-sk("reorder_by_supplier", "Q045", "Store / Inventory", "reorder", 3,
+sk("reorder_by_group", "Q045", "Store / Inventory", "reorder", 2,
    ["mst_stock_item","mst_stock_group"],
    """
    SELECT msg.name AS stock_group,
-     COUNT(msi.guid) AS items_below_reorder,
-     SUM(msi.reorder_level - msi.closing_balance) AS total_qty_to_order
+     COUNT(msi.guid) AS low_stock_items,
+     SUM(msi.closing_balance) AS total_qty_remaining
    FROM mst_stock_item msi
-   JOIN mst_stock_group msg ON msi._stock_group = msg.guid
-   WHERE msi.closing_balance <= msi.reorder_level
-     AND msi.reorder_level > 0
-   GROUP BY msg.name;
+   JOIN mst_stock_group msg ON msi._parent = msg.guid
+   WHERE msi.closing_balance > 0
+     AND msi.closing_balance < 20
+   GROUP BY msg.name
+   ORDER BY low_stock_items DESC;
    """,
-   "How many items need reordering per stock group?")
+   "How many items are running low per stock group?")
 
 # ── Q046 batch_expiry ─────────────────────────────────────────────────────────
 sk("batch_expiry_upcoming", "Q046", "Store / Inventory", "batch_expiry", 2,
    ["trn_batch","mst_stock_item"],
    """
-   SELECT msi.name AS item, tb.batch_name,
-     tb.expiry_date, tb.closing_balance AS qty,
-     tb.expiry_date - CURRENT_DATE AS days_to_expiry
+   SELECT msi.name AS item, tb.name AS batch_name,
+     tb.quantity AS batch_qty, tb.godown
    FROM trn_batch tb
    JOIN mst_stock_item msi ON tb._item = msi.guid
-   WHERE tb.expiry_date IS NOT NULL
-     AND tb.expiry_date > CURRENT_DATE
-     AND tb.expiry_date <= CURRENT_DATE + INTERVAL '90 days'
-     AND tb.closing_balance > 0
-   ORDER BY tb.expiry_date;
+   WHERE tb.quantity > 0
+   ORDER BY msi.name, tb.name;
    """,
-   "Which batches are expiring in the next 90 days?")
+   "Show all open batch quantities by item and godown.")
 
 sk("batch_expiry_all", "Q046", "Store / Inventory", "batch_expiry", 2,
    ["trn_batch","mst_stock_item"],
    """
-   SELECT msi.name AS item, tb.batch_name,
-     tb.expiry_date, tb.closing_balance AS qty_remaining
+   SELECT msi.name AS item,
+     COUNT(tb.name) AS batch_count,
+     SUM(tb.quantity) AS total_batch_qty
    FROM trn_batch tb
    JOIN mst_stock_item msi ON tb._item = msi.guid
-   WHERE tb.expiry_date IS NOT NULL AND tb.closing_balance > 0
-   ORDER BY tb.expiry_date NULLS LAST;
+   WHERE tb.quantity > 0
+   GROUP BY msi.name
+   ORDER BY total_batch_qty DESC;
    """,
-   "Show all batch expiry dates for items in stock.")
+   "Show batch-wise stock quantity by item.")
 
 # ── Q047 item_movement ────────────────────────────────────────────────────────
 sk("item_movement_period", "Q047", "Store / Inventory", "item_movement", 3,
@@ -1412,11 +1409,10 @@ sk("godown_transfer_list", "Q050", "Store / Inventory", "godown_transfer", 3,
    ["trn_inventory","mst_godown","trn_voucher"],
    f"""
    SELECT tv.date, tv.voucher_number,
-     mg_from.name AS from_godown,
-     mg_to.name AS to_godown,
+     mgd.name AS godown,
      ti.quantity, ti.amount
    FROM trn_inventory ti
-   JOIN mst_godown mg_from ON ti._godown = mg_from.guid
+   JOIN mst_godown mgd ON ti._godown = mgd.guid
    JOIN trn_voucher tv ON ti.guid = tv.guid
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
    WHERE mvt.name ILIKE '%Transfer%'
@@ -1563,7 +1559,7 @@ sk("headcount_total", "Q056", "HR / Admin", "headcount", 1,
    """
    SELECT COUNT(*) AS total_employees
    FROM mst_employee
-   WHERE is_active = 1;
+   WHERE date_of_release IS NULL;
    """,
    "How many active employees do we have?")
 
@@ -1572,7 +1568,7 @@ sk("headcount_by_group", "Q056", "HR / Admin", "headcount", 1,
    """
    SELECT parent AS department, COUNT(*) AS headcount
    FROM mst_employee
-   WHERE is_active = 1
+   WHERE date_of_release IS NULL
    GROUP BY parent
    ORDER BY headcount DESC;
    """,
@@ -1584,7 +1580,7 @@ sk("attendance_days_employee", "Q057", "HR / Admin", "attendance_days", 4,
    f"""
    SELECT me.name AS employee,
      mat.name AS attendance_type,
-     SUM(ta.attendancevalue) AS days
+     SUM(ta.type_value) AS days
    FROM mst_employee me
    JOIN trn_attendance ta ON ta._employee_name = me.guid
    JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
@@ -1599,7 +1595,7 @@ sk("attendance_days_summary", "Q057", "HR / Admin", "attendance_days", 3,
    ["mst_attendance_type","trn_attendance","trn_voucher"],
    f"""
    SELECT mat.name AS attendance_type,
-     SUM(ta.attendancevalue) AS total_days
+     SUM(ta.type_value) AS total_days
    FROM trn_attendance ta
    JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
    JOIN trn_voucher tv ON ta.guid = tv.guid
@@ -1614,7 +1610,7 @@ sk("absent_list_period", "Q058", "HR / Admin", "absent_list", 4,
    ["mst_employee","trn_attendance","mst_attendance_type","trn_voucher"],
    f"""
    SELECT me.name AS employee,
-     SUM(ta.attendancevalue) AS absent_days
+     SUM(ta.type_value) AS absent_days
    FROM mst_employee me
    JOIN trn_attendance ta ON ta._employee_name = me.guid
    JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
@@ -1630,7 +1626,7 @@ sk("absent_list_month", "Q058", "HR / Admin", "absent_list", 4,
    ["mst_employee","trn_attendance","mst_attendance_type","trn_voucher"],
    """
    SELECT me.name AS employee,
-     SUM(ta.attendancevalue) AS absent_days
+     SUM(ta.type_value) AS absent_days
    FROM mst_employee me
    JOIN trn_attendance ta ON ta._employee_name = me.guid
    JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
@@ -1648,7 +1644,7 @@ sk("overtime_by_employee", "Q059", "HR / Admin", "overtime", 4,
    ["trn_attendance","mst_attendance_type","trn_voucher","mst_employee"],
    f"""
    SELECT me.name AS employee,
-     SUM(ta.attendancevalue) AS overtime_hours
+     SUM(ta.type_value) AS overtime_hours
    FROM trn_attendance ta
    JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
    JOIN trn_voucher tv ON ta.guid = tv.guid
@@ -2023,8 +2019,7 @@ sk("voucher_count_by_type", "Q074", "Owner / Seth", "voucher_count", 2,
    ["trn_voucher","mst_vouchertype"],
    f"""
    SELECT mvt.name AS voucher_type,
-     COUNT(tv.guid) AS voucher_count,
-     SUM(ABS(tv.amount)) AS total_amount
+     COUNT(tv.guid) AS voucher_count
    FROM trn_voucher tv
    JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
    WHERE tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
@@ -2101,7 +2096,7 @@ sk("cheques_pending_by_age", "Q023", "Accountant / Munim", "cheques_pending", 3,
    FROM trn_bank tb
    JOIN trn_voucher tv ON tb.guid = tv.guid
    WHERE tb.transaction_type = 'Cheque'
-     AND (tb.bank_date IS NULL OR tb.is_reconciled = 0);
+     AND tb.bankers_date IS NULL;
    """,
    "Show pending cheques grouped by age bucket.")
 
@@ -2133,19 +2128,18 @@ sk("dormant_customers_never", "Q032", "Sales / Marketing", "dormant_customers", 
    """,
    "Which customers have never made a purchase?")
 
-sk("sales_by_state_top", "Q034", "Sales / Marketing", "sales_by_state", 3,
-   ["mst_ledger","trn_accounting","trn_voucher"],
+sk("sales_by_state_top", "Q034", "Sales / Marketing", "sales_by_state", 2,
+   ["trn_voucher","trn_accounting"],
    f"""
-   SELECT COALESCE(ml.place_of_supply, 'Not Set') AS state,
+   SELECT COALESCE(tv.place_of_supply, 'Not Set') AS state,
      -SUM(ta.amount) AS total_sales,
      COUNT(DISTINCT tv.guid) AS invoices
    FROM trn_voucher tv
    JOIN trn_accounting ta ON ta.guid = tv.guid
-   JOIN mst_ledger ml ON ta._ledger = ml.guid
    WHERE tv.is_invoice = 1
      AND ta.ledger = tv.party_name AND ta.amount < 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
-   GROUP BY ml.place_of_supply
+   GROUP BY tv.place_of_supply
    ORDER BY total_sales DESC
    LIMIT 10;
    """,
@@ -2172,7 +2166,7 @@ sk("stock_by_group_detail", "Q040", "Store / Inventory", "stock_by_group", 2,
    SELECT msg.name AS stock_group, msi.name AS item,
      msi.closing_balance AS qty, -msi.closing_value AS value
    FROM mst_stock_item msi
-   JOIN mst_stock_group msg ON msi._stock_group = msg.guid
+   JOIN mst_stock_group msg ON msi._parent = msg.guid
    WHERE msi.closing_balance > 0
    ORDER BY msg.name, value DESC;
    """,
@@ -2213,7 +2207,7 @@ sk("fast_moving_by_group", "Q043", "Store / Inventory", "fast_moving", 3,
      SUM(ABS(ti.quantity)) AS qty_sold
    FROM trn_inventory ti
    JOIN mst_stock_item msi ON ti._item = msi.guid
-   JOIN mst_stock_group msg ON msi._stock_group = msg.guid
+   JOIN mst_stock_group msg ON msi._parent = msg.guid
    JOIN trn_voucher tv ON ti.guid = tv.guid
    WHERE tv.is_invoice = 1 AND ti.quantity < 0
      AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
@@ -2288,7 +2282,7 @@ sk("overtime_summary", "Q059", "HR / Admin", "overtime", 3,
    f"""
    SELECT EXTRACT(MONTH FROM tv.date) AS month,
      COUNT(DISTINCT ta._employee_name) AS employees_with_ot,
-     SUM(ta.attendancevalue) AS total_ot_hours
+     SUM(ta.type_value) AS total_ot_hours
    FROM trn_attendance ta
    JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
    JOIN trn_voucher tv ON ta.guid = tv.guid
@@ -2396,10 +2390,8 @@ sk("expense_ratio_by_group", "Q072", "Owner / Seth", "expense_ratio", 3,
    f"""
    SELECT mg.name AS expense_group,
      SUM(ta.amount) AS expense_amount,
-     -SUM(CASE WHEN mg2.name = 'Sales Accounts' THEN ta2.amount ELSE 0 END) AS total_sales,
-     ROUND(SUM(ta.amount) /
-       NULLIF(-SUM(CASE WHEN mg2.name = 'Sales Accounts' THEN ta2.amount ELSE 0 END), 0) * 100, 2
-     ) AS expense_ratio_pct
+     s.sales AS total_sales,
+     ROUND(SUM(ta.amount) / NULLIF(s.sales, 0) * 100, 2) AS expense_ratio_pct
    FROM trn_accounting ta
    JOIN trn_voucher tv ON ta.guid = tv.guid
    JOIN mst_ledger ml ON ta._ledger = ml.guid
