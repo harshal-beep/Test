@@ -1,0 +1,9 @@
+pandas
+openpyxl
+networkx
+psycopg[binary]
+pyyaml
+anthropic
+sentence-transformers      # back-translation QA (intent-drift filter)
+tqdm
+python-dotenv

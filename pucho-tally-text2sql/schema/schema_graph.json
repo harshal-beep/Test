@@ -1,0 +1,4345 @@
+[
+  {
+    "a": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "r": {
+      "identity": 6917546619827225168,
+      "start": 98895,
+      "end": 98896,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_parent"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225168",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98896"
+    },
+    "b": {
+      "identity": 98896,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "primary_group",
+          "is_revenue",
+          "is_deemedpositive",
+          "is_reserved",
+          "affects_gross_profit",
+          "sort_position"
+        ],
+        "name": "mst_group",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98896"
+    }
+  },
+  {
+    "a": {
+      "identity": 98898,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "decimal(9,4)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category",
+          "_category",
+          "alias",
+          "description",
+          "notes",
+          "part_number",
+          "uom",
+          "_uom",
+          "alternate_uom",
+          "_alternate_uom",
+          "conversion",
+          "opening_balance",
+          "opening_rate",
+          "opening_value",
+          "closing_balance",
+          "closing_rate",
+          "closing_value",
+          "costing_method",
+          "gst_type_of_supply",
+          "gst_hsn_code",
+          "gst_hsn_description",
+          "gst_rate",
+          "gst_taxability"
+        ],
+        "name": "mst_stock_item",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    },
+    "r": {
+      "identity": 6917546619827225171,
+      "start": 98898,
+      "end": 98899,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_parent"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225171",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98899"
+    },
+    "b": {
+      "identity": 98899,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent"
+        ],
+        "name": "mst_stock_group",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98899"
+    }
+  },
+  {
+    "a": {
+      "identity": 98898,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "decimal(9,4)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category",
+          "_category",
+          "alias",
+          "description",
+          "notes",
+          "part_number",
+          "uom",
+          "_uom",
+          "alternate_uom",
+          "_alternate_uom",
+          "conversion",
+          "opening_balance",
+          "opening_rate",
+          "opening_value",
+          "closing_balance",
+          "closing_rate",
+          "closing_value",
+          "costing_method",
+          "gst_type_of_supply",
+          "gst_hsn_code",
+          "gst_hsn_description",
+          "gst_rate",
+          "gst_taxability"
+        ],
+        "name": "mst_stock_item",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    },
+    "r": {
+      "identity": 6917546619827225172,
+      "start": 98898,
+      "end": 98900,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_category"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225172",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98900"
+    },
+    "b": {
+      "identity": 98900,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent"
+        ],
+        "name": "mst_stock_category",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98900"
+    }
+  },
+  {
+    "a": {
+      "identity": 98898,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "decimal(9,4)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category",
+          "_category",
+          "alias",
+          "description",
+          "notes",
+          "part_number",
+          "uom",
+          "_uom",
+          "alternate_uom",
+          "_alternate_uom",
+          "conversion",
+          "opening_balance",
+          "opening_rate",
+          "opening_value",
+          "closing_balance",
+          "closing_rate",
+          "closing_value",
+          "costing_method",
+          "gst_type_of_supply",
+          "gst_hsn_code",
+          "gst_hsn_description",
+          "gst_rate",
+          "gst_taxability"
+        ],
+        "name": "mst_stock_item",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    },
+    "r": {
+      "identity": 6917546619827225174,
+      "start": 98898,
+      "end": 98902,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_uom"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225174",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98902"
+    },
+    "b": {
+      "identity": 98902,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "tinyint",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "decimal(15,4)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "formalname",
+          "is_simple_unit",
+          "base_units",
+          "additional_units",
+          "conversion"
+        ],
+        "name": "mst_uom",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98902"
+    }
+  },
+  {
+    "a": {
+      "identity": 98901,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "address"
+        ],
+        "name": "mst_godown",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    },
+    "r": {
+      "identity": 1157442696420360789,
+      "start": 98901,
+      "end": 98901,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_parent"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1157442696420360789",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    },
+    "b": {
+      "identity": 98901,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "address"
+        ],
+        "name": "mst_godown",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    }
+  },
+  {
+    "a": {
+      "identity": 98904,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category"
+        ],
+        "name": "mst_cost_centre",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    },
+    "r": {
+      "identity": 1159694496234046040,
+      "start": 98904,
+      "end": 98904,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_parent"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1159694496234046040",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    },
+    "b": {
+      "identity": 98904,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category"
+        ],
+        "name": "mst_cost_centre",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    }
+  },
+  {
+    "a": {
+      "identity": 98905,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "date",
+          "date",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(32)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "date",
+          "date",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "id_number",
+          "date_of_joining",
+          "date_of_release",
+          "designation",
+          "function_role",
+          "location",
+          "gender",
+          "date_of_birth",
+          "blood_group",
+          "father_mother_name",
+          "spouse_name",
+          "address",
+          "mobile",
+          "email",
+          "pan",
+          "aadhar",
+          "uan",
+          "pf_number",
+          "pf_joining_date",
+          "pf_relieving_date",
+          "pr_account_number"
+        ],
+        "name": "mst_employee",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    },
+    "r": {
+      "identity": 1155190896606675545,
+      "start": 98905,
+      "end": 98905,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_parent"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675545",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    },
+    "b": {
+      "identity": 98905,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "date",
+          "date",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(32)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "date",
+          "date",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "id_number",
+          "date_of_joining",
+          "date_of_release",
+          "designation",
+          "function_role",
+          "location",
+          "gender",
+          "date_of_birth",
+          "blood_group",
+          "father_mother_name",
+          "spouse_name",
+          "address",
+          "mobile",
+          "email",
+          "pan",
+          "aadhar",
+          "uan",
+          "pf_number",
+          "pf_joining_date",
+          "pf_relieving_date",
+          "pr_account_number"
+        ],
+        "name": "mst_employee",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    }
+  },
+  {
+    "a": {
+      "identity": 98906,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "payslip_name",
+          "pay_type",
+          "income_type",
+          "calculation_type",
+          "leave_type",
+          "calculation_period"
+        ],
+        "name": "mst_payhead",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98906"
+    },
+    "r": {
+      "identity": 1155190896606675546,
+      "start": 98906,
+      "end": 98906,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_parent"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675546",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98906",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98906"
+    },
+    "b": {
+      "identity": 98906,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "payslip_name",
+          "pay_type",
+          "income_type",
+          "calculation_type",
+          "leave_type",
+          "calculation_period"
+        ],
+        "name": "mst_payhead",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98906"
+    }
+  },
+  {
+    "a": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "r": {
+      "identity": 1155190896606675548,
+      "start": 98908,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_party_name"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675548",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "r": {
+      "identity": 6917546619827225169,
+      "start": 98908,
+      "end": 98897,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_voucher_type"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225169",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98897"
+    },
+    "b": {
+      "identity": 98897,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "numbering_method",
+          "is_deemedpositive",
+          "affects_stock"
+        ],
+        "name": "mst_vouchertype",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98897"
+    }
+  },
+  {
+    "a": {
+      "identity": 98909,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(16)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "amount",
+          "amount_forex",
+          "currency"
+        ],
+        "name": "trn_accounting",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98909"
+    },
+    "r": {
+      "identity": 1152939096792990301,
+      "start": 98909,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_ledger"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990301",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98909",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98909,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(16)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "amount",
+          "amount_forex",
+          "currency"
+        ],
+        "name": "trn_accounting",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98909"
+    },
+    "r": {
+      "identity": 1155190896606675549,
+      "start": 98909,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675549",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98909",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98910,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "date"
+        ],
+        "columns": [
+          "guid",
+          "item",
+          "_item",
+          "quantity",
+          "rate",
+          "amount",
+          "additional_amount",
+          "discount_amount",
+          "godown",
+          "_godown",
+          "tracking_number",
+          "order_number",
+          "order_duedate"
+        ],
+        "name": "trn_inventory",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98910"
+    },
+    "r": {
+      "identity": 1152939096792990302,
+      "start": 98910,
+      "end": 98898,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_item"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990302",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98910",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    },
+    "b": {
+      "identity": 98898,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "decimal(9,4)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category",
+          "_category",
+          "alias",
+          "description",
+          "notes",
+          "part_number",
+          "uom",
+          "_uom",
+          "alternate_uom",
+          "_alternate_uom",
+          "conversion",
+          "opening_balance",
+          "opening_rate",
+          "opening_value",
+          "closing_balance",
+          "closing_rate",
+          "closing_value",
+          "costing_method",
+          "gst_type_of_supply",
+          "gst_hsn_code",
+          "gst_hsn_description",
+          "gst_rate",
+          "gst_taxability"
+        ],
+        "name": "mst_stock_item",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    }
+  },
+  {
+    "a": {
+      "identity": 98910,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "date"
+        ],
+        "columns": [
+          "guid",
+          "item",
+          "_item",
+          "quantity",
+          "rate",
+          "amount",
+          "additional_amount",
+          "discount_amount",
+          "godown",
+          "_godown",
+          "tracking_number",
+          "order_number",
+          "order_duedate"
+        ],
+        "name": "trn_inventory",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98910"
+    },
+    "r": {
+      "identity": 6917546619827225173,
+      "start": 98910,
+      "end": 98901,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_godown"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225173",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98910",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    },
+    "b": {
+      "identity": 98901,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "address"
+        ],
+        "name": "mst_godown",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    }
+  },
+  {
+    "a": {
+      "identity": 98910,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "date"
+        ],
+        "columns": [
+          "guid",
+          "item",
+          "_item",
+          "quantity",
+          "rate",
+          "amount",
+          "additional_amount",
+          "discount_amount",
+          "godown",
+          "_godown",
+          "tracking_number",
+          "order_number",
+          "order_duedate"
+        ],
+        "name": "trn_inventory",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98910"
+    },
+    "r": {
+      "identity": 1155190896606675550,
+      "start": 98910,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675550",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98910",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98911,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "name",
+          "amount",
+          "billtype",
+          "bill_credit_period"
+        ],
+        "name": "trn_bill",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98911"
+    },
+    "r": {
+      "identity": 1152939096792990303,
+      "start": 98911,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_ledger"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990303",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98911",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98911,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "name",
+          "amount",
+          "billtype",
+          "bill_credit_period"
+        ],
+        "name": "trn_bill",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98911"
+    },
+    "r": {
+      "identity": 1155190896606675551,
+      "start": 98911,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675551",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98911",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98912,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(1024)",
+          "nvarchar(64)",
+          "decimal(17,2)",
+          "date"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "transaction_type",
+          "instrument_date",
+          "instrument_number",
+          "bank_name",
+          "amount",
+          "bankers_date"
+        ],
+        "name": "trn_bank",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98912"
+    },
+    "r": {
+      "identity": 1152939096792990304,
+      "start": 98912,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_ledger"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990304",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98912",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98912,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(1024)",
+          "nvarchar(64)",
+          "decimal(17,2)",
+          "date"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "transaction_type",
+          "instrument_date",
+          "instrument_number",
+          "bank_name",
+          "amount",
+          "bankers_date"
+        ],
+        "name": "trn_bank",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98912"
+    },
+    "r": {
+      "identity": 1155190896606675552,
+      "start": 98912,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675552",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98912",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98913,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98913"
+    },
+    "r": {
+      "identity": 1152939096792990305,
+      "start": 98913,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_ledger"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990305",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98913",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98913,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98913"
+    },
+    "r": {
+      "identity": 1155190896606675553,
+      "start": 98913,
+      "end": 98904,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_costcentre"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675553",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98913",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    },
+    "b": {
+      "identity": 98904,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category"
+        ],
+        "name": "mst_cost_centre",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    }
+  },
+  {
+    "a": {
+      "identity": 98913,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98913"
+    },
+    "r": {
+      "identity": 1157442696420360801,
+      "start": 98913,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1157442696420360801",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98913",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98914,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914"
+    },
+    "r": {
+      "identity": 1152939096792990306,
+      "start": 98914,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_ledger"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990306",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98914,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914"
+    },
+    "r": {
+      "identity": 1155190896606675554,
+      "start": 98914,
+      "end": 98903,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_costcategory"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675554",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98903"
+    },
+    "b": {
+      "identity": 98903,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "allocate_revenue",
+          "allocate_non_revenue"
+        ],
+        "name": "mst_cost_category",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98903"
+    }
+  },
+  {
+    "a": {
+      "identity": 98914,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914"
+    },
+    "r": {
+      "identity": 6917546619827225176,
+      "start": 98914,
+      "end": 98904,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_costcentre"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225176",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    },
+    "b": {
+      "identity": 98904,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category"
+        ],
+        "name": "mst_cost_centre",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    }
+  },
+  {
+    "a": {
+      "identity": 98914,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914"
+    },
+    "r": {
+      "identity": 1157442696420360802,
+      "start": 98914,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1157442696420360802",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98914",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98915,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "item",
+          "_item",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_inventory_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915"
+    },
+    "r": {
+      "identity": 1152939096792990307,
+      "start": 98915,
+      "end": 98898,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_item"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990307",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    },
+    "b": {
+      "identity": 98898,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "decimal(9,4)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category",
+          "_category",
+          "alias",
+          "description",
+          "notes",
+          "part_number",
+          "uom",
+          "_uom",
+          "alternate_uom",
+          "_alternate_uom",
+          "conversion",
+          "opening_balance",
+          "opening_rate",
+          "opening_value",
+          "closing_balance",
+          "closing_rate",
+          "closing_value",
+          "costing_method",
+          "gst_type_of_supply",
+          "gst_hsn_code",
+          "gst_hsn_description",
+          "gst_rate",
+          "gst_taxability"
+        ],
+        "name": "mst_stock_item",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    }
+  },
+  {
+    "a": {
+      "identity": 98915,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "item",
+          "_item",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_inventory_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915"
+    },
+    "r": {
+      "identity": 1155190896606675555,
+      "start": 98915,
+      "end": 98903,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_costcategory"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675555",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98903"
+    },
+    "b": {
+      "identity": 98903,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "allocate_revenue",
+          "allocate_non_revenue"
+        ],
+        "name": "mst_cost_category",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98903"
+    }
+  },
+  {
+    "a": {
+      "identity": 98915,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "item",
+          "_item",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_inventory_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915"
+    },
+    "r": {
+      "identity": 1157442696420360803,
+      "start": 98915,
+      "end": 98904,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_costcentre"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1157442696420360803",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    },
+    "b": {
+      "identity": 98904,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category"
+        ],
+        "name": "mst_cost_centre",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98904"
+    }
+  },
+  {
+    "a": {
+      "identity": 98915,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "item",
+          "_item",
+          "costcategory",
+          "_costcategory",
+          "costcentre",
+          "_costcentre",
+          "amount"
+        ],
+        "name": "trn_cost_inventory_category_centre",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915"
+    },
+    "r": {
+      "identity": 1159694496234046051,
+      "start": 98915,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1159694496234046051",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98915",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98916,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "item",
+          "_item",
+          "name",
+          "quantity",
+          "amount",
+          "godown",
+          "_godown",
+          "destination_godown",
+          "_destination_godown",
+          "tracking_number"
+        ],
+        "name": "trn_batch",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98916"
+    },
+    "r": {
+      "identity": 1152939096792990308,
+      "start": 98916,
+      "end": 98898,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_item"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990308",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98916",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    },
+    "b": {
+      "identity": 98898,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "decimal(15,4)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "decimal(9,4)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "category",
+          "_category",
+          "alias",
+          "description",
+          "notes",
+          "part_number",
+          "uom",
+          "_uom",
+          "alternate_uom",
+          "_alternate_uom",
+          "conversion",
+          "opening_balance",
+          "opening_rate",
+          "opening_value",
+          "closing_balance",
+          "closing_rate",
+          "closing_value",
+          "costing_method",
+          "gst_type_of_supply",
+          "gst_hsn_code",
+          "gst_hsn_description",
+          "gst_rate",
+          "gst_taxability"
+        ],
+        "name": "mst_stock_item",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98898"
+    }
+  },
+  {
+    "a": {
+      "identity": 98916,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "item",
+          "_item",
+          "name",
+          "quantity",
+          "amount",
+          "godown",
+          "_godown",
+          "destination_godown",
+          "_destination_godown",
+          "tracking_number"
+        ],
+        "name": "trn_batch",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98916"
+    },
+    "r": {
+      "identity": 1155190896606675556,
+      "start": 98916,
+      "end": 98901,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_godown"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675556",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98916",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    },
+    "b": {
+      "identity": 98901,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "address"
+        ],
+        "name": "mst_godown",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98901"
+    }
+  },
+  {
+    "a": {
+      "identity": 98916,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "decimal(15,4)",
+          "decimal(17,2)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)"
+        ],
+        "columns": [
+          "guid",
+          "item",
+          "_item",
+          "name",
+          "quantity",
+          "amount",
+          "godown",
+          "_godown",
+          "destination_godown",
+          "_destination_godown",
+          "tracking_number"
+        ],
+        "name": "trn_batch",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98916"
+    },
+    "r": {
+      "identity": 1157442696420360804,
+      "start": 98916,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1157442696420360804",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98916",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98917,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "decimal(9,4)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "amount",
+          "additional_allocation_type",
+          "rate_of_invoice_tax"
+        ],
+        "name": "trn_inventory_additional_cost",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98917"
+    },
+    "r": {
+      "identity": 1152939096792990309,
+      "start": 98917,
+      "end": 98895,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_ledger"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990309",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98917",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    },
+    "b": {
+      "identity": 98895,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "tinyint",
+          "tinyint",
+          "decimal(17,2)",
+          "decimal(17,2)",
+          "nvarchar(256)",
+          "nvarchar(1024)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(16)",
+          "decimal(9,4)",
+          "nvarchar(256)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "alias",
+          "description",
+          "notes",
+          "is_revenue",
+          "is_deemedpositive",
+          "opening_balance",
+          "closing_balance",
+          "mailing_name",
+          "mailing_address",
+          "mailing_state",
+          "mailing_country",
+          "mailing_pincode",
+          "email",
+          "mobile",
+          "it_pan",
+          "gstn",
+          "gst_registration_type",
+          "gst_supply_type",
+          "gst_duty_head",
+          "tax_rate",
+          "bank_account_holder",
+          "bank_account_number",
+          "bank_ifsc",
+          "bank_swift",
+          "bank_name",
+          "bank_branch",
+          "bill_credit_period"
+        ],
+        "name": "mst_ledger",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98895"
+    }
+  },
+  {
+    "a": {
+      "identity": 98917,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "nvarchar(32)",
+          "decimal(9,4)"
+        ],
+        "columns": [
+          "guid",
+          "ledger",
+          "_ledger",
+          "amount",
+          "additional_allocation_type",
+          "rate_of_invoice_tax"
+        ],
+        "name": "trn_inventory_additional_cost",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98917"
+    },
+    "r": {
+      "identity": 1155190896606675557,
+      "start": 98917,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675557",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98917",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98918,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "category",
+          "_category",
+          "employee_name",
+          "_employee_name",
+          "amount",
+          "employee_sort_order"
+        ],
+        "name": "trn_employee",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98918"
+    },
+    "r": {
+      "identity": 1152939096792990310,
+      "start": 98918,
+      "end": 98905,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_employee_name"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990310",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98918",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    },
+    "b": {
+      "identity": 98905,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "date",
+          "date",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(32)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "date",
+          "date",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "id_number",
+          "date_of_joining",
+          "date_of_release",
+          "designation",
+          "function_role",
+          "location",
+          "gender",
+          "date_of_birth",
+          "blood_group",
+          "father_mother_name",
+          "spouse_name",
+          "address",
+          "mobile",
+          "email",
+          "pan",
+          "aadhar",
+          "uan",
+          "pf_number",
+          "pf_joining_date",
+          "pf_relieving_date",
+          "pr_account_number"
+        ],
+        "name": "mst_employee",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    }
+  },
+  {
+    "a": {
+      "identity": 98918,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "int"
+        ],
+        "columns": [
+          "guid",
+          "category",
+          "_category",
+          "employee_name",
+          "_employee_name",
+          "amount",
+          "employee_sort_order"
+        ],
+        "name": "trn_employee",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98918"
+    },
+    "r": {
+      "identity": 1155190896606675558,
+      "start": 98918,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675558",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98918",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98919,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "int",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "category",
+          "_category",
+          "employee_name",
+          "_employee_name",
+          "employee_sort_order",
+          "payhead_name",
+          "_payhead_name",
+          "payhead_sort_order",
+          "amount"
+        ],
+        "name": "trn_payhead",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98919"
+    },
+    "r": {
+      "identity": 1152939096792990311,
+      "start": 98919,
+      "end": 98905,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_employee_name"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990311",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98919",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    },
+    "b": {
+      "identity": 98905,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "date",
+          "date",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(32)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "date",
+          "date",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "id_number",
+          "date_of_joining",
+          "date_of_release",
+          "designation",
+          "function_role",
+          "location",
+          "gender",
+          "date_of_birth",
+          "blood_group",
+          "father_mother_name",
+          "spouse_name",
+          "address",
+          "mobile",
+          "email",
+          "pan",
+          "aadhar",
+          "uan",
+          "pf_number",
+          "pf_joining_date",
+          "pf_relieving_date",
+          "pr_account_number"
+        ],
+        "name": "mst_employee",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    }
+  },
+  {
+    "a": {
+      "identity": 98919,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "int",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "category",
+          "_category",
+          "employee_name",
+          "_employee_name",
+          "employee_sort_order",
+          "payhead_name",
+          "_payhead_name",
+          "payhead_sort_order",
+          "amount"
+        ],
+        "name": "trn_payhead",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98919"
+    },
+    "r": {
+      "identity": 6917546619827225178,
+      "start": 98919,
+      "end": 98906,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_payhead_name"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:6917546619827225178",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98919",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98906"
+    },
+    "b": {
+      "identity": 98906,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "payslip_name",
+          "pay_type",
+          "income_type",
+          "calculation_type",
+          "leave_type",
+          "calculation_period"
+        ],
+        "name": "mst_payhead",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98906"
+    }
+  },
+  {
+    "a": {
+      "identity": 98919,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "int",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "category",
+          "_category",
+          "employee_name",
+          "_employee_name",
+          "employee_sort_order",
+          "payhead_name",
+          "_payhead_name",
+          "payhead_sort_order",
+          "amount"
+        ],
+        "name": "trn_payhead",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98919"
+    },
+    "r": {
+      "identity": 1155190896606675559,
+      "start": 98919,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675559",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98919",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  },
+  {
+    "a": {
+      "identity": 98920,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "employee_name",
+          "_employee_name",
+          "attendancetype_name",
+          "_attendancetype_name",
+          "time_value",
+          "type_value"
+        ],
+        "name": "trn_attendance",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98920"
+    },
+    "r": {
+      "identity": 1152939096792990312,
+      "start": 98920,
+      "end": 98905,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_employee_name"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1152939096792990312",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98920",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    },
+    "b": {
+      "identity": 98905,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "date",
+          "date",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "date",
+          "nvarchar(32)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(256)",
+          "nvarchar(32)",
+          "nvarchar(64)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "nvarchar(32)",
+          "date",
+          "date",
+          "nvarchar(32)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "id_number",
+          "date_of_joining",
+          "date_of_release",
+          "designation",
+          "function_role",
+          "location",
+          "gender",
+          "date_of_birth",
+          "blood_group",
+          "father_mother_name",
+          "spouse_name",
+          "address",
+          "mobile",
+          "email",
+          "pan",
+          "aadhar",
+          "uan",
+          "pf_number",
+          "pf_joining_date",
+          "pf_relieving_date",
+          "pr_account_number"
+        ],
+        "name": "mst_employee",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98905"
+    }
+  },
+  {
+    "a": {
+      "identity": 98920,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "employee_name",
+          "_employee_name",
+          "attendancetype_name",
+          "_attendancetype_name",
+          "time_value",
+          "type_value"
+        ],
+        "name": "trn_attendance",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98920"
+    },
+    "r": {
+      "identity": 1155190896606675560,
+      "start": 98920,
+      "end": 98907,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "_attendancetype_name"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1155190896606675560",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98920",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98907"
+    },
+    "b": {
+      "identity": 98907,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "nvarchar(1024)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(32)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "name",
+          "parent",
+          "_parent",
+          "uom",
+          "_uom",
+          "attendance_type",
+          "attendance_period"
+        ],
+        "name": "mst_attendance_type",
+        "table_type": "MASTER"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98907"
+    }
+  },
+  {
+    "a": {
+      "identity": 98920,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "decimal(17,2)",
+          "decimal(17,2)"
+        ],
+        "columns": [
+          "guid",
+          "employee_name",
+          "_employee_name",
+          "attendancetype_name",
+          "_attendancetype_name",
+          "time_value",
+          "type_value"
+        ],
+        "name": "trn_attendance",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98920"
+    },
+    "r": {
+      "identity": 1157442696420360808,
+      "start": 98920,
+      "end": 98908,
+      "type": "JOINS_ON",
+      "properties": {
+        "to_col": "guid",
+        "from_col": "guid"
+      },
+      "elementId": "5:0d805eda-74d4-4e66-b37f-a3ec47c12421:1157442696420360808",
+      "startNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98920",
+      "endNodeElementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    },
+    "b": {
+      "identity": 98908,
+      "labels": [
+        "SchemaTable"
+      ],
+      "properties": {
+        "column_types": [
+          "varchar(64)",
+          "int",
+          "date",
+          "nvarchar(1024)",
+          "varchar(64)",
+          "nvarchar(64)",
+          "nvarchar(64)",
+          "date",
+          "nvarchar(4000)",
+          "nvarchar(256)",
+          "varchar(64)",
+          "nvarchar(256)",
+          "tinyint",
+          "tinyint",
+          "tinyint",
+          "tinyint"
+        ],
+        "columns": [
+          "guid",
+          "alterid",
+          "date",
+          "voucher_type",
+          "_voucher_type",
+          "voucher_number",
+          "reference_number",
+          "reference_date",
+          "narration",
+          "party_name",
+          "_party_name",
+          "place_of_supply",
+          "is_invoice",
+          "is_accounting_voucher",
+          "is_inventory_voucher",
+          "is_order_voucher"
+        ],
+        "name": "trn_voucher",
+        "table_type": "TRANSACTION"
+      },
+      "elementId": "4:0d805eda-74d4-4e66-b37f-a3ec47c12421:98908"
+    }
+  }
+]
