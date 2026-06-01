@@ -42,12 +42,12 @@ FAILS_FILE  = pathlib.Path("data/paraphrased/failures.jsonl")
 
 # Paraphrases per language bucket
 PER_LANG = {
-    "en":       10,   # English — mix of formal, casual, abbreviated
-    "hi":       10,   # Hindi Devanagari
-    "gu":       10,   # Gujarati script
-    "hinglish": 10,   # Romanised Hindi/Gujarati mix — how real MSME users type
+    "en":       20,   # English — mix of formal, casual, abbreviated
+    "hi":       20,   # Hindi Devanagari
+    "gu":       20,   # Gujarati script
+    "hinglish": 20,   # Romanised Hindi/Gujarati mix — how real MSME users type
 }
-TOTAL_PER_INSTANCE = sum(PER_LANG.values())   # 40
+TOTAL_PER_INSTANCE = sum(PER_LANG.values())   # 80
 
 MODEL    = "claude-haiku-4-5-20251001"        # fast + cheap for bulk paraphrase
 MAX_RETRIES = 4
@@ -111,7 +111,7 @@ def call_claude(client: anthropic.Anthropic, inst: dict[str, Any]) -> dict[str, 
         try:
             msg = client.messages.create(
                 model=MODEL,
-                max_tokens=2048,
+                max_tokens=4096,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}],
             )

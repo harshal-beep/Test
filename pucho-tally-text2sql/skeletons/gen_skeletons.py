@@ -2428,6 +2428,905 @@ sk("top_expense_growth_monthly", "Q073", "Owner / Seth", "top_expense_growth", 3
    """,
    "Show monthly expense trend by ledger.")
 
+# ── Month-filtered variants ───────────────────────────────────────────────────
+sk("profit_month_filter", "Q003", "Owner / Seth", "profit", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT
+     SUM(CASE WHEN mg.name IN ('Sales Accounts','Direct Incomes','Indirect Incomes') THEN -ta.amount ELSE 0 END) AS income,
+     SUM(CASE WHEN mg.name IN ('Direct Expenses','Indirect Expenses') THEN ta.amount ELSE 0 END) AS expenses,
+     SUM(CASE WHEN mg.name IN ('Sales Accounts','Direct Incomes','Indirect Incomes') THEN -ta.amount ELSE 0 END) -
+     SUM(CASE WHEN mg.name IN ('Direct Expenses','Indirect Expenses') THEN ta.amount ELSE 0 END) AS net_profit
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What was my profit in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("gst_output_by_month", "Q018", "Accountant / Munim", "gst_output_tax", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT -SUM(ta.amount) AS gst_output
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Duties & Taxes'
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is total GST output tax for month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("gst_input_by_month", "Q019", "Accountant / Munim", "gst_input_tax", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT SUM(ta.amount) AS gst_input
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Duties & Taxes'
+     AND tv.is_invoice = 1
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is total GST input tax for month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("gst_net_payable_month_filter", "Q020", "Accountant / Munim", "gst_net_payable", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT
+     -SUM(CASE WHEN tv.is_invoice = 1 AND ta.amount < 0 THEN ta.amount ELSE 0 END) AS output_tax,
+     SUM(CASE WHEN tv.is_invoice = 1 AND ta.amount > 0 THEN ta.amount ELSE 0 END) AS input_tax,
+     -SUM(ta.amount) AS net_payable
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Duties & Taxes'
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is net GST payable for month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("collection_by_month", "Q013", "Owner / Seth", "daily_collection", 2,
+   ["trn_accounting","trn_voucher","mst_group"],
+   f"""
+   SELECT tv.date, -SUM(ta.amount) AS collection
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name IN ('Bank Accounts','Cash-in-Hand')
+     AND ta.amount < 0
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY tv.date
+   ORDER BY tv.date;
+   """,
+   "Show daily collections for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("top_customers_month", "Q007", "Owner / Seth", "top_customers", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT tv.party_name, -SUM(ta.amount) AS sales
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Sales Accounts'
+     AND ta.amount < 0
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY tv.party_name
+   ORDER BY sales DESC
+   LIMIT 10;
+   """,
+   "Who are my top customers in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("biggest_expense_month", "Q008", "Owner / Seth", "biggest_expense", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT ml.name AS ledger, SUM(ta.amount) AS expense
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name IN ('Direct Expenses','Indirect Expenses')
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY ml.name
+   ORDER BY expense DESC
+   LIMIT 10;
+   """,
+   "What were my biggest expenses in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("sales_by_gst_rate_month", "Q021", "Accountant / Munim", "sales_by_gst_rate", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT msi.gst_rate, -SUM(ti.amount) AS sales_value, SUM(ABS(ti.quantity)) AS qty_sold
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE tv.is_invoice = 1 AND ti.quantity < 0
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY msi.gst_rate
+   ORDER BY msi.gst_rate;
+   """,
+   "Show sales by GST rate for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("purchase_total_month", "Q005", "Owner / Seth", "payables_total", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT -SUM(ta.amount) AS total_purchases
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Purchase Accounts'
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What were total purchases in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("bank_recon_month", "Q033", "Accountant / Munim", "bank_recon", 2,
+   ["trn_bank","trn_voucher"],
+   f"""
+   SELECT tv.date, tv.voucher_number, tb.transaction_type, tb.amount, tb.bankers_date
+   FROM trn_bank tb
+   JOIN trn_voucher tv ON tb.guid = tv.guid
+   WHERE EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date;
+   """,
+   "Show bank reconciliation entries for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("gross_margin_month", "Q069", "Owner / Seth", "gross_margin", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT
+     -SUM(CASE WHEN mg.name = 'Sales Accounts' THEN ta.amount ELSE 0 END) AS sales,
+     SUM(CASE WHEN mg.name = 'Purchase Accounts' THEN ta.amount ELSE 0 END) AS cogs,
+     -SUM(CASE WHEN mg.name = 'Sales Accounts' THEN ta.amount ELSE 0 END) -
+     SUM(CASE WHEN mg.name = 'Purchase Accounts' THEN ta.amount ELSE 0 END) AS gross_margin
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is my gross margin for month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("expense_total_month", "Q072", "Owner / Seth", "expense_ratio", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT SUM(ta.amount) AS total_expenses
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name IN ('Direct Expenses','Indirect Expenses')
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What were total expenses in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("salary_month_filter", "Q059", "HR / Admin", "salary_total", 3,
+   ["trn_payhead","trn_voucher"],
+   f"""
+   SELECT -SUM(tp.amount) AS total_salary
+   FROM trn_payhead tp
+   JOIN trn_voucher tv ON tp.guid = tv.guid
+   WHERE tp.amount < 0
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What was total salary paid in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("attendance_month", "Q064", "HR / Admin", "attendance_days", 3,
+   ["trn_attendance","mst_attendance_type","trn_voucher","mst_employee"],
+   f"""
+   SELECT me.name AS employee, mat.name AS type, SUM(ta.type_value) AS days
+   FROM trn_attendance ta
+   JOIN mst_attendance_type mat ON ta._attendancetype_name = mat.guid
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_employee me ON ta._employee_name = me.guid
+   WHERE EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY me.name, mat.name
+   ORDER BY me.name;
+   """,
+   "Show attendance summary for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("cost_centre_expense_month", "Q067", "Cost / Project Manager", "cost_centre_expense", 3,
+   ["trn_cost_centre","mst_cost_centre","trn_voucher"],
+   f"""
+   SELECT mcc.name AS cost_centre, SUM(tcc.amount) AS expense
+   FROM trn_cost_centre tcc
+   JOIN mst_cost_centre mcc ON tcc._costcentre = mcc.guid
+   JOIN trn_voucher tv ON tcc.guid = tv.guid
+   WHERE EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY mcc.name
+   ORDER BY expense DESC;
+   """,
+   "Show cost centre expenses for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("interstate_sales_month", "Q024", "Accountant / Munim", "interstate_sales", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT tv.place_of_supply, -SUM(ta.amount) AS sales_value, COUNT(DISTINCT tv.guid) AS invoices
+   FROM trn_voucher tv
+   JOIN trn_accounting ta ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE tv.is_invoice = 1 AND mg.name = 'Sales Accounts' AND ta.amount < 0
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY tv.place_of_supply
+   ORDER BY sales_value DESC;
+   """,
+   "Show interstate sales by state for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("contra_entries_month", "Q035", "Accountant / Munim", "contra_entries", 3,
+   ["trn_accounting","trn_voucher","mst_vouchertype"],
+   f"""
+   SELECT tv.date, tv.voucher_number, tv.narration
+   FROM trn_voucher tv
+   JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
+   WHERE mvt.name ILIKE '%Contra%'
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date;
+   """,
+   "Show contra entries for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("journal_entries_month", "Q036", "Accountant / Munim", "journal_entries", 3,
+   ["trn_accounting","trn_voucher","mst_vouchertype","mst_ledger"],
+   f"""
+   SELECT tv.date, tv.voucher_number, ml.name AS ledger, ta.amount
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
+   WHERE mvt.name ILIKE '%Journal%'
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date, tv.voucher_number;
+   """,
+   "Show journal entries for month {month}.",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("voucher_count_month", "Q074", "Accountant / Munim", "voucher_count", 2,
+   ["trn_voucher","mst_vouchertype"],
+   f"""
+   SELECT mvt.name AS voucher_type, COUNT(*) AS count
+   FROM trn_voucher tv
+   JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
+   WHERE EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY mvt.name
+   ORDER BY count DESC;
+   """,
+   "How many vouchers of each type were entered in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+sk("sales_total_month", "Q001", "Owner / Seth", "sales_total", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT -SUM(ta.amount) AS total_sales
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Sales Accounts'
+     AND EXTRACT(MONTH FROM tv.date) = {{month}}
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What were total sales in month {month}?",
+   slots={"month": {"type": "month", "source": "voucher_dates"}})
+
+# ── Party-filtered variants ───────────────────────────────────────────────────
+sk("party_sales_detail", "Q007", "Owner / Seth", "top_customers", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT tv.date, tv.voucher_number, -ta.amount AS amount
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Sales Accounts' AND ta.amount < 0
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show all sales to party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_purchases_detail", "Q005", "Owner / Seth", "payables_total", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT tv.date, tv.voucher_number, ta.amount AS purchase_amount
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Purchase Accounts'
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show all purchases from party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_outstanding_balance", "Q004", "Owner / Seth", "receivables_total", 2,
+   ["mst_ledger","mst_group"],
+   f"""
+   SELECT ml.name AS party, ml.closing_balance AS outstanding
+   FROM mst_ledger ml
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name IN ('Sundry Debtors','Sundry Creditors')
+     AND ml.name ILIKE '%{{party}}%';
+   """,
+   "What is the outstanding balance for party {party}?",
+   slots={"party": {"type": "party_name", "source": "mst_ledger.name"}})
+
+sk("party_invoice_list", "Q007", "Owner / Seth", "top_customers", 2,
+   ["trn_voucher"],
+   f"""
+   SELECT tv.date, tv.voucher_number, tv.narration
+   FROM trn_voucher tv
+   WHERE tv.is_invoice = 1
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "List all invoices for party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_payment_received", "Q013", "Owner / Seth", "daily_collection", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT tv.date, tv.voucher_number, -ta.amount AS payment
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name IN ('Bank Accounts','Cash-in-Hand') AND ta.amount < 0
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show payments received from party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_overdue_invoices", "Q011", "Owner / Seth", "overdue_customers", 3,
+   ["trn_bill","trn_voucher","mst_ledger"],
+   f"""
+   SELECT tv.date, tv.voucher_number, tb.amount,
+     (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS due_date,
+     CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS days_overdue
+   FROM trn_bill tb
+   JOIN trn_voucher tv ON tb.guid = tv.guid
+   JOIN mst_ledger ml ON tb._ledger = ml.guid
+   WHERE (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date < CURRENT_DATE
+     AND tb.amount > 0
+     AND ml.name ILIKE '%{{party}}%'
+   ORDER BY days_overdue DESC;
+   """,
+   "Show overdue invoices for party {party}.",
+   slots={"party": {"type": "party_name", "source": "mst_ledger.name"}})
+
+sk("party_avg_order_value", "Q007", "Owner / Seth", "avg_order_value", 2,
+   ["trn_voucher"],
+   f"""
+   SELECT COUNT(DISTINCT tv.guid) AS invoices,
+     AVG(ABS(sub.total)) AS avg_order_value
+   FROM trn_voucher tv
+   JOIN (
+     SELECT ta2.guid, SUM(ta2.amount) AS total
+     FROM trn_accounting ta2 GROUP BY ta2.guid
+   ) sub ON tv.guid = sub.guid
+   WHERE tv.is_invoice = 1
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is the average order value for party {party}?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_monthly_sales_trend", "Q009", "Owner / Seth", "sales_growth", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT EXTRACT(MONTH FROM tv.date) AS month, -SUM(ta.amount) AS sales
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Sales Accounts' AND ta.amount < 0
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY EXTRACT(MONTH FROM tv.date)
+   ORDER BY month;
+   """,
+   "Show monthly sales trend for party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_top_items_bought", "Q043", "Store / Inventory", "top_item_sales", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT msi.name AS item, SUM(ABS(ti.quantity)) AS qty, -SUM(ti.amount) AS value
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY msi.name
+   ORDER BY value DESC;
+   """,
+   "What are the top items purchased by party {party}?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("supplier_outstanding", "Q005", "Owner / Seth", "payables_total", 2,
+   ["mst_ledger","mst_group"],
+   f"""
+   SELECT ml.name AS supplier, ml.closing_balance AS payable
+   FROM mst_ledger ml
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Sundry Creditors'
+     AND ml.name ILIKE '%{{party}}%';
+   """,
+   "What is outstanding payable to supplier {party}?",
+   slots={"party": {"type": "party_name", "source": "mst_ledger.name"}})
+
+sk("party_discount_received", "Q048", "Store / Inventory", "discount_given", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT SUM(ti.discount_amount) AS total_discount, COUNT(*) AS transactions
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   WHERE tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What discount was given to party {party}?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_last_transaction", "Q007", "Owner / Seth", "top_customers", 2,
+   ["trn_voucher"],
+   f"""
+   SELECT MAX(tv.date) AS last_transaction_date, COUNT(*) AS total_vouchers
+   FROM trn_voucher tv
+   WHERE tv.party_name ILIKE '%{{party}}%';
+   """,
+   "When was the last transaction with party {party}?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_gst_sales_summary", "Q018", "Accountant / Munim", "gst_output_tax", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT msi.gst_rate, -SUM(ti.amount) AS sales_value
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY msi.gst_rate
+   ORDER BY msi.gst_rate;
+   """,
+   "Show GST-wise sales to party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("customer_ageing_detail", "Q012", "Owner / Seth", "ageing", 3,
+   ["trn_bill","trn_voucher","mst_ledger"],
+   f"""
+   SELECT tv.date, tv.voucher_number, tb.amount,
+     (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date AS due_date,
+     CASE
+       WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date <= 30  THEN '0-30 days'
+       WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date <= 60  THEN '31-60 days'
+       WHEN CURRENT_DATE - (tv.date + INTERVAL '1 day' * COALESCE(tb.bill_credit_period, 30))::date <= 90  THEN '61-90 days'
+       ELSE '90+ days'
+     END AS bucket
+   FROM trn_bill tb
+   JOIN trn_voucher tv ON tb.guid = tv.guid
+   JOIN mst_ledger ml ON tb._ledger = ml.guid
+   WHERE tb.amount > 0
+     AND ml.name ILIKE '%{{party}}%'
+   ORDER BY due_date;
+   """,
+   "Show ageing of outstanding bills for party {party}.",
+   slots={"party": {"type": "party_name", "source": "mst_ledger.name"}})
+
+sk("party_repeat_frequency", "Q015", "Owner / Seth", "repeat_customers", 2,
+   ["trn_voucher"],
+   f"""
+   SELECT COUNT(DISTINCT tv.guid) AS total_orders,
+     COUNT(DISTINCT EXTRACT(MONTH FROM tv.date)) AS active_months,
+     MIN(tv.date) AS first_order, MAX(tv.date) AS last_order
+   FROM trn_voucher tv
+   WHERE tv.is_invoice = 1
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "How frequently does party {party} order?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_total_sales_period", "Q007", "Owner / Seth", "top_customers", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT -SUM(ta.amount) AS total_sales, COUNT(DISTINCT tv.guid) AS invoices
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Sales Accounts' AND ta.amount < 0
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What are total sales to party {party} this period?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_tds_detail", "Q037", "Accountant / Munim", "tds_deducted", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT -SUM(ta.amount) AS tds_amount, COUNT(DISTINCT tv.guid) AS vouchers
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name = 'Duties & Taxes'
+     AND ml.name ILIKE '%TDS%'
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is TDS deducted for party {party}?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_credit_note_list", "Q007", "Owner / Seth", "top_customers", 2,
+   ["trn_voucher","mst_vouchertype"],
+   f"""
+   SELECT tv.date, tv.voucher_number, tv.narration
+   FROM trn_voucher tv
+   JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
+   WHERE mvt.name ILIKE '%Credit Note%'
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show credit notes for party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_place_of_supply", "Q025", "Accountant / Munim", "sales_by_state", 2,
+   ["trn_voucher"],
+   f"""
+   SELECT tv.place_of_supply, COUNT(DISTINCT tv.guid) AS invoices
+   FROM trn_voucher tv
+   WHERE tv.is_invoice = 1
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY tv.place_of_supply;
+   """,
+   "Which state is party {party} from?",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+sk("party_payment_history", "Q004", "Owner / Seth", "receivables_total", 3,
+   ["trn_accounting","trn_voucher","mst_ledger","mst_group"],
+   f"""
+   SELECT tv.date, tv.voucher_number, -ta.amount AS amount
+   FROM trn_accounting ta
+   JOIN trn_voucher tv ON ta.guid = tv.guid
+   JOIN mst_ledger ml ON ta._ledger = ml.guid
+   JOIN mst_group mg ON ml._parent = mg.guid
+   WHERE mg.name IN ('Bank Accounts','Cash-in-Hand')
+     AND tv.party_name ILIKE '%{{party}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show payment history for party {party}.",
+   slots={"party": {"type": "party_name", "source": "trn_voucher.party_name"}})
+
+# ── Item-filtered variants ────────────────────────────────────────────────────
+sk("item_current_stock", "Q040", "Store / Inventory", "stock_on_hand", 1,
+   ["mst_stock_item"],
+   """
+   SELECT msi.name, msi.closing_balance AS qty, -msi.closing_value AS value
+   FROM mst_stock_item msi
+   WHERE msi.name ILIKE '%{item}%';
+   """,
+   "What is the current stock of item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_movement_detail", "Q053", "Store / Inventory", "item_movement", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item","mst_vouchertype"],
+   f"""
+   SELECT tv.date, tv.voucher_number, mvt.name AS voucher_type,
+     ti.quantity, ti.rate, ti.amount
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show all stock movements for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_sales_by_party", "Q043", "Store / Inventory", "top_item_sales", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT tv.party_name, SUM(ABS(ti.quantity)) AS qty_sold, -SUM(ti.amount) AS value
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY tv.party_name
+   ORDER BY value DESC;
+   """,
+   "Which customers bought item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_purchase_history", "Q053", "Store / Inventory", "item_movement", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT tv.date, tv.party_name, tv.voucher_number, ti.quantity, ti.rate, ti.amount
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND ti.quantity > 0
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show purchase history for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_godown_stock_detail", "Q046", "Store / Inventory", "stock_by_godown", 3,
+   ["trn_inventory","mst_stock_item","mst_godown"],
+   f"""
+   SELECT mgd.name AS godown, SUM(ti.quantity) AS net_qty
+   FROM trn_inventory ti
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   JOIN mst_godown mgd ON ti._godown = mgd.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+   GROUP BY mgd.name
+   ORDER BY net_qty DESC;
+   """,
+   "Show godown-wise stock for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_batch_list", "Q055", "Store / Inventory", "batch_expiry", 3,
+   ["trn_batch","trn_inventory","mst_stock_item"],
+   f"""
+   SELECT tb.name AS batch, SUM(ti.quantity) AS qty
+   FROM trn_batch tb
+   JOIN trn_inventory ti ON tb.guid = ti.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+   GROUP BY tb.name
+   ORDER BY tb.name;
+   """,
+   "Show batches for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_monthly_sales", "Q043", "Store / Inventory", "top_item_sales", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT EXTRACT(MONTH FROM tv.date) AS month,
+     SUM(ABS(ti.quantity)) AS qty_sold, -SUM(ti.amount) AS sales_value
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY EXTRACT(MONTH FROM tv.date)
+   ORDER BY month;
+   """,
+   "Show monthly sales trend for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_last_sale_price", "Q043", "Store / Inventory", "top_item_sales", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT tv.date, tv.party_name, ti.rate, ti.quantity
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.is_invoice = 1 AND ti.quantity < 0
+   ORDER BY tv.date DESC
+   LIMIT 1;
+   """,
+   "What was the last sale price of item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_last_purchase_price", "Q044", "Store / Inventory", "purchase_price_trend", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT tv.date, tv.party_name, ti.rate
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND ti.quantity > 0
+   ORDER BY tv.date DESC
+   LIMIT 1;
+   """,
+   "What was the last purchase price of item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_closing_value", "Q040", "Store / Inventory", "total_stock_value", 1,
+   ["mst_stock_item"],
+   """
+   SELECT msi.name, -msi.closing_value AS stock_value, msi.closing_balance AS qty
+   FROM mst_stock_item msi
+   WHERE msi.name ILIKE '%{item}%';
+   """,
+   "What is the closing stock value for item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_inward_outward", "Q053", "Store / Inventory", "item_movement", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT
+     SUM(CASE WHEN ti.quantity > 0 THEN ti.quantity ELSE 0 END) AS total_inward,
+     SUM(CASE WHEN ti.quantity < 0 THEN ABS(ti.quantity) ELSE 0 END) AS total_outward
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What is total inward and outward quantity for item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_gst_rate_lookup", "Q021", "Accountant / Munim", "sales_by_gst_rate", 1,
+   ["mst_stock_item"],
+   """
+   SELECT msi.name, msi.tax_rate
+   FROM mst_stock_item msi
+   WHERE msi.name ILIKE '%{item}%';
+   """,
+   "What is the GST rate for item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_discount_given", "Q048", "Store / Inventory", "discount_given", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT SUM(ti.discount_amount) AS total_discount,
+     SUM(ABS(ti.quantity)) AS qty_sold
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "What discount was given on item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_reorder_check", "Q041", "Store / Inventory", "reorder", 1,
+   ["mst_stock_item"],
+   """
+   SELECT msi.name, msi.closing_balance AS current_qty
+   FROM mst_stock_item msi
+   WHERE msi.name ILIKE '%{item}%';
+   """,
+   "Is item {item} below reorder level?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_transfer_history", "Q056", "Store / Inventory", "godown_transfer", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item","mst_godown","mst_vouchertype"],
+   f"""
+   SELECT tv.date, tv.voucher_number, mgd.name AS godown, ti.quantity
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   JOIN mst_godown mgd ON ti._godown = mgd.guid
+   JOIN mst_vouchertype mvt ON tv._voucher_type = mvt.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND mvt.name ILIKE '%Transfer%'
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   ORDER BY tv.date DESC;
+   """,
+   "Show godown transfer history for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_uom_detail", "Q057", "Store / Inventory", "uom_check", 2,
+   ["mst_stock_item","mst_uom"],
+   """
+   SELECT msi.name, mu.name AS uom, msi.closing_balance
+   FROM mst_stock_item msi
+   JOIN mst_uom mu ON msi._uom = mu.guid
+   WHERE msi.name ILIKE '%{item}%';
+   """,
+   "What is the unit of measure for item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_top_customers_buying", "Q043", "Store / Inventory", "top_item_sales", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT tv.party_name, COUNT(DISTINCT tv.guid) AS orders,
+     SUM(ABS(ti.quantity)) AS qty, -SUM(ti.amount) AS value
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO}
+   GROUP BY tv.party_name
+   ORDER BY value DESC
+   LIMIT 5;
+   """,
+   "Who are the top buyers of item {item}?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_sales_total_period", "Q043", "Store / Inventory", "top_item_sales", 3,
+   ["trn_inventory","trn_voucher","mst_stock_item"],
+   f"""
+   SELECT SUM(ABS(ti.quantity)) AS total_qty_sold, -SUM(ti.amount) AS total_value
+   FROM trn_inventory ti
+   JOIN trn_voucher tv ON ti.guid = tv.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+     AND tv.is_invoice = 1 AND ti.quantity < 0
+     AND tv.date BETWEEN {PERIOD_FROM} AND {PERIOD_TO};
+   """,
+   "How much of item {item} was sold this period?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_negative_stock_check", "Q049", "Store / Inventory", "negative_stock", 1,
+   ["mst_stock_item"],
+   """
+   SELECT msi.name, msi.closing_balance AS qty
+   FROM mst_stock_item msi
+   WHERE msi.name ILIKE '%{item}%'
+     AND msi.closing_balance < 0;
+   """,
+   "Is item {item} showing negative stock?",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
+sk("item_expiry_check", "Q055", "Store / Inventory", "batch_expiry", 3,
+   ["trn_batch","trn_inventory","mst_stock_item"],
+   f"""
+   SELECT tb.name AS batch, SUM(ti.quantity) AS net_qty,
+     CASE WHEN SUM(ti.quantity) > 0 THEN 'IN STOCK' ELSE 'OUT OF STOCK' END AS status
+   FROM trn_batch tb
+   JOIN trn_inventory ti ON tb.guid = ti.guid
+   JOIN mst_stock_item msi ON ti._item = msi.guid
+   WHERE msi.name ILIKE '%{{item}}%'
+   GROUP BY tb.name
+   ORDER BY tb.name;
+   """,
+   "Check batch expiry status for item {item}.",
+   slots={"item": {"type": "item_name", "source": "mst_stock_item.name"}})
+
 # ── Re-write YAML with all skeletons ─────────────────────────────────────────
 with open("skeletons/skeletons.yaml", "w") as f:
     yaml.dump(skeletons, f, allow_unicode=True, default_flow_style=False,
