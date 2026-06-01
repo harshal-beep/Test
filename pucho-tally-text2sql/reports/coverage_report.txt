@@ -1,0 +1,26 @@
+# Stage 3 Coverage Report
+
+Total skeletons: 153
+Question bank entries: 74
+All 74 entries covered: True
+Min skeletons per Q: 2
+Max skeletons per Q: 3
+
+Gap breakdown in question bank:
+  PARTIAL: 10
+  COVERED: 13
+  NEW: 51
+
+Skeletons by persona:
+  Accountant / Munim: 35
+  Owner / Seth: 31
+  Store / Inventory: 29
+  HR / Admin: 24
+  Sales / Marketing: 20
+  Cost / Project Manager: 14
+
+Join depth distribution:
+  depth 1: 11
+  depth 2: 39
+  depth 3: 90
+  depth 4: 13
