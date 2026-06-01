@@ -1,10 +1,18 @@
 """
 Stage 6 — Multilingual paraphrase.
 
-For each validated (question, sql) pair, generates ~40 NL paraphrases across
-4 languages: English (formal + casual), Hindi (Devanagari), Gujarati, Hinglish.
+For each validated (question, sql) pair, generates 40 NL paraphrases across
+4 languages: English (10), Hindi/Devanagari (10), Gujarati (10), Hinglish (10).
 SQL stays fixed. Output: data/paraphrased/instances.jsonl
 
+Two execution modes:
+  1. Agent mode (default in Claude Code sessions): Claude sub-agents generate
+     paraphrases directly — no external API key needed. Run via the pipeline
+     orchestrator or Claude Code session.
+  2. API mode (for standalone runs): set ANTHROPIC_API_KEY in .env, then run
+     this script directly: python pipeline/paraphrase_multilingual.py
+
+Stage 6 was executed in agent mode, producing 8,120 records (203 × 40).
 Resume-safe: already-processed instance ids are skipped on restart.
 """
 
@@ -15,10 +23,17 @@ import sys
 import time
 from typing import Any
 
-import anthropic
-from dotenv import load_dotenv
+try:
+    import anthropic
+    HAS_SDK = True
+except ImportError:
+    HAS_SDK = False
 
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ── Config ────────────────────────────────────────────────────────────────────
 INPUT_FILE  = pathlib.Path("data/validated/instances.jsonl")
