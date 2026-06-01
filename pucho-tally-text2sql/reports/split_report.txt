@@ -1,56 +1,57 @@
 Stage 8 — Distribution Report
 ==================================================
 
-── TRAIN (6,280 records) ──
+── TRAIN (25,120 records) ──
   Language:
-    en           1,570  (25.0%)
-    gu           1,570  (25.0%)
-    hi           1,570  (25.0%)
-    hinglish     1,570  (25.0%)
+    en           6,280  (25.0%)
+    gu           6,280  (25.0%)
+    hi           6,280  (25.0%)
+    hinglish     6,280  (25.0%)
   Join depth:
-    depth 1        640  (10.2%)
-    depth 2      1,760  (28.0%)
-    depth 3      3,160  (50.3%)
-    depth 4        720  (11.5%)
-  Unique intents: 71
-    voucher_lookup                  600
-    party_outstanding               240
-    party_gstin                     240
-    salary_by_employee              240
-    item_cost_centre                200
+    depth 1      2,080  (8.3%)
+    depth 2      5,720  (22.8%)
+    depth 3      16,640  (66.2%)
+    depth 4        680  (2.7%)
+  Unique intents: 72
+    top_item_sales                 2,080
+    top_customers                  1,680
+    item_movement                  1,480
+    payables_total                 1,280
+    receivables_total               880
 
-── VAL (920 records) ──
+── VAL (4,360 records) ──
   Language:
-    en             230  (25.0%)
-    gu             230  (25.0%)
-    hi             230  (25.0%)
-    hinglish       230  (25.0%)
+    en           1,090  (25.0%)
+    gu           1,090  (25.0%)
+    hi           1,090  (25.0%)
+    hinglish     1,090  (25.0%)
   Join depth:
-    depth 1         80  (8.7%)
-    depth 2        400  (43.5%)
-    depth 3        240  (26.1%)
-    depth 4        200  (21.7%)
-  Unique intents: 15
-    ledger_balance                  200
-    absent_list                     200
-    payables_total                   40
-    ageing                           40
-    trial_balance_group              40
+    depth 1        640  (14.7%)
+    depth 2      1,320  (30.3%)
+    depth 3      2,200  (50.5%)
+    depth 4        200  (4.6%)
+  Unique intents: 18
+    uom_check                       480
+    bank_recon                      400
+    gst_net_payable                 400
+    gst_output_tax                  400
+    top_customers                   400
 
-── TEST (1,150 records) ──
+── TEST (2,870 records) ──
   Language:
-    en             460  (40.0%)
-    gu             230  (20.0%)
-    hi             230  (20.0%)
-    hinglish       230  (20.0%)
+    en             890  (31.0%)
+    gu             660  (23.0%)
+    hi             660  (23.0%)
+    hinglish       660  (23.0%)
   Join depth:
-    depth 1         40  (3.5%)
-    depth 2        200  (17.4%)
-    depth 3        680  (59.1%)
-    depth ?        230  (20.0%)
-  Unique intents: 14
-    item_movement                   240
-    ?                               230
-    purchase_price_trend            200
-    voucher_count                    80
-    trial_balance_group              40
+    depth 1         40  (1.4%)
+    depth 2        120  (4.2%)
+    depth 3      2,440  (85.0%)
+    depth 4         40  (1.4%)
+    depth ?        230  (8.0%)
+  Unique intents: 21
+    top_customers                   400
+    biggest_expense                 400
+    overdue_customers               400
+    sales_by_gst_rate               400
+    sales_growth                    400
