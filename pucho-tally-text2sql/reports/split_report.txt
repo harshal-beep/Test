@@ -1,0 +1,56 @@
+Stage 8 — Distribution Report
+==================================================
+
+── TRAIN (6,280 records) ──
+  Language:
+    en           1,570  (25.0%)
+    gu           1,570  (25.0%)
+    hi           1,570  (25.0%)
+    hinglish     1,570  (25.0%)
+  Join depth:
+    depth 1        640  (10.2%)
+    depth 2      1,760  (28.0%)
+    depth 3      3,160  (50.3%)
+    depth 4        720  (11.5%)
+  Unique intents: 71
+    voucher_lookup                  600
+    party_outstanding               240
+    party_gstin                     240
+    salary_by_employee              240
+    item_cost_centre                200
+
+── VAL (920 records) ──
+  Language:
+    en             230  (25.0%)
+    gu             230  (25.0%)
+    hi             230  (25.0%)
+    hinglish       230  (25.0%)
+  Join depth:
+    depth 1         80  (8.7%)
+    depth 2        400  (43.5%)
+    depth 3        240  (26.1%)
+    depth 4        200  (21.7%)
+  Unique intents: 15
+    ledger_balance                  200
+    absent_list                     200
+    payables_total                   40
+    ageing                           40
+    trial_balance_group              40
+
+── TEST (1,150 records) ──
+  Language:
+    en             460  (40.0%)
+    gu             230  (20.0%)
+    hi             230  (20.0%)
+    hinglish       230  (20.0%)
+  Join depth:
+    depth 1         40  (3.5%)
+    depth 2        200  (17.4%)
+    depth 3        680  (59.1%)
+    depth ?        230  (20.0%)
+  Unique intents: 14
+    item_movement                   240
+    ?                               230
+    purchase_price_trend            200
+    voucher_count                    80
+    trial_balance_group              40
