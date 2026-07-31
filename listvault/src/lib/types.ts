@@ -36,6 +36,7 @@ export interface Item {
   added_by: string | null
   checked_by: string | null
   checked_at: string | null
+  assigned_to: string | null
   position: number
   created_at: string
   updated_at: string

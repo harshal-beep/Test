@@ -1,6 +1,7 @@
-import { FormEvent, useState } from 'react'
+import { FormEvent, ReactNode, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, PanInfo } from 'framer-motion'
+import confetti from 'canvas-confetti'
 import {
   closestCenter,
   DndContext,
@@ -19,9 +20,11 @@ import {
   GripVertical,
   MoreHorizontal,
   Pencil,
+  RotateCcw,
   Send,
   Trash2,
-  Users
+  Users,
+  X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Item, canReopen } from '../lib/types'
@@ -30,6 +33,8 @@ import { useKeyboardInset } from '../lib/useKeyboardInset'
 import { useListDetail } from '../hooks/useListDetail'
 import Avatar from '../components/Avatar'
 import { AnimatedCheck, BottomSheet, Page, Skeleton, useConfirm, useToast } from '../components/ui'
+
+const SWIPE_THRESHOLD = 72
 
 export default function ListDetail() {
   const { id = '' } = useParams()
@@ -40,7 +45,7 @@ export default function ListDetail() {
   const kbInset = useKeyboardInset()
   const {
     list, items, household, loading, notFound, synced, isOwner,
-    addItems, toggleItem, editItem, deleteItem, placeItem, profileOf
+    addItems, toggleItem, editItem, deleteItem, placeItem, assignItem, profileOf
   } = useListDetail(id)
 
   const [input, setInput] = useState('')
@@ -48,8 +53,10 @@ export default function ListDetail() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+  const [filter, setFilter] = useState<'all' | 'mine'>('all')
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
+  const myId = session?.user.id
 
   if (loading)
     return (
@@ -72,9 +79,13 @@ export default function ListDetail() {
     )
 
   const archived = list.status === 'archived'
+  const matchesFilter = (i: Item) => filter === 'all' || i.assigned_to === myId
   const unchecked = items.filter((i) => !i.checked)
   const checked = items.filter((i) => i.checked)
+  const uncheckedVisible = unchecked.filter(matchesFilter)
+  const checkedVisible = checked.filter(matchesFilter)
   const pct = items.length === 0 ? 0 : Math.round((checked.length / items.length) * 100)
+  const myOpenCount = unchecked.filter((i) => i.assigned_to === myId).length
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -86,6 +97,15 @@ export default function ListDetail() {
       toast((err as Error).message)
       setInput(text)
     }
+  }
+
+  /** Toggle with a celebration when the last open task gets done. */
+  function handleToggle(item: Item) {
+    if (!item.checked && unchecked.length === 1) {
+      confetti({ particleCount: 110, spread: 75, origin: { y: 0.75 }, colors: ['#6c63ff', '#8b83ff', '#ffd166', '#25D366'] })
+      toast('Sab ho gaya! 🎉')
+    }
+    void toggleItem(item)
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -145,15 +165,67 @@ export default function ListDetail() {
     }
   }
 
-  function rowBody(item: Item, dragHandle?: React.ReactNode) {
+  /** Reset all done tasks back to open — great for reusing a grocery list. */
+  async function uncheckAll() {
+    const { error } = await supabase
+      .from('lv_items')
+      .update({ checked: false, checked_by: null, checked_at: null })
+      .eq('list_id', id)
+      .eq('checked', true)
+    if (error) toast(error.message)
+    else toast('All tasks reset')
+  }
+
+  async function clearCompleted() {
+    if (!(await confirm(`Clear ${checked.length} completed task${checked.length === 1 ? '' : 's'}?`, {
+      body: 'They are removed from this list for everyone.',
+      confirmLabel: 'Clear',
+      danger: true
+    }))) return
+    const { error } = await supabase.from('lv_items').delete().eq('list_id', id).eq('checked', true)
+    if (error) toast(error.message)
+    else toast('Completed tasks cleared')
+  }
+
+  function onSwipeEnd(item: Item, info: PanInfo) {
+    if (info.offset.x > SWIPE_THRESHOLD) {
+      handleToggle(item)
+    } else if (info.offset.x < -SWIPE_THRESHOLD) {
+      void deleteItem(item)
+      toast('Task deleted')
+    }
+  }
+
+  function rowBody(item: Item, dragHandle?: ReactNode) {
     const addedBy = profileOf(item.added_by)
     const checkedBy = profileOf(item.checked_by)
+    const assignee = profileOf(item.assigned_to)
     const isExpanded = expanded === item.id
-    return (
-      <>
-        <div className="flex items-center gap-2.5 px-3 py-3">
+    const swipeable = !archived && editing !== item.id
+
+    const row = (
+      <div className="relative">
+        {/* swipe action hints behind the row */}
+        {swipeable && (
+          <div className="absolute inset-0 flex items-center justify-between rounded-[20px] px-5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white">
+              <Check size={16} strokeWidth={3} />
+            </span>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white">
+              <Trash2 size={15} />
+            </span>
+          </div>
+        )}
+        <motion.div
+          drag={swipeable ? 'x' : false}
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={{ left: 0.35, right: 0.35 }}
+          dragSnapToOrigin
+          onDragEnd={(_, info) => onSwipeEnd(item, info)}
+          className="relative flex items-center gap-2.5 rounded-[20px] bg-white px-3 py-3 [touch-action:pan-y] dark:bg-ink-900"
+        >
           {dragHandle}
-          <AnimatedCheck checked={item.checked} disabled={archived} onToggle={() => void toggleItem(item)} />
+          <AnimatedCheck checked={item.checked} disabled={archived} onToggle={() => handleToggle(item)} />
           {editing === item.id ? (
             <form
               className="flex-1"
@@ -176,17 +248,34 @@ export default function ListDetail() {
             </form>
           ) : (
             <button
-              className={`flex-1 text-left text-[15px] transition-colors ${item.checked ? 'text-ink-400 line-through' : ''}`}
+              className={`min-w-0 flex-1 text-left text-[15px] transition-colors ${item.checked ? 'text-ink-400 line-through' : ''}`}
               onClick={() => setExpanded(isExpanded ? null : item.id)}
             >
-              {item.text}
+              <span className="block truncate">{item.text}</span>
+              {assignee && !item.checked && (
+                <span className={`mt-0.5 block text-xs ${item.assigned_to === myId ? 'font-semibold text-brand-600' : 'text-ink-400'}`}>
+                  for {item.assigned_to === myId ? 'you' : assignee.display_name?.split(' ')[0] || 'someone'}
+                </span>
+              )}
             </button>
           )}
-          <span className="flex -space-x-1.5">
-            {addedBy && <Avatar profile={addedBy} size={5} />}
-            {checkedBy && item.checked && checkedBy.id !== addedBy?.id && <Avatar profile={checkedBy} size={5} />}
+          <span className="flex shrink-0 -space-x-1.5">
+            {assignee && !item.checked ? (
+              <span className="rounded-full ring-2 ring-brand-500/70">
+                <Avatar profile={assignee} size={6} />
+              </span>
+            ) : (
+              addedBy && <Avatar profile={addedBy} size={5} />
+            )}
+            {checkedBy && item.checked && <Avatar profile={checkedBy} size={5} />}
           </span>
-        </div>
+        </motion.div>
+      </div>
+    )
+
+    return (
+      <>
+        {row}
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -195,13 +284,38 @@ export default function ListDetail() {
               exit={{ height: 0, opacity: 0 }}
               transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <div className="border-t border-ink-100 px-4 py-2.5 text-xs text-ink-500 dark:border-ink-800 dark:text-ink-400">
-                <p>
+              <div className="border-t border-ink-100 px-4 py-3 dark:border-ink-800">
+                {/* Assignment */}
+                {!archived && household.length > 1 && (
+                  <div className="mb-2.5 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-500 dark:text-ink-400">For:</span>
+                    {household.map((p) => {
+                      const selected = item.assigned_to === p.id
+                      return (
+                        <motion.button
+                          key={p.id}
+                          whileTap={{ scale: 0.85 }}
+                          onClick={() => void assignItem(item, selected ? null : p.id)}
+                          title={p.display_name || p.email || ''}
+                          className={`rounded-full transition-all ${selected ? 'ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-ink-900' : 'opacity-55 hover:opacity-100'}`}
+                        >
+                          <Avatar profile={p} size={8} />
+                        </motion.button>
+                      )
+                    })}
+                    {item.assigned_to && (
+                      <button onClick={() => void assignItem(item, null)} aria-label="Unassign" className="icon-btn h-7 w-7">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-ink-500 dark:text-ink-400">
                   Added by <strong>{addedBy?.display_name ?? 'someone'}</strong> ·{' '}
                   {new Date(item.created_at).toLocaleString()}
                 </p>
                 {item.checked && item.checked_at && (
-                  <p className="mt-0.5">
+                  <p className="mt-0.5 text-xs text-ink-500 dark:text-ink-400">
                     Done by <strong>{checkedBy?.display_name ?? 'someone'}</strong> ·{' '}
                     {new Date(item.checked_at).toLocaleString()}
                   </p>
@@ -297,24 +411,64 @@ export default function ListDetail() {
         </div>
       )}
 
-      {/* Tasks — drag the grip to reorder */}
+      {/* All / Mine filter */}
+      {household.length > 1 && items.length > 0 && (
+        <div className="flex gap-2">
+          {(['all', 'mine'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`rounded-full px-3.5 py-1.5 text-[13px] font-semibold transition-all active:scale-95 ${
+                filter === f
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                  : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-400'
+              }`}
+            >
+              {f === 'all' ? 'All tasks' : `For me${myOpenCount > 0 ? ` · ${myOpenCount}` : ''}`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Tasks — drag the grip to reorder, swipe right to finish, left to delete */}
       {items.length === 0 && !archived && (
         <p className="pt-8 text-center text-sm text-ink-400">No tasks yet — add the first one below.</p>
       )}
+      {items.length > 0 && uncheckedVisible.length === 0 && checkedVisible.length === 0 && (
+        <p className="pt-8 text-center text-sm text-ink-400">Nothing assigned to you here. Enjoy the break ☕</p>
+      )}
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
-        <SortableContext items={unchecked.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={uncheckedVisible.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           <ul className="space-y-2">
-            {unchecked.map((item) => (
+            {uncheckedVisible.map((item) => (
               <SortableRow key={item.id} item={item} />
             ))}
           </ul>
         </SortableContext>
       </DndContext>
-      {checked.length > 0 && (
+      {checkedVisible.length > 0 && (
         <>
-          <p className="pt-1 text-xs font-bold uppercase tracking-wider text-ink-400">Done · {checked.length}</p>
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Done · {checkedVisible.length}</p>
+            {!archived && (
+              <span className="flex gap-1">
+                <button
+                  onClick={() => void uncheckAll()}
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-800/20"
+                >
+                  <RotateCcw size={12} /> Reset
+                </button>
+                <button
+                  onClick={() => void clearCompleted()}
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold text-ink-500 hover:bg-ink-100 dark:text-ink-400 dark:hover:bg-ink-800"
+                >
+                  <Trash2 size={12} /> Clear
+                </button>
+              </span>
+            )}
+          </div>
           <ul className="space-y-2">
-            {checked.map((item) => (
+            {checkedVisible.map((item) => (
               <li key={item.id} className={`surface overflow-hidden ${item.pending ? 'opacity-60' : ''}`}>
                 {rowBody(item)}
               </li>
