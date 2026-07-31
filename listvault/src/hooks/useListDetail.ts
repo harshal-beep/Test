@@ -151,11 +151,12 @@ export function useListDetail(listId: string) {
     await supabase.from('lv_items').delete().eq('id', item.id)
   }
 
-  /** Hand a task to a household member (or null to unassign). */
-  async function assignItem(item: Item, userId: string | null) {
+  /** Set a task's assignees — one person, several, or [] to unassign. */
+  async function assignItem(item: Item, userIds: string[]) {
+    const value = userIds.length ? userIds : null
     track(item.id)
-    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, assigned_to: userId } : i)))
-    await supabase.from('lv_items').update({ assigned_to: userId }).eq('id', item.id)
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, assigned_to: value } : i)))
+    await supabase.from('lv_items').update({ assigned_to: value }).eq('id', item.id)
     settle(item.id)
   }
 

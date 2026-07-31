@@ -27,7 +27,7 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { Item, canReopen } from '../lib/types'
+import { Item, Profile, canReopen } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import { useKeyboardInset } from '../lib/useKeyboardInset'
 import { useListDetail } from '../hooks/useListDetail'
@@ -79,13 +79,14 @@ export default function ListDetail() {
     )
 
   const archived = list.status === 'archived'
-  const matchesFilter = (i: Item) => filter === 'all' || i.assigned_to === myId
+  const forMe = (i: Item) => !!myId && (i.assigned_to?.includes(myId) ?? false)
+  const matchesFilter = (i: Item) => filter === 'all' || forMe(i)
   const unchecked = items.filter((i) => !i.checked)
   const checked = items.filter((i) => i.checked)
   const uncheckedVisible = unchecked.filter(matchesFilter)
   const checkedVisible = checked.filter(matchesFilter)
   const pct = items.length === 0 ? 0 : Math.round((checked.length / items.length) * 100)
-  const myOpenCount = unchecked.filter((i) => i.assigned_to === myId).length
+  const myOpenCount = unchecked.filter(forMe).length
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -199,7 +200,19 @@ export default function ListDetail() {
   function rowBody(item: Item, dragHandle?: ReactNode) {
     const addedBy = profileOf(item.added_by)
     const checkedBy = profileOf(item.checked_by)
-    const assignee = profileOf(item.assigned_to)
+    const assignees = (item.assigned_to ?? [])
+      .map(profileOf)
+      .filter((p): p is Profile => !!p)
+    const assignedToMe = forMe(item)
+    const allAssigned = household.length > 1 && assignees.length >= household.length
+    const forLabel = allAssigned
+      ? household.length === 2
+        ? 'for both of us'
+        : 'for everyone'
+      : 'for ' +
+        assignees
+          .map((p) => (p.id === myId ? 'you' : p.display_name?.split(' ')[0] || 'someone'))
+          .join(' + ')
     const isExpanded = expanded === item.id
     const swipeable = !archived && editing !== item.id
 
@@ -252,18 +265,20 @@ export default function ListDetail() {
               onClick={() => setExpanded(isExpanded ? null : item.id)}
             >
               <span className="block truncate">{item.text}</span>
-              {assignee && !item.checked && (
-                <span className={`mt-0.5 block text-xs ${item.assigned_to === myId ? 'font-semibold text-brand-600' : 'text-ink-400'}`}>
-                  for {item.assigned_to === myId ? 'you' : assignee.display_name?.split(' ')[0] || 'someone'}
+              {assignees.length > 0 && !item.checked && (
+                <span className={`mt-0.5 block text-xs ${assignedToMe ? 'font-semibold text-brand-600' : 'text-ink-400'}`}>
+                  {forLabel}
                 </span>
               )}
             </button>
           )}
           <span className="flex shrink-0 -space-x-1.5">
-            {assignee && !item.checked ? (
-              <span className="rounded-full ring-2 ring-brand-500/70">
-                <Avatar profile={assignee} size={6} />
-              </span>
+            {assignees.length > 0 && !item.checked ? (
+              assignees.slice(0, 3).map((p) => (
+                <span key={p.id} className="rounded-full ring-2 ring-brand-500/70">
+                  <Avatar profile={p} size={6} />
+                </span>
+              ))
             ) : (
               addedBy && <Avatar profile={addedBy} size={5} />
             )}
@@ -287,15 +302,21 @@ export default function ListDetail() {
               <div className="border-t border-ink-100 px-4 py-3 dark:border-ink-800">
                 {/* Assignment */}
                 {!archived && household.length > 1 && (
-                  <div className="mb-2.5 flex items-center gap-2">
+                  <div className="mb-2.5 flex flex-wrap items-center gap-2">
                     <span className="text-xs font-semibold text-ink-500 dark:text-ink-400">For:</span>
                     {household.map((p) => {
-                      const selected = item.assigned_to === p.id
+                      const current = item.assigned_to ?? []
+                      const selected = current.includes(p.id)
                       return (
                         <motion.button
                           key={p.id}
                           whileTap={{ scale: 0.85 }}
-                          onClick={() => void assignItem(item, selected ? null : p.id)}
+                          onClick={() =>
+                            void assignItem(
+                              item,
+                              selected ? current.filter((x) => x !== p.id) : [...current, p.id]
+                            )
+                          }
                           title={p.display_name || p.email || ''}
                           className={`rounded-full transition-all ${selected ? 'ring-2 ring-brand-500 ring-offset-2 dark:ring-offset-ink-900' : 'opacity-55 hover:opacity-100'}`}
                         >
@@ -303,8 +324,18 @@ export default function ListDetail() {
                         </motion.button>
                       )
                     })}
-                    {item.assigned_to && (
-                      <button onClick={() => void assignItem(item, null)} aria-label="Unassign" className="icon-btn h-7 w-7">
+                    <button
+                      onClick={() => void assignItem(item, household.map((p) => p.id))}
+                      className={`rounded-full px-2.5 py-1 text-xs font-semibold transition-all active:scale-95 ${
+                        allAssigned
+                          ? 'bg-brand-600 text-white'
+                          : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-400'
+                      }`}
+                    >
+                      {household.length === 2 ? 'Both of us' : 'Everyone'}
+                    </button>
+                    {(item.assigned_to?.length ?? 0) > 0 && (
+                      <button onClick={() => void assignItem(item, [])} aria-label="Unassign" className="icon-btn h-7 w-7">
                         <X size={14} />
                       </button>
                     )}
