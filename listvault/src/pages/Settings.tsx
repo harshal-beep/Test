@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { UserPlus, Users } from 'lucide-react'
+import { Camera, UserPlus, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { processAvatar } from '../lib/avatarUpload'
 import { Profile } from '../lib/types'
 import Avatar from '../components/Avatar'
 import { Page, useConfirm, useToast } from '../components/ui'
@@ -17,6 +18,8 @@ export default function Settings() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [household, setHousehold] = useState<Profile[]>([])
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     supabase
@@ -38,6 +41,41 @@ export default function Settings() {
       setTimeout(() => setSaved(false), 2000)
       await refreshProfile()
     }
+  }
+
+  async function onPhotoPicked(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file || !profile) return
+    setPhotoBusy(true)
+    try {
+      const blob = await processAvatar(file)
+      const path = `${profile.id}.jpg`
+      const { error: upErr } = await supabase.storage
+        .from('lv-avatars')
+        .upload(path, blob, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' })
+      if (upErr) throw upErr
+      const { data } = supabase.storage.from('lv-avatars').getPublicUrl(path)
+      // cache-bust so every client sees the new photo immediately
+      const url = `${data.publicUrl}?v=${Date.now()}`
+      const { error: profErr } = await supabase.from('lv_profiles').update({ avatar_url: url }).eq('id', profile.id)
+      if (profErr) throw profErr
+      await refreshProfile()
+      toast('Photo updated 📸')
+    } catch (err) {
+      toast((err as Error).message)
+    }
+    setPhotoBusy(false)
+  }
+
+  async function removePhoto() {
+    if (!profile) return
+    setPhotoBusy(true)
+    await supabase.storage.from('lv-avatars').remove([`${profile.id}.jpg`])
+    await supabase.from('lv_profiles').update({ avatar_url: null }).eq('id', profile.id)
+    await refreshProfile()
+    setPhotoBusy(false)
+    toast('Photo removed')
   }
 
   async function changePassword() {
@@ -87,7 +125,18 @@ export default function Settings() {
       <h1 className="text-[26px] font-extrabold tracking-tight">Settings</h1>
 
       <section className="flex items-center gap-3 surface p-4 shadow-sm">
-        <Avatar profile={profile} size={12} />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={photoBusy}
+          aria-label="Change profile photo"
+          className={`relative shrink-0 transition-transform active:scale-95 ${photoBusy ? 'animate-pulse opacity-60' : ''}`}
+        >
+          <Avatar profile={profile} size={12} />
+          <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white ring-2 ring-white dark:ring-ink-900">
+            <Camera size={11} />
+          </span>
+        </button>
+        <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => void onPhotoPicked(e)} />
         <div className="flex-1">
           <label className="text-xs font-semibold uppercase text-ink-400" htmlFor="display-name">
             Display name
@@ -103,7 +152,17 @@ export default function Settings() {
               {saved ? '✓' : 'Save'}
             </button>
           </div>
-          <p className="mt-1 text-xs text-ink-400">{profile?.email}</p>
+          <p className="mt-1 text-xs text-ink-400">
+            {profile?.email}
+            {profile?.avatar_url && (
+              <>
+                {' · '}
+                <button onClick={() => void removePhoto()} disabled={photoBusy} className="underline">
+                  Remove photo
+                </button>
+              </>
+            )}
+          </p>
         </div>
       </section>
 
