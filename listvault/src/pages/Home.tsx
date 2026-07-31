@@ -33,6 +33,14 @@ function greeting(): string {
   return 'Good evening'
 }
 
+/** The hero follows the sky: sunrise tones, daytime indigo, evening violet. */
+function heroGradient(): string {
+  const h = new Date().getHours()
+  if (h < 12) return 'from-amber-400 via-rose-400 to-brand-600'
+  if (h < 17) return 'from-brand-500 via-brand-600 to-brand-800'
+  return 'from-brand-700 via-brand-800 to-brand-900'
+}
+
 export default function Home() {
   const { profile } = useAuth()
   const [lists, setLists] = useState<ListRow[]>([])
@@ -119,7 +127,7 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 p-5 text-white shadow-float shadow-brand-600/25"
+        className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br p-5 text-white shadow-float shadow-brand-600/25 ${heroGradient()}`}
       >
         <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="absolute -right-2 top-16 h-16 w-16 rounded-full bg-white/10" />

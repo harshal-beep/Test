@@ -25,20 +25,23 @@ function Tab({ to, label, Icon }: { to: string; label: string; Icon: typeof List
       end={to === '/'}
       className={({ isActive }) =>
         `relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
-          isActive ? 'text-brand-600' : 'text-ink-400 hover:text-ink-600 dark:hover:text-ink-200'
+          isActive ? 'text-brand-600 dark:text-brand-400' : 'text-ink-400 hover:text-ink-600 dark:hover:text-ink-200'
         }`
       }
     >
       {({ isActive }) => (
         <>
-          <Icon size={21} strokeWidth={isActive ? 2.4 : 2} />
-          {label}
           {isActive && (
             <motion.span
-              layoutId="tab-dot"
-              className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-brand-600"
+              layoutId="tab-pill"
+              transition={{ type: 'spring', damping: 26, stiffness: 380 }}
+              className="absolute inset-x-1.5 inset-y-1 rounded-2xl bg-brand-50 dark:bg-brand-800/25"
             />
           )}
+          <span className="relative z-10 flex flex-col items-center gap-1">
+            <Icon size={21} strokeWidth={isActive ? 2.4 : 2} />
+            {label}
+          </span>
         </>
       )}
     </NavLink>
@@ -60,7 +63,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-2xl flex-col">
-      <header className="sticky top-0 z-10 flex items-center justify-between bg-ink-50/90 px-5 py-3.5 backdrop-blur-md dark:bg-ink-950/90">
+      <header className="sticky top-0 z-10 flex items-center justify-between bg-ink-50/80 px-5 pb-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] backdrop-blur-xl dark:bg-ink-950/80">
         <NavLink to="/" className="text-lg font-extrabold tracking-tight">
           Ha<span className="text-brand-600">Maara</span>
         </NavLink>
@@ -120,7 +123,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </AnimatePresence>
 
       <nav className="fixed inset-x-0 bottom-0 z-30">
-        <div className="mx-auto flex max-w-2xl items-center border-t border-ink-100 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md dark:border-ink-800 dark:bg-ink-900/95">
+        <div className="mx-auto flex max-w-2xl items-center border-t border-ink-100/70 bg-white/80 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl dark:border-ink-800/70 dark:bg-ink-900/80">
           {leftTabs.map((t) => (
             <Tab key={t.to} {...t} />
           ))}
@@ -128,7 +131,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             whileTap={{ scale: 0.88 }}
             onClick={() => setFabOpen((o) => !o)}
             aria-label="Create"
-            className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white shadow-float shadow-brand-600/40"
+            className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-float shadow-brand-600/50"
           >
             <motion.span animate={{ rotate: fabOpen ? 45 : 0 }} transition={{ type: 'spring', damping: 16, stiffness: 300 }}>
               <Plus size={26} strokeWidth={2.4} />

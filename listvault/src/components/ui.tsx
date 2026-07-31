@@ -119,7 +119,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ type: 'spring', damping: 24, stiffness: 380 }}
-              className="rounded-full bg-ink-900 px-4 py-2.5 text-sm font-medium text-white shadow-float dark:bg-white dark:text-ink-900"
+              className="max-w-[86vw] truncate rounded-full bg-ink-900/95 px-4 py-2.5 text-center text-sm font-medium text-white shadow-float backdrop-blur-sm dark:bg-white/95 dark:text-ink-900"
             >
               {t.message}
             </motion.div>
@@ -220,13 +220,23 @@ export function AnimatedCheck({
       disabled={disabled}
       onClick={onToggle}
       aria-label={checked ? 'Uncheck' : 'Check'}
-      className={`flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200 ${
+      className={`relative flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200 ${
         checked ? 'border-brand-600 bg-brand-600' : 'border-ink-300 dark:border-ink-600'
       } ${disabled ? 'opacity-40' : ''}`}
     >
       <AnimatePresence>
         {checked && (
           <motion.span
+            key="burst"
+            initial={{ scale: 0.4, opacity: 0.7 }}
+            animate={{ scale: 2, opacity: 0 }}
+            transition={{ duration: 0.45, ease: 'easeOut' }}
+            className="pointer-events-none absolute inset-0 rounded-full border-2 border-brand-500"
+          />
+        )}
+        {checked && (
+          <motion.span
+            key="check"
             initial={{ scale: 0, rotate: -30 }}
             animate={{ scale: 1, rotate: 0 }}
             exit={{ scale: 0 }}
@@ -243,7 +253,7 @@ export function AnimatedCheck({
 /* --------------------------------- Loaders --------------------------------- */
 
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse rounded-2xl bg-ink-100 dark:bg-ink-800 ${className}`} />
+  return <div className={`skeleton ${className}`} />
 }
 
 export function EmptyState({ icon, title, hint }: { icon: ReactNode; title: string; hint?: string }) {
@@ -254,9 +264,13 @@ export function EmptyState({ icon, title, hint }: { icon: ReactNode; title: stri
       transition={{ duration: 0.3 }}
       className="flex flex-col items-center gap-3 rounded-[20px] border border-dashed border-ink-200 py-12 text-center dark:border-ink-700"
     >
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-800/30">
+      <motion.span
+        animate={{ y: [0, -5, 0] }}
+        transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+        className="flex h-14 w-14 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-800/30"
+      >
         {icon}
-      </span>
+      </motion.span>
       <div className="px-8">
         <p className="font-semibold">{title}</p>
         {hint && <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">{hint}</p>}
