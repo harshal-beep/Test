@@ -14,12 +14,16 @@ interface Invite {
 }
 
 function inviteMessage(inv: Invite): string {
+  const hi = inv.name ? `Hi ${inv.name}! ` : ''
   return (
-    `You're invited to HaMaara 🎉\n\n` +
-    `Open: https://hamaara.vercel.app\n` +
-    `Email: ${inv.email}\n` +
-    `Temporary password: ${inv.password}\n\n` +
-    `Log in and you're in — no email verification needed.`
+    `🏠 *Welcome to HaMaara!*\n` +
+    `_Hamaara ghar, hamaari lists_ ✨\n\n` +
+    `${hi}Your account is ready — shared lists, notes & habits for all of us.\n\n` +
+    `👉 https://hamaara.vercel.app\n\n` +
+    `📧 *Email:* ${inv.email}\n` +
+    `🔑 *Password:* ${inv.password}\n\n` +
+    `Log in straight away (no verification email). ` +
+    `💡 Change your password anytime from Settings → Change password.`
   )
 }
 

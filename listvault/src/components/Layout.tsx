@@ -59,7 +59,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   ]
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-2xl flex-col">
+    <div className="mx-auto flex min-h-[100dvh] max-w-2xl flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between bg-ink-50/90 px-5 py-3.5 backdrop-blur-md dark:bg-ink-950/90">
         <NavLink to="/" className="text-lg font-extrabold tracking-tight">
           Ha<span className="text-brand-600">Maara</span>

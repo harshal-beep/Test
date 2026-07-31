@@ -155,6 +155,16 @@ export function useListDetail(listId: string) {
     await supabase.from('lv_items').delete().eq('id', item.id)
   }
 
+  /** Set an explicit fractional position (used by drag & drop). */
+  async function placeItem(item: Item, newPos: number) {
+    track(item.id)
+    setItems((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, position: newPos } : i)).sort((a, b) => a.position - b.position)
+    )
+    await supabase.from('lv_items').update({ position: newPos }).eq('id', item.id)
+    settle(item.id)
+  }
+
   /** Reorder by fractional position: cheap, conflict-tolerant. */
   async function moveItem(item: Item, direction: -1 | 1) {
     const sorted = [...items].sort((a, b) => a.position - b.position)
@@ -193,6 +203,7 @@ export function useListDetail(listId: string) {
     editItem,
     deleteItem,
     moveItem,
+    placeItem,
     profileOf,
     reload: load
   }

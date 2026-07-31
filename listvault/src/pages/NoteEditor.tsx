@@ -70,7 +70,7 @@ export default function NoteEditor() {
     if (isNew) {
       const { data, error } = await supabase
         .from('lv_notes')
-        .insert({ title: title.trim(), body, owner_id: session.user.id, is_private: isPrivate, updated_by: session.user.id })
+        .insert({ title: title.trim(), body, owner_id: session.user.id, is_private: isPrivate, updated_by: session.user.id, position: Date.now() })
         .select()
         .single()
       setSaving(false)

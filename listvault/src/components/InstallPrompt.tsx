@@ -20,8 +20,8 @@ export default function InstallPrompt() {
     <div className="mx-4 mb-3 rounded-xl border border-brand-100 dark:border-brand-800 bg-brand-50 dark:bg-brand-800/20 p-3 text-sm">
       <p className="mb-1 font-semibold">Install HaMaara for the best experience</p>
       <p className="text-ink-600 dark:text-ink-300">
-        Tap the <span aria-label="share icon">Share</span> button in Safari, then{' '}
-        <strong>Add to Home Screen</strong>. Notifications only work after installing.
+        Tap the <strong>Share</strong> icon (in Safari's toolbar, or next to Chrome's address
+        bar), then <strong>Add to Home Screen</strong>. HaMaara opens full-screen like a real app.
       </p>
       <button
         className="mt-2 text-xs font-medium text-brand-700 underline"

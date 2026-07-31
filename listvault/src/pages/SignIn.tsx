@@ -59,7 +59,7 @@ export default function SignIn() {
 
   if (screen === 'walkthrough') {
     return (
-      <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-between px-8 py-12 text-center">
+      <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-between px-8 py-12 text-center">
         <div className="flex w-full items-center justify-between">
           <h1 className="text-xl font-extrabold tracking-tight">
             Ha<span className="text-brand-600">Maara</span>
@@ -150,7 +150,7 @@ export default function SignIn() {
       initial={{ opacity: 0, x: 32 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-      className="mx-auto flex min-h-screen max-w-md flex-col px-6 py-8"
+      className="mx-auto flex min-h-[100dvh] max-w-md flex-col px-6 py-8"
     >
       <button onClick={() => setScreen('walkthrough')} className="icon-btn -ml-2 mb-6" aria-label="Back">
         <ArrowLeft size={20} />

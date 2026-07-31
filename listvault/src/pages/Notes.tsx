@@ -1,10 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core'
+import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Lock, NotebookPen, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
-import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
+import { EmptyState, Page, Skeleton, useToast } from '../components/ui'
 
 // Pastel note-card palette, cycled by position
 const PASTELS = [
@@ -15,10 +25,60 @@ const PASTELS = [
   'bg-[#e8f1ff] dark:bg-[#24314a]'
 ]
 
+function NoteCard({
+  note,
+  index,
+  sortable,
+  onOpen
+}: {
+  note: Note
+  index: number
+  sortable: boolean
+  onOpen: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: note.id,
+    disabled: !sortable
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      onClick={onOpen}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`select-none rounded-[20px] p-4 shadow-card transition-shadow ${PASTELS[index % PASTELS.length]} ${
+        isDragging ? 'z-10 opacity-90 shadow-float ring-2 ring-brand-500/40' : 'hover:shadow-float'
+      }`}
+    >
+      <span className="flex items-start gap-1.5">
+        <span className="flex-1 font-bold leading-snug">
+          {note.title || note.body.slice(0, 60) || 'Untitled note'}
+        </span>
+        {note.is_private && <Lock size={14} className="mt-1 shrink-0 text-ink-500 dark:text-ink-400" />}
+      </span>
+      {note.title && note.body && (
+        <span className="mt-1.5 block overflow-hidden text-sm leading-relaxed text-ink-600 [-webkit-box-orient:vertical] [-webkit-line-clamp:4] [display:-webkit-box] dark:text-ink-300">
+          {note.body}
+        </span>
+      )}
+      <span className="mt-2.5 block text-xs font-medium text-ink-500 dark:text-ink-400">
+        {new Date(note.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+      </span>
+    </div>
+  )
+}
+
 export default function Notes() {
+  const navigate = useNavigate()
+  const toast = useToast()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
+  const draggingRef = useRef(false)
+
+  // Long-press (200ms) to pick up a card; a plain tap opens it.
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 8 } }))
 
   useEffect(() => {
     void load()
@@ -30,7 +90,7 @@ export default function Notes() {
   }, [])
 
   async function load() {
-    const { data } = await supabase.from('lv_notes').select('*').order('updated_at', { ascending: false })
+    const { data } = await supabase.from('lv_notes').select('*').order('position', { ascending: false })
     setNotes((data as Note[]) ?? [])
     setLoading(false)
   }
@@ -41,13 +101,40 @@ export default function Notes() {
     return notes.filter((n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
   }, [notes, filter])
 
+  const sortable = filter.trim() === ''
+
+  async function onDragEnd(e: DragEndEvent) {
+    setTimeout(() => (draggingRef.current = false), 50)
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const oldIdx = notes.findIndex((n) => n.id === active.id)
+    const newIdx = notes.findIndex((n) => n.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) return
+    const next = arrayMove(notes, oldIdx, newIdx)
+    setNotes(next)
+    const at = next.findIndex((n) => n.id === active.id)
+    // descending order: earlier card = larger position
+    const before = next[at - 1]?.position
+    const after = next[at + 1]?.position
+    const newPos =
+      before !== undefined && after !== undefined
+        ? (before + after) / 2
+        : before !== undefined
+          ? before - 1
+          : after !== undefined
+            ? after + 1
+            : Date.now()
+    const { error } = await supabase.from('lv_notes').update({ position: newPos }).eq('id', active.id)
+    if (error) toast(error.message)
+  }
+
   return (
     <Page className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[26px] font-extrabold tracking-tight">Notes</h1>
-        <Link to="/notes/new" className="btn-primary px-4 py-2 text-sm">
+        <button onClick={() => navigate('/notes/new')} className="btn-primary px-4 py-2 text-sm">
           + New note
-        </Link>
+        </button>
       </div>
 
       <div className="relative">
@@ -61,11 +148,11 @@ export default function Notes() {
       </div>
 
       {loading ? (
-        <div className="columns-2 gap-3">
-          <Skeleton className="mb-3 h-36" />
-          <Skeleton className="mb-3 h-28" />
-          <Skeleton className="mb-3 h-28" />
-          <Skeleton className="mb-3 h-40" />
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-36" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+          <Skeleton className="h-40" />
         </div>
       ) : visible.length === 0 ? (
         <EmptyState
@@ -78,38 +165,33 @@ export default function Notes() {
           }
         />
       ) : (
-        <motion.div
-          variants={stagger.container}
-          initial="initial"
-          animate="animate"
-          className="columns-2 gap-3 [column-fill:_balance]"
-        >
-          {visible.map((n, i) => (
-            <motion.div key={n.id} variants={stagger.item} className="mb-3 break-inside-avoid">
-              <motion.div whileTap={{ scale: 0.97 }}>
-                <Link
-                  to={`/notes/${n.id}`}
-                  className={`block rounded-[20px] p-4 shadow-card transition-shadow hover:shadow-float ${PASTELS[i % PASTELS.length]}`}
-                >
-                  <span className="flex items-start gap-1.5">
-                    <span className="flex-1 font-bold leading-snug">
-                      {n.title || n.body.slice(0, 60) || 'Untitled note'}
-                    </span>
-                    {n.is_private && <Lock size={14} className="mt-1 shrink-0 text-ink-500 dark:text-ink-400" />}
-                  </span>
-                  {n.title && n.body && (
-                    <span className="mt-1.5 block overflow-hidden text-sm leading-relaxed text-ink-600 [-webkit-box-orient:vertical] [-webkit-line-clamp:4] [display:-webkit-box] dark:text-ink-300">
-                      {n.body}
-                    </span>
-                  )}
-                  <span className="mt-2.5 block text-xs font-medium text-ink-500 dark:text-ink-400">
-                    {new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                  </span>
-                </Link>
+        <>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={() => (draggingRef.current = true)} onDragEnd={onDragEnd}>
+            <SortableContext items={visible.map((n) => n.id)} strategy={rectSortingStrategy}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className="grid grid-cols-2 items-start gap-3"
+              >
+                {visible.map((n, i) => (
+                  <NoteCard
+                    key={n.id}
+                    note={n}
+                    index={i}
+                    sortable={sortable}
+                    onOpen={() => {
+                      if (!draggingRef.current) navigate(`/notes/${n.id}`)
+                    }}
+                  />
+                ))}
               </motion.div>
-            </motion.div>
-          ))}
-        </motion.div>
+            </SortableContext>
+          </DndContext>
+          {sortable && notes.length > 1 && (
+            <p className="text-center text-xs text-ink-400">Hold a note to drag it into a new spot</p>
+          )}
+        </>
       )}
     </Page>
   )

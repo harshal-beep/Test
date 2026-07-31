@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
-import { Page, useConfirm } from '../components/ui'
+import { Page, useConfirm, useToast } from '../components/ui'
 
 export default function Settings() {
   const { profile, signOut, refreshProfile } = useAuth()
   const confirmSheet = useConfirm()
+  const toast = useToast()
+  const [newPw, setNewPw] = useState('')
+  const [pwBusy, setPwBusy] = useState(false)
   const [name, setName] = useState(profile?.display_name ?? '')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -22,6 +25,21 @@ export default function Settings() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2000)
       await refreshProfile()
+    }
+  }
+
+  async function changePassword() {
+    if (newPw.length < 6) {
+      toast('Password needs 6+ characters')
+      return
+    }
+    setPwBusy(true)
+    const { error: err } = await supabase.auth.updateUser({ password: newPw })
+    setPwBusy(false)
+    if (err) toast(err.message)
+    else {
+      setNewPw('')
+      toast('Password updated 🔒')
     }
   }
 
@@ -74,6 +92,27 @@ export default function Settings() {
             </button>
           </div>
           <p className="mt-1 text-xs text-ink-400">{profile?.email}</p>
+        </div>
+      </section>
+
+      <section className="space-y-2.5 surface p-4 text-sm shadow-sm">
+        <h2 className="font-semibold">Change password</h2>
+        <div className="flex gap-2">
+          <input
+            type="password"
+            value={newPw}
+            onChange={(e) => setNewPw(e.target.value)}
+            placeholder="New password (6+ characters)"
+            autoComplete="new-password"
+            className="field flex-1 py-2.5"
+          />
+          <button
+            onClick={() => void changePassword()}
+            disabled={pwBusy || newPw.length < 6}
+            className="btn-primary shrink-0 px-4 py-2.5 text-sm"
+          >
+            {pwBusy ? '…' : 'Update'}
+          </button>
         </div>
       </section>
 

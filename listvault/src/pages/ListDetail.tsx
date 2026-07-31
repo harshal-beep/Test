@@ -2,11 +2,21 @@ import { FormEvent, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowDown,
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core'
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
   ArrowLeft,
-  ArrowUp,
   Check,
   Copy,
+  GripVertical,
   MoreHorizontal,
   Pencil,
   Send,
@@ -17,6 +27,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { Item, canReopen } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useKeyboardInset } from '../lib/useKeyboardInset'
 import { useListDetail } from '../hooks/useListDetail'
 import Avatar from '../components/Avatar'
 import { AnimatedCheck, BottomSheet, Page, Skeleton, useConfirm, useToast } from '../components/ui'
@@ -27,9 +38,10 @@ export default function ListDetail() {
   const { session } = useAuth()
   const confirm = useConfirm()
   const toast = useToast()
+  const kbInset = useKeyboardInset()
   const {
     list, items, members, loading, notFound, synced, isOwner,
-    addItems, toggleItem, editItem, deleteItem, moveItem, profileOf
+    addItems, toggleItem, editItem, deleteItem, placeItem, profileOf
   } = useListDetail(id)
 
   const [input, setInput] = useState('')
@@ -37,6 +49,8 @@ export default function ListDetail() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
 
   if (loading)
     return (
@@ -60,7 +74,12 @@ export default function ListDetail() {
 
   const archived = list.status === 'archived'
   const shareUrl = `${window.location.origin}/j/${list.join_code}`
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Join my list "${list.name}" on HaMaara: ${shareUrl}`)}`
+  const shareMessage =
+    `${list.emoji ?? '📝'} *${list.name}*\n` +
+    `Join our shared list on HaMaara 🏠\n\n` +
+    `👉 ${shareUrl}\n\n` +
+    `Or open https://hamaara.vercel.app and enter code *${list.join_code}*`
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`
   const unchecked = items.filter((i) => !i.checked)
   const checked = items.filter((i) => i.checked)
   const pct = items.length === 0 ? 0 : Math.round((checked.length / items.length) * 100)
@@ -75,6 +94,27 @@ export default function ListDetail() {
       toast((err as Error).message)
       setInput(text)
     }
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    const { active, over } = e
+    if (!over || active.id === over.id) return
+    const oldIdx = unchecked.findIndex((i) => i.id === active.id)
+    const newIdx = unchecked.findIndex((i) => i.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) return
+    const next = arrayMove(unchecked, oldIdx, newIdx)
+    const at = next.findIndex((i) => i.id === active.id)
+    const before = next[at - 1]?.position
+    const after = next[at + 1]?.position
+    const newPos =
+      before !== undefined && after !== undefined
+        ? (before + after) / 2
+        : before !== undefined
+          ? before + 1
+          : after !== undefined
+            ? after - 1
+            : 1
+    void placeItem(next[at], newPos)
   }
 
   async function closeList() {
@@ -125,21 +165,14 @@ export default function ListDetail() {
     }
   }
 
-  function renderItem(item: Item) {
+  function rowBody(item: Item, dragHandle?: React.ReactNode) {
     const addedBy = profileOf(item.added_by)
     const checkedBy = profileOf(item.checked_by)
     const isExpanded = expanded === item.id
     return (
-      <motion.li
-        key={item.id}
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, x: -24, transition: { duration: 0.18 } }}
-        transition={{ type: 'spring', damping: 26, stiffness: 340 }}
-        className={`surface overflow-hidden ${item.pending ? 'opacity-60' : ''}`}
-      >
-        <div className="flex items-center gap-3 px-4 py-3">
+      <>
+        <div className="flex items-center gap-2.5 px-3 py-3">
+          {dragHandle}
           <AnimatedCheck checked={item.checked} disabled={archived} onToggle={() => void toggleItem(item)} />
           {editing === item.id ? (
             <form
@@ -163,9 +196,7 @@ export default function ListDetail() {
             </form>
           ) : (
             <button
-              className={`flex-1 text-left text-[15px] transition-colors ${
-                item.checked ? 'text-ink-400 line-through' : ''
-              }`}
+              className={`flex-1 text-left text-[15px] transition-colors ${item.checked ? 'text-ink-400 line-through' : ''}`}
               onClick={() => setExpanded(isExpanded ? null : item.id)}
             >
               {item.text}
@@ -208,17 +239,7 @@ export default function ListDetail() {
                     >
                       <Pencil size={15} />
                     </button>
-                    <button className="icon-btn h-8 w-8" aria-label="Move up" onClick={() => void moveItem(item, -1)}>
-                      <ArrowUp size={15} />
-                    </button>
-                    <button className="icon-btn h-8 w-8" aria-label="Move down" onClick={() => void moveItem(item, 1)}>
-                      <ArrowDown size={15} />
-                    </button>
-                    <button
-                      className="icon-btn h-8 w-8 text-red-500"
-                      aria-label="Delete"
-                      onClick={() => void deleteItem(item)}
-                    >
+                    <button className="icon-btn h-8 w-8 text-red-500" aria-label="Delete" onClick={() => void deleteItem(item)}>
                       <Trash2 size={15} />
                     </button>
                   </div>
@@ -227,7 +248,34 @@ export default function ListDetail() {
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.li>
+      </>
+    )
+  }
+
+  function SortableRow({ item }: { item: Item }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+    return (
+      <li
+        ref={setNodeRef}
+        style={{ transform: CSS.Transform.toString(transform), transition }}
+        className={`surface overflow-hidden ${item.pending ? 'opacity-60' : ''} ${
+          isDragging ? 'z-10 shadow-float ring-2 ring-brand-500/40' : ''
+        }`}
+      >
+        {rowBody(
+          item,
+          archived ? undefined : (
+            <button
+              {...attributes}
+              {...listeners}
+              aria-label="Drag to reorder"
+              className="-ml-1 cursor-grab touch-none p-1 text-ink-300 active:cursor-grabbing dark:text-ink-600"
+            >
+              <GripVertical size={17} />
+            </button>
+          )
+        )}
+      </li>
     )
   }
 
@@ -274,19 +322,29 @@ export default function ListDetail() {
         </div>
       )}
 
-      {/* Tasks */}
+      {/* Tasks — drag the grip to reorder */}
       {items.length === 0 && !archived && (
         <p className="pt-8 text-center text-sm text-ink-400">No tasks yet — add the first one below.</p>
       )}
-      <motion.ul layout className="space-y-2">
-        <AnimatePresence mode="popLayout">{unchecked.map(renderItem)}</AnimatePresence>
-      </motion.ul>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis]} onDragEnd={onDragEnd}>
+        <SortableContext items={unchecked.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <ul className="space-y-2">
+            {unchecked.map((item) => (
+              <SortableRow key={item.id} item={item} />
+            ))}
+          </ul>
+        </SortableContext>
+      </DndContext>
       {checked.length > 0 && (
         <>
           <p className="pt-1 text-xs font-bold uppercase tracking-wider text-ink-400">Done · {checked.length}</p>
-          <motion.ul layout className="space-y-2">
-            <AnimatePresence mode="popLayout">{checked.map(renderItem)}</AnimatePresence>
-          </motion.ul>
+          <ul className="space-y-2">
+            {checked.map((item) => (
+              <li key={item.id} className={`surface overflow-hidden ${item.pending ? 'opacity-60' : ''}`}>
+                {rowBody(item)}
+              </li>
+            ))}
+          </ul>
         </>
       )}
 
@@ -300,31 +358,35 @@ export default function ListDetail() {
             Duplicate without completed tasks
           </button>
           {isOwner && canReopen(list) && (
-            <button onClick={() => void supabase.from('lv_lists').update({ status: 'active', closed_at: null }).eq('id', id)} className="w-full py-2 text-sm font-medium text-ink-500 dark:text-ink-400">
+            <button
+              onClick={() => void supabase.from('lv_lists').update({ status: 'active', closed_at: null }).eq('id', id)}
+              className="w-full py-2 text-sm font-medium text-ink-500 dark:text-ink-400"
+            >
               Reopen (within 24h)
             </button>
           )}
         </div>
       )}
 
-      {/* Quick add — pinned above nav */}
+      {/* Quick add — pinned above nav, lifts above the iOS keyboard */}
       {!archived && (
         <form
           onSubmit={submit}
-          className="fixed inset-x-0 bottom-[68px] z-10 mx-auto max-w-2xl px-5 pb-2"
+          className="fixed inset-x-0 z-10 mx-auto max-w-2xl px-5 pb-2 transition-[bottom] duration-150"
+          style={{ bottom: kbInset > 0 ? kbInset + 8 : 68 }}
         >
           <div className="flex items-center gap-2 rounded-full bg-white p-1.5 pl-5 shadow-float ring-1 ring-ink-100 dark:bg-ink-900 dark:ring-ink-700">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Add a task…"
-              className="flex-1 bg-transparent text-[15px] placeholder:text-ink-400 focus:outline-none"
+              className="min-w-0 flex-1 bg-transparent text-[16px] placeholder:text-ink-400 focus:outline-none"
             />
             <motion.button
               whileTap={{ scale: 0.85 }}
               disabled={!input.trim()}
               aria-label="Add task"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-600 text-white shadow-md shadow-brand-600/30 disabled:opacity-40"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white shadow-md shadow-brand-600/30 disabled:opacity-40"
             >
               <Send size={17} />
             </motion.button>
@@ -347,7 +409,12 @@ export default function ListDetail() {
               <Copy size={15} /> Copy link
             </button>
           </div>
-          <a href={whatsappUrl} target="_blank" rel="noreferrer" className="flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] py-3.5 font-semibold text-white shadow-lg shadow-[#25D366]/30 active:scale-[0.98]">
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] py-3.5 font-semibold text-white shadow-lg shadow-[#25D366]/30 active:scale-[0.98]"
+          >
             Share on WhatsApp
           </a>
           <p className="text-center text-xs text-ink-400">Anyone with the link or code joins as an editor.</p>
