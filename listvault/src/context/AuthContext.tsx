@@ -41,8 +41,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user.id])
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase.from('lv_profiles').select('*').eq('id', userId).single()
-    if (data) setProfile(data as Profile)
+    const { data } = await supabase.from('lv_profiles').select('*').eq('id', userId).maybeSingle()
+    if (data) {
+      setProfile(data as Profile)
+      return
+    }
+    // No profile row. Either the account was deleted while this device kept a
+    // still-valid token (zombie session), or the row is genuinely missing.
+    const { data: userData, error } = await supabase.auth.getUser()
+    if (error || !userData.user) {
+      // Server no longer recognises this account — force a clean sign-in.
+      await supabase.auth.signOut()
+      return
+    }
+    const u = userData.user
+    const { data: created } = await supabase
+      .from('lv_profiles')
+      .insert({
+        id: u.id,
+        display_name: (u.user_metadata?.display_name as string | undefined) ?? u.email?.split('@')[0] ?? '',
+        email: u.email
+      })
+      .select()
+      .single()
+    if (created) setProfile(created as Profile)
   }
 
   const value: AuthState = {
