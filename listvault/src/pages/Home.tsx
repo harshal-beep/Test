@@ -95,7 +95,7 @@ export default function Home() {
             : `${pending} task${pending === 1 ? '' : 's'} to go`}
         </p>
         <p className="mt-0.5 text-sm opacity-80">
-          {lists.length} active list{lists.length === 1 ? '' : 's'} in your vault
+          {lists.length} active list{lists.length === 1 ? '' : 's'} — hamaara, together
         </p>
       </motion.div>
 

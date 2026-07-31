@@ -62,7 +62,7 @@ export default function SignIn() {
       <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-between px-8 py-12 text-center">
         <div className="flex w-full items-center justify-between">
           <h1 className="text-xl font-extrabold tracking-tight">
-            List<span className="text-brand-600">Vault</span>
+            Ha<span className="text-brand-600">Maara</span>
           </h1>
           {!last && (
             <button onClick={() => setSlide(SLIDES.length - 1)} className="text-sm font-medium text-ink-400">
@@ -156,7 +156,7 @@ export default function SignIn() {
         <ArrowLeft size={20} />
       </button>
       <h1 className="mb-8 text-center text-2xl font-extrabold tracking-tight">
-        {mode === 'signup' ? 'Create your vault' : 'Welcome back'}
+        {mode === 'signup' ? 'Create your account' : 'Welcome back'}
       </h1>
       <AuthForm initialMode={mode} />
     </motion.div>

@@ -9,9 +9,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
-        name: 'ListVault',
-        short_name: 'ListVault',
-        description: 'Shared lists with a permanent archive',
+        name: 'HaMaara',
+        short_name: 'HaMaara',
+        description: 'Our lists, our notes — shared in real time, archived forever',
         theme_color: '#6c63ff',
         background_color: '#f8fafc',
         display: 'standalone',

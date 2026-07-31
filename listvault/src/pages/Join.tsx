@@ -42,7 +42,7 @@ export default function Join() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
-      <h1 className="text-2xl font-bold text-brand-700">ListVault</h1>
+      <h1 className="text-2xl font-bold text-brand-700">HaMaara</h1>
       {error ? (
         <p className="text-red-600 dark:text-red-400">{error}</p>
       ) : !peek ? (

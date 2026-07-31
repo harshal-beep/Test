@@ -73,7 +73,7 @@ export default function Notes() {
           title={notes.length === 0 ? 'No notes yet' : 'No matches'}
           hint={
             notes.length === 0
-              ? 'Shared notes are visible to everyone in your vault; private notes only to you.'
+              ? 'Shared notes are visible to everyone in HaMaara; private notes only to you.'
               : 'Try a different search.'
           }
         />

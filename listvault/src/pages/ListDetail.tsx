@@ -60,7 +60,7 @@ export default function ListDetail() {
 
   const archived = list.status === 'archived'
   const shareUrl = `${window.location.origin}/j/${list.join_code}`
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Join my list "${list.name}" on ListVault: ${shareUrl}`)}`
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`Join my list "${list.name}" on HaMaara: ${shareUrl}`)}`
   const unchecked = items.filter((i) => !i.checked)
   const checked = items.filter((i) => i.checked)
   const pct = items.length === 0 ? 0 : Math.round((checked.length / items.length) * 100)

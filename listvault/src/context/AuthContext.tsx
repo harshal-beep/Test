@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   if (!isConfigured) {
     return (
       <div className="mx-auto mt-24 max-w-md rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-6 text-sm">
-        <h1 className="mb-2 text-lg font-semibold">ListVault is not configured</h1>
+        <h1 className="mb-2 text-lg font-semibold">HaMaara is not configured</h1>
         <p>
           Copy <code>.env.example</code> to <code>.env.local</code> and set{' '}
           <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>, then restart the

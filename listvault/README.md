@@ -1,4 +1,7 @@
-# ListVault
+# HaMaara
+
+> **HaMaara** (हमारा — "ours") — the app formerly scaffolded as ListVault; the code
+> directory and `lv_` database prefix keep the old name.
 
 Shared to-do/shopping lists in real time — with the differentiator: every closed list is
 permanently archived into a searchable, reusable vault. Built per the v1 MVP PRD.
