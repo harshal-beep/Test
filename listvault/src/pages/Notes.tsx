@@ -11,28 +11,18 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Lock, NotebookPen, Search } from 'lucide-react'
+import { Lock, NotebookPen, Pin, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
+import { NOTE_COLORS, noteColorKey } from '../lib/noteColors'
 import { EmptyState, Page, Skeleton, useToast } from '../components/ui'
-
-// Pastel note-card palette, cycled by position
-const PASTELS = [
-  'bg-[#edebff] dark:bg-[#2b2952]',
-  'bg-[#fff1e0] dark:bg-[#3d3325]',
-  'bg-[#e4f7ee] dark:bg-[#22382f]',
-  'bg-[#ffe9f0] dark:bg-[#3c2733]',
-  'bg-[#e8f1ff] dark:bg-[#24314a]'
-]
 
 function NoteCard({
   note,
-  index,
   sortable,
   onOpen
 }: {
   note: Note
-  index: number
   sortable: boolean
   onOpen: () => void
 }) {
@@ -47,7 +37,7 @@ function NoteCard({
       {...listeners}
       onClick={onOpen}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`select-none rounded-[20px] p-4 shadow-card transition-shadow ${PASTELS[index % PASTELS.length]} ${
+      className={`select-none rounded-[20px] p-4 shadow-card transition-shadow ${NOTE_COLORS[noteColorKey(note)].card} ${
         isDragging ? 'z-10 opacity-90 shadow-float ring-2 ring-brand-500/40' : 'hover:shadow-float'
       }`}
     >
@@ -55,6 +45,7 @@ function NoteCard({
         <span className="flex-1 font-bold leading-snug">
           {note.title || note.body.slice(0, 60) || 'Untitled note'}
         </span>
+        {note.pinned && <Pin size={14} className="mt-1 shrink-0 fill-current text-brand-600 dark:text-brand-400" />}
         {note.is_private && <Lock size={14} className="mt-1 shrink-0 text-ink-500 dark:text-ink-400" />}
       </span>
       {note.title && note.body && (
@@ -97,8 +88,11 @@ export default function Notes() {
 
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase()
-    if (!q) return notes
-    return notes.filter((n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
+    const matched = q
+      ? notes.filter((n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
+      : notes
+    // pinned first; stable sort keeps position order within each group
+    return [...matched].sort((a, b) => Number(b.pinned) - Number(a.pinned))
   }, [notes, filter])
 
   const sortable = filter.trim() === ''
@@ -174,11 +168,10 @@ export default function Notes() {
                 transition={{ duration: 0.25 }}
                 className="grid grid-cols-2 items-start gap-3"
               >
-                {visible.map((n, i) => (
+                {visible.map((n) => (
                   <NoteCard
                     key={n.id}
                     note={n}
-                    index={i}
                     sortable={sortable}
                     onOpen={() => {
                       if (!draggingRef.current) navigate(`/notes/${n.id}`)

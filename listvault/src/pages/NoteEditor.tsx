@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, ListChecks, ListPlus, Lock, LockOpen, Sparkles, SpellCheck, Trash2, WrapText } from 'lucide-react'
+import { ArrowLeft, Check, ListChecks, ListPlus, Lock, LockOpen, Pin, Sparkles, SpellCheck, Trash2, WrapText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
+import { NOTE_COLOR_KEYS, NOTE_COLORS } from '../lib/noteColors'
 import { useAuth } from '../context/AuthContext'
 import { Page, Skeleton, useConfirm, useToast } from '../components/ui'
+
+function timeAgo(iso: string): string {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
 
 const AI_ACTIONS = [
   { key: 'summarize', label: 'Summarize', Icon: WrapText },
@@ -24,6 +33,9 @@ export default function NoteEditor() {
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const [color, setColor] = useState<string | null>(null)
+  const [editedBy, setEditedBy] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
@@ -48,8 +60,22 @@ export default function NoteEditor() {
         setTitle(n.title)
         setBody(n.body)
         setIsPrivate(n.is_private)
+        setPinned(n.pinned)
+        setColor(n.color)
         setOwnerId(n.owner_id)
         setLoading(false)
+        if (n.updated_by === session?.user.id) {
+          setEditedBy(`Edited by you · ${timeAgo(n.updated_at)}`)
+        } else if (n.updated_by) {
+          void supabase
+            .from('lv_profiles')
+            .select('display_name')
+            .eq('id', n.updated_by)
+            .maybeSingle()
+            .then(({ data: p }) =>
+              setEditedBy(`Edited by ${p?.display_name ?? 'someone'} · ${timeAgo(n.updated_at)}`)
+            )
+        }
       })
   }, [id, isNew]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -70,7 +96,7 @@ export default function NoteEditor() {
     if (isNew) {
       const { data, error } = await supabase
         .from('lv_notes')
-        .insert({ title: title.trim(), body, owner_id: session.user.id, is_private: isPrivate, updated_by: session.user.id, position: Date.now() })
+        .insert({ title: title.trim(), body, owner_id: session.user.id, is_private: isPrivate, pinned, color, updated_by: session.user.id, position: Date.now() })
         .select()
         .single()
       setSaving(false)
@@ -80,7 +106,7 @@ export default function NoteEditor() {
         navigate(`/notes/${(data as Note).id}`, { replace: true })
       }
     } else {
-      const patch: Partial<Note> = { title: title.trim(), body, updated_by: session.user.id }
+      const patch: Partial<Note> = { title: title.trim(), body, pinned, color, updated_by: session.user.id }
       if (isOwner) patch.is_private = isPrivate
       const { error } = await supabase.from('lv_notes').update(patch).eq('id', id)
       setSaving(false)
@@ -159,6 +185,13 @@ export default function NoteEditor() {
           <ArrowLeft size={20} />
         </button>
         <span className="flex-1" />
+        <button
+          onClick={() => setPinned((p) => !p)}
+          className={`icon-btn ${pinned ? 'text-brand-600 dark:text-brand-400' : 'text-ink-400'}`}
+          aria-label={pinned ? 'Unpin note' : 'Pin note'}
+        >
+          <Pin size={18} className={pinned ? 'fill-current' : ''} />
+        </button>
         {isOwner && (
           <button
             onClick={() => setIsPrivate((p) => !p)}
@@ -185,6 +218,23 @@ export default function NoteEditor() {
         >
           <Check size={16} /> {saving ? 'Saving…' : 'Save'}
         </motion.button>
+      </div>
+
+      {/* Color + last-edited row */}
+      <div className="mb-3 flex items-center gap-2.5">
+        {NOTE_COLOR_KEYS.map((k) => (
+          <button
+            key={k}
+            onClick={() => setColor((c) => (c === k ? null : k))}
+            aria-label={`Note color ${k}`}
+            className={`h-6 w-6 rounded-full transition-transform active:scale-90 ${
+              color === k ? 'ring-2 ring-ink-900 ring-offset-2 ring-offset-white dark:ring-white dark:ring-offset-ink-950' : ''
+            }`}
+            style={{ backgroundColor: NOTE_COLORS[k].dot }}
+          />
+        ))}
+        <span className="flex-1" />
+        {editedBy && <span className="text-xs font-medium text-ink-400">{editedBy}</span>}
       </div>
 
       {/* Editor */}

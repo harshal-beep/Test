@@ -52,6 +52,9 @@ export interface Note {
   is_private: boolean
   updated_by: string | null
   position: number
+  pinned: boolean
+  /** Named pastel key ('lilac' | 'peach' | 'mint' | 'rose' | 'sky'); null = auto by id. */
+  color: string | null
   created_at: string
   updated_at: string
 }
