@@ -54,6 +54,21 @@ export interface Note {
   updated_at: string
 }
 
+export interface Habit {
+  id: string
+  name: string
+  emoji: string | null
+  color: string | null
+  owner_id: string
+  created_at: string
+}
+
+export interface HabitCheck {
+  habit_id: string
+  day: string
+  user_id: string
+}
+
 export interface SearchResult {
   list_id: string
   list_name: string

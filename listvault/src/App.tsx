@@ -10,6 +10,7 @@ import Search from './pages/Search'
 import Settings from './pages/Settings'
 import Admin from './pages/Admin'
 import Notes from './pages/Notes'
+import Habits from './pages/Habits'
 import NoteEditor from './pages/NoteEditor'
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
                   <Route path="/list/:id" element={<ListDetail />} />
                   <Route path="/notes" element={<Notes />} />
                   <Route path="/notes/:id" element={<NoteEditor />} />
+                  <Route path="/habits" element={<Habits />} />
                   <Route path="/archive" element={<Archive />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/settings" element={<Settings />} />
