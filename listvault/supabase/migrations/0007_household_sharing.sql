@@ -1,0 +1,5 @@
+-- APPLIED as migration `listvault_household_sharing`.
+-- Household sharing model: every account the admin creates sees all lists,
+-- notes (except private), and habits automatically. Per-list membership and
+-- join codes are retired (tables/RPCs left in place but dormant).
+-- See the migration applied on the project for the full policy + RPC text.

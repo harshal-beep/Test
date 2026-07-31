@@ -20,7 +20,6 @@ import {
   MoreHorizontal,
   Pencil,
   Send,
-  Share2,
   Trash2,
   Users
 } from 'lucide-react'
@@ -40,12 +39,12 @@ export default function ListDetail() {
   const toast = useToast()
   const kbInset = useKeyboardInset()
   const {
-    list, items, members, loading, notFound, synced, isOwner,
+    list, items, household, loading, notFound, synced, isOwner,
     addItems, toggleItem, editItem, deleteItem, placeItem, profileOf
   } = useListDetail(id)
 
   const [input, setInput] = useState('')
-  const [sheet, setSheet] = useState<'share' | 'members' | 'options' | null>(null)
+  const [sheet, setSheet] = useState<'members' | 'options' | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
@@ -73,13 +72,6 @@ export default function ListDetail() {
     )
 
   const archived = list.status === 'archived'
-  const shareUrl = `${window.location.origin}/j/${list.join_code}`
-  const shareMessage =
-    `${list.emoji ?? '📝'} *${list.name}*\n` +
-    `Join our shared list on HaMaara 🏠\n\n` +
-    `👉 ${shareUrl}\n\n` +
-    `Or open https://hamaara.vercel.app and enter code *${list.join_code}*`
-  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`
   const unchecked = items.filter((i) => !i.checked)
   const checked = items.filter((i) => i.checked)
   const pct = items.length === 0 ? 0 : Math.round((checked.length / items.length) * 100)
@@ -142,18 +134,6 @@ export default function ListDetail() {
     const name = prompt('Rename list', list!.name)?.trim()
     if (!name) return
     await supabase.from('lv_lists').update({ name }).eq('id', id)
-  }
-
-  async function regenerateCode() {
-    if (!(await confirm('Regenerate the join code?', { body: 'The old link and code stop working immediately.', confirmLabel: 'Regenerate' }))) return
-    const { error } = await supabase.rpc('lv_regenerate_join_code', { p_list_id: id })
-    if (error) toast(error.message)
-    else toast('New code generated')
-  }
-
-  async function removeMember(userId: string, name: string) {
-    if (!(await confirm(`Remove ${name}?`, { body: 'They lose access to this list.', confirmLabel: 'Remove', danger: true }))) return
-    await supabase.from('lv_list_members').delete().eq('list_id', id).eq('user_id', userId)
   }
 
   async function duplicate(includeChecked: boolean) {
@@ -300,11 +280,6 @@ export default function ListDetail() {
         <button onClick={() => setSheet('members')} className="icon-btn" aria-label="Members">
           <Users size={19} />
         </button>
-        {!archived && (
-          <button onClick={() => setSheet('share')} className="icon-btn text-brand-600" aria-label="Share">
-            <Share2 size={19} />
-          </button>
-        )}
         <button onClick={() => setSheet('options')} className="icon-btn" aria-label="More">
           <MoreHorizontal size={19} />
         </button>
@@ -394,62 +369,28 @@ export default function ListDetail() {
         </form>
       )}
 
-      {/* Share sheet */}
-      <BottomSheet open={sheet === 'share'} onClose={() => setSheet(null)} title="Invite people">
+      {/* Household sheet */}
+      <BottomSheet open={sheet === 'members'} onClose={() => setSheet(null)} title={`Our home · ${household.length}`}>
         <div className="space-y-4 pb-1">
-          <div className="flex items-center justify-between rounded-2xl bg-ink-100 px-5 py-4 dark:bg-ink-800">
-            <span className="text-2xl font-extrabold tracking-[0.3em]">{list.join_code}</span>
-            <button
-              onClick={() => {
-                void navigator.clipboard.writeText(shareUrl)
-                toast('Link copied')
-              }}
-              className="btn-ghost flex items-center gap-1.5 px-3 py-2 text-sm"
-            >
-              <Copy size={15} /> Copy link
-            </button>
-          </div>
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex w-full items-center justify-center gap-2 rounded-full bg-[#25D366] py-3.5 font-semibold text-white shadow-lg shadow-[#25D366]/30 active:scale-[0.98]"
-          >
-            Share on WhatsApp
-          </a>
-          <p className="text-center text-xs text-ink-400">Anyone with the link or code joins as an editor.</p>
-          {isOwner && (
-            <button onClick={() => void regenerateCode()} className="w-full text-center text-sm font-medium text-ink-500 underline-offset-2 hover:underline dark:text-ink-400">
-              Regenerate code
-            </button>
-          )}
-        </div>
-      </BottomSheet>
-
-      {/* Members sheet */}
-      <BottomSheet open={sheet === 'members'} onClose={() => setSheet(null)} title={`Members · ${members.length}`}>
-        <ul className="space-y-3 pb-1">
-          {members.map((m) => (
-            <li key={m.user_id} className="flex items-center gap-3">
-              <Avatar profile={m.profile} size={9} />
-              <span className="flex-1">
-                <span className="block text-sm font-semibold">
-                  {m.profile?.display_name ?? 'Member'}
-                  {m.user_id === session?.user.id && ' (you)'}
+          <p className="text-sm text-ink-500 dark:text-ink-400">
+            Everyone in HaMaara shares this list automatically — no invites needed. Admins add
+            people from the Admin page.
+          </p>
+          <ul className="space-y-3">
+            {household.map((m) => (
+              <li key={m.id} className="flex items-center gap-3">
+                <Avatar profile={m} size={9} />
+                <span className="flex-1 text-sm font-semibold">
+                  {m.display_name || m.email}
+                  {m.id === session?.user.id && ' (you)'}
                 </span>
-                <span className="text-xs uppercase tracking-wide text-ink-400">{m.role}</span>
-              </span>
-              {isOwner && m.role !== 'owner' && (
-                <button
-                  className="text-xs font-medium text-red-500"
-                  onClick={() => void removeMember(m.user_id, m.profile?.display_name ?? 'this member')}
-                >
-                  Remove
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+                {m.id === list.owner_id && (
+                  <span className="text-xs uppercase tracking-wide text-ink-400">created it</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       </BottomSheet>
 
       {/* Options sheet */}

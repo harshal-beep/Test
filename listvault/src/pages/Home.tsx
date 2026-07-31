@@ -1,12 +1,12 @@
-import { FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ListTodo, Plus, Ticket } from 'lucide-react'
+import { ListTodo, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
-import { EmptyState, Page, Skeleton, stagger, useToast } from '../components/ui'
+import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
 import { ListComposer } from '../components/Composers'
 
 type ListRow = List & { total: number; done: number }
@@ -35,11 +35,9 @@ function greeting(): string {
 
 export default function Home() {
   const { profile } = useAuth()
-  const toast = useToast()
   const [lists, setLists] = useState<ListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
-  const [joinCode, setJoinCode] = useState('')
   const [feed, setFeed] = useState<FeedEntry[]>([])
   const [feedProfiles, setFeedProfiles] = useState<Profile[]>([])
 
@@ -104,22 +102,6 @@ export default function Home() {
     }))
     setLists(rows)
     setLoading(false)
-  }
-
-  async function joinByCode(e: FormEvent) {
-    e.preventDefault()
-    const code = joinCode.trim()
-    if (code.length !== 6) {
-      toast('Codes are 6 characters')
-      return
-    }
-    const { error } = await supabase.rpc('lv_join_list_by_code', { p_code: code })
-    if (error) toast(error.message)
-    else {
-      setJoinCode('')
-      toast('Joined the list 🎉')
-      void loadLists()
-    }
   }
 
   const pending = lists.reduce((sum, l) => sum + (l.total - l.done), 0)
@@ -232,21 +214,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      {/* Join by code */}
-      <form onSubmit={joinByCode} className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Ticket size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
-          <input
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            placeholder="Join with a code"
-            maxLength={6}
-            className="field pl-11 uppercase tracking-[0.2em] placeholder:normal-case placeholder:tracking-normal"
-          />
-        </div>
-        <button className="btn-ghost border border-brand-200 px-5 py-3 text-sm dark:border-brand-800">Join</button>
-      </form>
 
       <ListComposer open={composerOpen} onClose={() => setComposerOpen(false)} />
     </Page>

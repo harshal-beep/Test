@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Item, List, ListMember, Profile } from '../lib/types'
+import { Item, List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -12,7 +12,7 @@ export function useListDetail(listId: string) {
   const { session } = useAuth()
   const [list, setList] = useState<List | null>(null)
   const [items, setItems] = useState<Item[]>([])
-  const [members, setMembers] = useState<ListMember[]>([])
+  const [household, setHousehold] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [synced, setSynced] = useState(true)
@@ -22,7 +22,7 @@ export function useListDetail(listId: string) {
     const [listRes, itemsRes, membersRes] = await Promise.all([
       supabase.from('lv_lists').select('*').eq('id', listId).maybeSingle(),
       supabase.from('lv_items').select('*').eq('list_id', listId).order('position'),
-      supabase.from('lv_list_members').select('*, profile:lv_profiles(*)').eq('list_id', listId)
+      supabase.from('lv_profiles').select('*')
     ])
     if (!listRes.data) {
       setNotFound(true)
@@ -31,7 +31,7 @@ export function useListDetail(listId: string) {
     }
     setList(listRes.data as List)
     setItems((itemsRes.data as Item[]) ?? [])
-    setMembers((membersRes.data as ListMember[]) ?? [])
+    setHousehold((membersRes.data as Profile[]) ?? [])
     setLoading(false)
   }, [listId])
 
@@ -64,11 +64,6 @@ export function useListDetail(listId: string) {
           if (payload.eventType === 'DELETE') setNotFound(true)
           else setList(payload.new as List)
         }
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lv_list_members', filter: `list_id=eq.${listId}` },
-        () => void load()
       )
       .subscribe()
     return () => void supabase.removeChannel(channel)
@@ -185,15 +180,14 @@ export function useListDetail(listId: string) {
   }
 
   const profileOf = useCallback(
-    (userId: string | null): Profile | undefined =>
-      members.find((m) => m.user_id === userId)?.profile,
-    [members]
+    (userId: string | null): Profile | undefined => household.find((p) => p.id === userId),
+    [household]
   )
 
   return {
     list,
     items: [...items].sort((a, b) => a.position - b.position),
-    members,
+    household,
     loading,
     notFound,
     synced,

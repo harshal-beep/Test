@@ -4,7 +4,6 @@ import Layout from './components/Layout'
 import SignIn from './pages/SignIn'
 import Home from './pages/Home'
 import ListDetail from './pages/ListDetail'
-import Join from './pages/Join'
 import Archive from './pages/Archive'
 import Search from './pages/Search'
 import Settings from './pages/Settings'
@@ -25,8 +24,6 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Join links work signed-out (preview + sign-in-to-join, PRD 5.2) */}
-        <Route path="/j/:code" element={<Join />} />
         {session ? (
           <Route
             path="*"
