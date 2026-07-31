@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Flame, Plus, Trash2 } from 'lucide-react'
+import confetti from 'canvas-confetti'
+import { Flame, Pencil, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Habit, HabitCheck, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +37,41 @@ function streakOf(days: Set<string>): number {
   return streak
 }
 
+const CELEBRATE = {
+  particleCount: 110,
+  spread: 75,
+  origin: { y: 0.75 },
+  colors: ['#6c63ff', '#8b83ff', '#ffd166', '#25D366']
+}
+const STREAK_MILESTONES = [7, 14, 30, 50, 100]
+
+/** Days since Monday (Mon-Sun week). */
+function mondayIndex(): number {
+  return (new Date().getDay() + 6) % 7
+}
+
+/** Checked days in the week k weeks back (k = 0 → current week so far). */
+function countWeek(days: Set<string>, k: number): number {
+  const mi = mondayIndex()
+  const from = k === 0 ? 0 : mi + 7 * (k - 1) + 1
+  const to = k === 0 ? mi : mi + 7 * k
+  let n = 0
+  for (let off = from; off <= to; off++) if (days.has(isoDay(off))) n++
+  return n
+}
+
+/** Consecutive weeks meeting the target; the current week counts once met. */
+function weekStreakOf(days: Set<string>, target: number): number {
+  let k = countWeek(days, 0) >= target ? 0 : 1
+  let streak = 0
+  // checks are only loaded 60 days back, so cap the walk there
+  while (k <= 8 && countWeek(days, k) >= target) {
+    streak++
+    k++
+  }
+  return streak
+}
+
 export default function Habits() {
   const { session } = useAuth()
   const confirm = useConfirm()
@@ -45,6 +81,7 @@ export default function Habits() {
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
+  const [editing, setEditing] = useState<Habit | null>(null)
   const [manage, setManage] = useState<Habit | null>(null)
 
   useEffect(() => {
@@ -96,25 +133,39 @@ export default function Habits() {
     return map
   }, [habits, allByHabit, profiles, myId, today])
 
-  async function toggleToday(habit: Habit) {
+  /** Toggle any day in the visible week — today or a forgotten past day. */
+  async function toggleDay(habit: Habit, day: string) {
     if (!myId) return
     const entry = byHabit.get(habit.id)
-    const done = entry?.mine.has(today) ?? false
+    const done = entry?.mine.has(day) ?? false
     // optimistic
     setChecks((prev) =>
       done
-        ? prev.filter((c) => !(c.habit_id === habit.id && c.day === today && c.user_id === myId))
-        : [...prev, { habit_id: habit.id, day: today, user_id: myId }]
+        ? prev.filter((c) => !(c.habit_id === habit.id && c.day === day && c.user_id === myId))
+        : [...prev, { habit_id: habit.id, day, user_id: myId }]
     )
     if (done) {
-      await supabase.from('lv_habit_checks').delete().match({ habit_id: habit.id, day: today, user_id: myId })
-    } else {
-      const { error } = await supabase.from('lv_habit_checks').insert({ habit_id: habit.id, day: today, user_id: myId })
-      if (error) toast(error.message)
-      else {
-        const streak = streakOf(new Set([...(entry?.mine ?? []), today]))
-        if (streak > 1) toast(`${streak}-day streak 🔥`)
+      await supabase.from('lv_habit_checks').delete().match({ habit_id: habit.id, day, user_id: myId })
+      return
+    }
+    const { error } = await supabase.from('lv_habit_checks').insert({ habit_id: habit.id, day, user_id: myId })
+    if (error) {
+      toast(error.message)
+      return
+    }
+    if (day !== today) return // backfills don't celebrate
+    const mine = new Set([...(entry?.mine ?? []), day])
+    if (habit.target_per_week >= 7) {
+      const streak = streakOf(mine)
+      if (STREAK_MILESTONES.includes(streak)) {
+        confetti(CELEBRATE)
+        toast(`${streak}-day streak! 🔥🔥`)
+      } else if (streak > 1) {
+        toast(`${streak}-day streak 🔥`)
       }
+    } else if (countWeek(mine, 0) === habit.target_per_week) {
+      confetti(CELEBRATE)
+      toast('Week goal done ✅')
     }
   }
 
@@ -158,6 +209,9 @@ export default function Habits() {
             const mine = entry?.mine ?? new Set<string>()
             const streak = streakOf(mine)
             const doneToday = mine.has(today)
+            const weekly = h.target_per_week < 7
+            const weekCount = countWeek(mine, 0)
+            const wStreak = weekStreakOf(mine, h.target_per_week)
             return (
               <motion.div
                 key={h.id}
@@ -174,7 +228,16 @@ export default function Habits() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold">{h.name}</p>
                   <p className="flex items-center gap-1 text-xs text-ink-500 dark:text-ink-400">
-                    {streak > 0 ? (
+                    {weekly ? (
+                      <>
+                        {wStreak > 0 && (
+                          <>
+                            <Flame size={12} className="text-amber-500" /> {wStreak}-week streak ·
+                          </>
+                        )}
+                        {` ${weekCount}/${h.target_per_week} this week`}
+                      </>
+                    ) : streak > 0 ? (
                       <>
                         <Flame size={12} className="text-amber-500" /> {streak}-day streak
                       </>
@@ -182,17 +245,31 @@ export default function Habits() {
                       'Start your streak today'
                     )}
                   </p>
-                  <div className="mt-2 flex items-center gap-1.5">
-                    {week.map((off) => (
-                      <span
-                        key={off}
-                        title={isoDay(off)}
-                        className={`h-2 w-2 rounded-full transition-colors ${
-                          mine.has(isoDay(off)) ? '' : 'bg-ink-200 dark:bg-ink-700'
-                        }`}
-                        style={mine.has(isoDay(off)) ? { backgroundColor: h.color ?? '#6c63ff' } : undefined}
-                      />
-                    ))}
+                  <div className="mt-1.5 flex items-center gap-1">
+                    {week.map((off) => {
+                      const day = isoDay(off)
+                      const on = mine.has(day)
+                      return (
+                        <button
+                          key={off}
+                          type="button"
+                          title={day}
+                          aria-label={`Toggle ${day}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            void toggleDay(h, day)
+                          }}
+                          className="p-1 transition-transform active:scale-75"
+                        >
+                          <span
+                            className={`block h-2 w-2 rounded-full transition-colors ${
+                              on ? '' : 'bg-ink-200 dark:bg-ink-700'
+                            }`}
+                            style={on ? { backgroundColor: h.color ?? '#6c63ff' } : undefined}
+                          />
+                        </button>
+                      )
+                    })}
                     {(entry?.todayOthers.length ?? 0) > 0 && (
                       <span className="ml-2 flex -space-x-1.5" title="Also done today">
                         {entry!.todayOthers.slice(0, 3).map((p) => (
@@ -203,15 +280,23 @@ export default function Habits() {
                   </div>
                 </div>
                 <div onClick={(e) => e.stopPropagation()}>
-                  <AnimatedCheck checked={doneToday} onToggle={() => void toggleToday(h)} />
+                  <AnimatedCheck checked={doneToday} onToggle={() => void toggleDay(h, today)} />
                 </div>
               </motion.div>
             )
           })}
+          <p className="text-center text-xs text-ink-400">Tap a day dot to log or fix a past day</p>
         </motion.div>
       )}
 
-      <HabitComposer open={composerOpen} onClose={() => setComposerOpen(false)} />
+      <HabitComposer
+        open={composerOpen}
+        habit={editing}
+        onClose={() => {
+          setComposerOpen(false)
+          setEditing(null)
+        }}
+      />
 
       <BottomSheet
         open={manage !== null}
@@ -236,7 +321,9 @@ export default function Habits() {
                         {p.id === myId && ' (you)'}
                       </span>
                       <span className="flex items-center gap-1 text-xs text-ink-500 dark:text-ink-400">
-                        {s > 0 ? (
+                        {manage.target_per_week < 7 ? (
+                          `${countWeek(days, 0)}/${manage.target_per_week} this week`
+                        ) : s > 0 ? (
                           <>
                             <Flame size={11} className="text-amber-500" /> {s}-day streak
                           </>
@@ -259,12 +346,24 @@ export default function Habits() {
               })}
             </ul>
             {manage.owner_id === myId && (
-              <button
-                onClick={() => void deleteHabit(manage)}
-                className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                <Trash2 size={18} /> Delete habit
-              </button>
+              <div>
+                <button
+                  onClick={() => {
+                    setEditing(manage)
+                    setManage(null)
+                    setComposerOpen(true)
+                  }}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left font-medium hover:bg-ink-50 dark:hover:bg-ink-800"
+                >
+                  <Pencil size={18} /> Edit habit
+                </button>
+                <button
+                  onClick={() => void deleteHabit(manage)}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <Trash2 size={18} /> Delete habit
+                </button>
+              </div>
             )}
           </div>
         )}
@@ -273,33 +372,52 @@ export default function Habits() {
   )
 }
 
-export function HabitComposer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function HabitComposer({
+  open,
+  onClose,
+  habit
+}: {
+  open: boolean
+  onClose: () => void
+  habit?: Habit | null
+}) {
   const { session } = useAuth()
   const toast = useToast()
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState(HABIT_EMOJIS[0])
   const [color, setColor] = useState(HABIT_COLORS[0])
+  const [target, setTarget] = useState(7)
   const [busy, setBusy] = useState(false)
 
-  async function create(e: FormEvent) {
+  // prefill when opened for editing, reset when opened for creating
+  useEffect(() => {
+    if (!open) return
+    setName(habit?.name ?? '')
+    setEmoji(habit?.emoji ?? HABIT_EMOJIS[0])
+    setColor(habit?.color ?? HABIT_COLORS[0])
+    setTarget(habit?.target_per_week ?? 7)
+  }, [open, habit])
+
+  async function submit(e: FormEvent) {
     e.preventDefault()
     if (!name.trim() || !session) return
     setBusy(true)
-    const { error } = await supabase
-      .from('lv_habits')
-      .insert({ name: name.trim(), emoji, color, owner_id: session.user.id })
+    const row = { name: name.trim(), emoji, color, target_per_week: target }
+    const { error } = habit
+      ? await supabase.from('lv_habits').update(row).eq('id', habit.id)
+      : await supabase.from('lv_habits').insert({ ...row, owner_id: session.user.id })
     setBusy(false)
     if (error) toast(error.message)
     else {
       setName('')
       onClose()
-      toast('Habit created — day 1 starts now 💪')
+      toast(habit ? 'Habit updated' : 'Habit created — day 1 starts now 💪')
     }
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="New habit">
-      <form onSubmit={create} className="space-y-4 pb-1">
+    <BottomSheet open={open} onClose={onClose} title={habit ? 'Edit habit' : 'New habit'}>
+      <form onSubmit={submit} className="space-y-4 pb-1">
         <input
           autoFocus
           value={name}
@@ -321,6 +439,25 @@ export function HabitComposer({ open, onClose }: { open: boolean; onClose: () =>
               {em}
             </button>
           ))}
+        </div>
+        <div className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-400">How often?</p>
+          <div className="flex flex-wrap gap-2">
+            {[7, 1, 2, 3, 4, 5, 6].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setTarget(n)}
+                className={`rounded-full px-3.5 py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+                  target === n
+                    ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+                    : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'
+                }`}
+              >
+                {n === 7 ? 'Every day' : `${n}× a week`}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="flex gap-2.5">
           {HABIT_COLORS.map((c) => (

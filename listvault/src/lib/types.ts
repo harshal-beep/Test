@@ -65,6 +65,8 @@ export interface Habit {
   emoji: string | null
   color: string | null
   owner_id: string
+  /** 7 = every day; 1-6 = "n times a week" (Mon-Sun week). */
+  target_per_week: number
   created_at: string
 }
 
