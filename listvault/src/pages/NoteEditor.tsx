@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, ListChecks, Lock, LockOpen, Sparkles, SpellCheck, Trash2, WrapText } from 'lucide-react'
+import { ArrowLeft, Check, ListChecks, ListPlus, Lock, LockOpen, Sparkles, SpellCheck, Trash2, WrapText } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
@@ -97,6 +97,40 @@ export default function NoteEditor() {
     await supabase.from('lv_notes').delete().eq('id', id)
     toast('Note deleted')
     navigate('/notes')
+  }
+
+  /** AI: turn this note into a real HaMaara task list. */
+  async function turnIntoList() {
+    if (!session || !body.trim()) return
+    setAiBusy('to_list')
+    const { data, error } = await supabase.functions.invoke('lv-ai', { body: { action: 'format_list', text: body } })
+    if (error || data?.error) {
+      setAiBusy(null)
+      toast(error?.message || data.error)
+      return
+    }
+    const lines = (data.result as string).split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 100)
+    if (lines.length === 0) {
+      setAiBusy(null)
+      toast('Nothing list-like found in this note')
+      return
+    }
+    const { data: list, error: le } = await supabase
+      .from('lv_lists')
+      .insert({ name: (title.trim() || lines[0]).slice(0, 60), emoji: '📝', color: '#6c63ff', owner_id: session.user.id })
+      .select()
+      .single()
+    if (le) {
+      setAiBusy(null)
+      toast(le.message)
+      return
+    }
+    await supabase.from('lv_items').insert(
+      lines.map((text, i) => ({ list_id: list.id, text: text.slice(0, 500), added_by: session.user.id, position: i + 1 }))
+    )
+    setAiBusy(null)
+    toast(`List created with ${lines.length} tasks ✨`)
+    navigate(`/list/${list.id}`)
   }
 
   async function runAi(action: string) {
@@ -214,6 +248,23 @@ export default function NoteEditor() {
         </AnimatePresence>
 
         <div className="flex gap-2 overflow-x-auto rounded-full bg-white p-1.5 shadow-float ring-1 ring-ink-100 dark:bg-ink-900 dark:ring-ink-700">
+          <motion.button
+            whileTap={{ scale: 0.94 }}
+            disabled={!body.trim() || aiBusy !== null}
+            onClick={() => void turnIntoList()}
+            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-2.5 text-[13px] font-semibold transition-colors disabled:opacity-40 ${
+              aiBusy === 'to_list' ? 'bg-brand-600 text-white' : 'text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-800/20'
+            }`}
+          >
+            {aiBusy === 'to_list' ? (
+              <motion.span animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
+                <Sparkles size={15} />
+              </motion.span>
+            ) : (
+              <ListPlus size={15} />
+            )}
+            {aiBusy === 'to_list' ? 'Creating…' : 'To list'}
+          </motion.button>
           {AI_ACTIONS.map((a) => (
             <motion.button
               key={a.key}

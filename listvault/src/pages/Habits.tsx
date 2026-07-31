@@ -72,20 +72,29 @@ export default function Habits() {
   const myId = session?.user.id
   const today = isoDay(0)
 
-  const byHabit = useMemo(() => {
-    const map = new Map<string, { mine: Set<string>; todayOthers: Profile[] }>()
-    for (const h of habits) map.set(h.id, { mine: new Set(), todayOthers: [] })
+  // habitId -> userId -> set of checked days
+  const allByHabit = useMemo(() => {
+    const map = new Map<string, Map<string, Set<string>>>()
+    for (const h of habits) map.set(h.id, new Map())
     for (const ch of checks) {
-      const entry = map.get(ch.habit_id)
-      if (!entry) continue
-      if (ch.user_id === myId) entry.mine.add(ch.day)
-      else if (ch.day === today) {
-        const prof = profiles.find((p) => p.id === ch.user_id)
-        if (prof) entry.todayOthers.push(prof)
-      }
+      const users = map.get(ch.habit_id)
+      if (!users) continue
+      if (!users.has(ch.user_id)) users.set(ch.user_id, new Set())
+      users.get(ch.user_id)!.add(ch.day)
     }
     return map
-  }, [habits, checks, profiles, myId, today])
+  }, [habits, checks])
+
+  const byHabit = useMemo(() => {
+    const map = new Map<string, { mine: Set<string>; todayOthers: Profile[] }>()
+    for (const h of habits) {
+      const users = allByHabit.get(h.id) ?? new Map<string, Set<string>>()
+      const mine = users.get(myId ?? '') ?? new Set<string>()
+      const todayOthers = profiles.filter((p) => p.id !== myId && users.get(p.id)?.has(today))
+      map.set(h.id, { mine, todayOthers })
+    }
+    return map
+  }, [habits, allByHabit, profiles, myId, today])
 
   async function toggleToday(habit: Habit) {
     if (!myId) return
@@ -204,21 +213,58 @@ export default function Habits() {
 
       <HabitComposer open={composerOpen} onClose={() => setComposerOpen(false)} />
 
-      <BottomSheet open={manage !== null} onClose={() => setManage(null)} title={manage?.name}>
+      <BottomSheet
+        open={manage !== null}
+        onClose={() => setManage(null)}
+        title={manage ? `${manage.emoji ?? '✨'} ${manage.name}` : undefined}
+      >
         {manage && (
-          <div className="space-y-1 pb-1">
-            <p className="px-3 pb-2 text-sm text-ink-500 dark:text-ink-400">
-              Everyone in HaMaara sees this habit and tracks their own streak.
+          <div className="space-y-4 pb-1">
+            <p className="text-sm text-ink-500 dark:text-ink-400">
+              Hamaara habit — everyone tracks their own streak on the same habit.
             </p>
-            {manage.owner_id === myId ? (
+            <ul className="space-y-3.5">
+              {profiles.map((p) => {
+                const days = allByHabit.get(manage.id)?.get(p.id) ?? new Set<string>()
+                const s = streakOf(days)
+                return (
+                  <li key={p.id} className="flex items-center gap-3">
+                    <Avatar profile={p} size={9} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        {p.display_name || p.email}
+                        {p.id === myId && ' (you)'}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-ink-500 dark:text-ink-400">
+                        {s > 0 ? (
+                          <>
+                            <Flame size={11} className="text-amber-500" /> {s}-day streak
+                          </>
+                        ) : (
+                          'No streak yet'
+                        )}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      {week.map((off) => (
+                        <span
+                          key={off}
+                          className={`h-2 w-2 rounded-full ${days.has(isoDay(off)) ? '' : 'bg-ink-200 dark:bg-ink-700'}`}
+                          style={days.has(isoDay(off)) ? { backgroundColor: manage.color ?? '#6c63ff' } : undefined}
+                        />
+                      ))}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+            {manage.owner_id === myId && (
               <button
                 onClick={() => void deleteHabit(manage)}
                 className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
                 <Trash2 size={18} /> Delete habit
               </button>
-            ) : (
-              <p className="px-3 py-2 text-sm text-ink-400">Only the creator can delete this habit.</p>
             )}
           </div>
         )}

@@ -3,12 +3,28 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ListTodo, Plus, Ticket } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { List } from '../lib/types'
+import { List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import Avatar from '../components/Avatar'
 import { EmptyState, Page, Skeleton, stagger, useToast } from '../components/ui'
 import { ListComposer } from '../components/Composers'
 
 type ListRow = List & { total: number; done: number }
+
+interface FeedEntry {
+  key: string
+  ts: string
+  actor: string | null
+  text: string
+}
+
+function timeAgo(iso: string): string {
+  const s = (Date.now() - new Date(iso).getTime()) / 1000
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`
+  return `${Math.floor(s / 86400)}d ago`
+}
 
 function greeting(): string {
   const h = new Date().getHours()
@@ -24,17 +40,56 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
   const [joinCode, setJoinCode] = useState('')
+  const [feed, setFeed] = useState<FeedEntry[]>([])
+  const [feedProfiles, setFeedProfiles] = useState<Profile[]>([])
 
   useEffect(() => {
     void loadLists()
+    void loadFeed()
     const channel = supabase
       .channel('home-lists')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_lists' }, () => void loadLists())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_items' }, () => void loadLists())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_items' }, () => { void loadLists(); void loadFeed() })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_list_members' }, () => void loadLists())
       .subscribe()
     return () => void supabase.removeChannel(channel)
   }, [])
+
+  async function loadFeed() {
+    const [items, notes, habitChecks, profs] = await Promise.all([
+      supabase
+        .from('lv_items')
+        .select('id, text, created_at, checked, checked_at, added_by, checked_by, list:lv_lists(name, emoji)')
+        .order('created_at', { ascending: false })
+        .limit(12),
+      supabase.from('lv_notes').select('id, title, body, updated_at, updated_by').order('updated_at', { ascending: false }).limit(5),
+      supabase
+        .from('lv_habit_checks')
+        .select('habit_id, day, user_id, created_at, habit:lv_habits(name, emoji)')
+        .order('created_at', { ascending: false })
+        .limit(8),
+      supabase.from('lv_profiles').select('*')
+    ])
+    setFeedProfiles((profs.data as Profile[]) ?? [])
+    const entries: FeedEntry[] = []
+    type ItemRow = { id: string; text: string; created_at: string; checked: boolean; checked_at: string | null; added_by: string | null; checked_by: string | null; list: { name: string; emoji: string | null } | null }
+    for (const it of (items.data as ItemRow[] | null) ?? []) {
+      const listName = it.list ? `${it.list.emoji ?? ''} ${it.list.name}`.trim() : 'a list'
+      entries.push({ key: `add-${it.id}`, ts: it.created_at, actor: it.added_by, text: `added “${it.text}” to ${listName}` })
+      if (it.checked && it.checked_at)
+        entries.push({ key: `done-${it.id}`, ts: it.checked_at, actor: it.checked_by, text: `completed “${it.text}” in ${listName}` })
+    }
+    type NoteRow = { id: string; title: string; body: string; updated_at: string; updated_by: string | null }
+    for (const n of (notes.data as NoteRow[] | null) ?? []) {
+      entries.push({ key: `note-${n.id}-${n.updated_at}`, ts: n.updated_at, actor: n.updated_by, text: `updated note “${n.title || n.body.slice(0, 30) || 'Untitled'}”` })
+    }
+    type CheckRow = { habit_id: string; day: string; user_id: string; created_at: string; habit: { name: string; emoji: string | null } | null }
+    for (const c of (habitChecks.data as CheckRow[] | null) ?? []) {
+      if (c.habit) entries.push({ key: `habit-${c.habit_id}-${c.day}-${c.user_id}`, ts: c.created_at, actor: c.user_id, text: `did ${c.habit.emoji ?? ''} ${c.habit.name}`.trim() })
+    }
+    entries.sort((a, b) => (a.ts < b.ts ? 1 : -1))
+    setFeed(entries.slice(0, 8))
+  }
 
   async function loadLists() {
     const { data } = await supabase
@@ -154,6 +209,29 @@ export default function Home() {
           </motion.div>
         )}
       </section>
+
+      {/* Recent activity */}
+      {feed.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="font-bold">Recent activity</h2>
+          <div className="surface divide-y divide-ink-100 dark:divide-ink-800">
+            {feed.map((e) => {
+              const actor = feedProfiles.find((p) => p.id === e.actor)
+              const isMe = e.actor === profile?.id
+              return (
+                <div key={e.key} className="flex items-center gap-3 px-4 py-2.5">
+                  <Avatar profile={actor} size={7} />
+                  <p className="min-w-0 flex-1 truncate text-sm">
+                    <span className="font-semibold">{isMe ? 'You' : actor?.display_name?.split(' ')[0] || 'Someone'}</span>{' '}
+                    <span className="text-ink-600 dark:text-ink-300">{e.text}</span>
+                  </p>
+                  <span className="shrink-0 text-xs text-ink-400">{timeAgo(e.ts)}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Join by code */}
       <form onSubmit={joinByCode} className="flex items-center gap-2">
