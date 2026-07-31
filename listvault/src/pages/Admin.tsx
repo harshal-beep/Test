@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
+import { Page, useConfirm, useToast } from '../components/ui'
 
 /**
  * Admin section: manage members. Adding/removing accounts goes through the
@@ -11,6 +12,8 @@ import Avatar from '../components/Avatar'
  */
 export default function Admin() {
   const { profile, session } = useAuth()
+  const confirmSheet = useConfirm()
+  const toast = useToast()
   const [members, setMembers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
@@ -34,7 +37,7 @@ export default function Admin() {
   }
 
   if (!profile?.is_admin) {
-    return <p className="text-slate-500 dark:text-slate-400">This section is only available to admins.</p>
+    return <p className="text-ink-500 dark:text-ink-400">This section is only available to admins.</p>
   }
 
   async function addMember(e: FormEvent) {
@@ -54,6 +57,7 @@ export default function Admin() {
       setError(data.error)
       return
     }
+    toast('Member added')
     setNotice(`Added ${email.trim()} — share the password with them so they can sign in.`)
     setName('')
     setEmail('')
@@ -62,7 +66,11 @@ export default function Admin() {
   }
 
   async function removeMember(member: Profile) {
-    if (!confirm(`Remove ${member.display_name || member.email}? Their account and any lists they own are deleted.`)) return
+    if (!(await confirmSheet(`Remove ${member.display_name || member.email}?`, {
+      body: 'Their account and any lists they own are deleted.',
+      confirmLabel: 'Remove',
+      danger: true
+    }))) return
     setError('')
     const { data, error: err } = await supabase.functions.invoke('lv-admin-users', {
       body: { action: 'delete', user_id: member.id }
@@ -84,16 +92,16 @@ export default function Admin() {
   }
 
   return (
-    <div className="space-y-5">
-      <h1 className="text-xl font-bold">Admin</h1>
+    <Page className="space-y-5">
+      <h1 className="text-[26px] font-extrabold tracking-tight">Admin</h1>
 
-      <form onSubmit={addMember} className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <form onSubmit={addMember} className="space-y-3 surface p-4 shadow-sm">
         <h2 className="font-semibold">Add a member</h2>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name"
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-ink-200 dark:border-ink-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
         />
         <input
           type="email"
@@ -101,7 +109,7 @@ export default function Admin() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
           required
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-ink-200 dark:border-ink-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
         />
         <input
           type="text"
@@ -110,7 +118,7 @@ export default function Admin() {
           placeholder="Temporary password (6+ characters)"
           minLength={6}
           required
-          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-ink-200 dark:border-ink-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
         />
         <button
           disabled={busy}
@@ -118,7 +126,7 @@ export default function Admin() {
         >
           {busy ? 'Adding…' : 'Add member'}
         </button>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+        <p className="text-xs text-ink-500 dark:text-ink-400">
           The account is created ready to use — no email confirmation needed. Share the password
           with them; they can change it later.
         </p>
@@ -127,10 +135,10 @@ export default function Admin() {
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {notice && <p className="text-sm text-brand-700">{notice}</p>}
 
-      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
+      <section className="surface p-4 shadow-sm">
         <h2 className="mb-3 font-semibold">Members ({members.length})</h2>
         {loading ? (
-          <p className="text-slate-500 dark:text-slate-400">Loading…</p>
+          <p className="text-ink-500 dark:text-ink-400">Loading…</p>
         ) : (
           <ul className="space-y-3">
             {members.map((m) => (
@@ -141,7 +149,7 @@ export default function Admin() {
                     {m.display_name || m.email}
                     {m.id === session?.user.id && ' (you)'}
                   </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-400">{m.email}</span>
+                  <span className="text-xs text-ink-500 dark:text-ink-400">{m.email}</span>
                 </span>
                 {m.is_admin && (
                   <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">
@@ -150,7 +158,7 @@ export default function Admin() {
                 )}
                 {m.id !== session?.user.id && (
                   <>
-                    <button className="text-xs text-slate-600 dark:text-slate-300 underline" onClick={() => void toggleAdmin(m)}>
+                    <button className="text-xs text-ink-600 dark:text-ink-300 underline" onClick={() => void toggleAdmin(m)}>
                       {m.is_admin ? 'Revoke admin' : 'Make admin'}
                     </button>
                     <button className="text-xs text-red-600 dark:text-red-400 underline" onClick={() => void removeMember(m)}>
@@ -163,6 +171,6 @@ export default function Admin() {
           </ul>
         )}
       </section>
-    </div>
+    </Page>
   )
 }

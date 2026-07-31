@@ -38,14 +38,13 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
     }
   }
 
-  const inputClass =
-    'w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-4 py-3 text-[15px] placeholder:text-slate-400 focus:border-brand-500 focus:bg-white dark:focus:bg-slate-950 focus:outline-none'
+  const inputClass = 'field'
 
   return (
     <form onSubmit={submit} className="w-full max-w-sm space-y-4 self-center">
       {mode === 'signup' && (
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Name</label>
+          <label className="mb-1.5 block text-xs font-medium text-ink-500 dark:text-ink-400">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -56,7 +55,7 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
         </div>
       )}
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Email</label>
+        <label className="mb-1.5 block text-xs font-medium text-ink-500 dark:text-ink-400">Email</label>
         <input
           type="email"
           value={email}
@@ -68,7 +67,7 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
         />
       </div>
       <div>
-        <label className="mb-1.5 block text-xs font-medium text-slate-500 dark:text-slate-400">Password</label>
+        <label className="mb-1.5 block text-xs font-medium text-ink-500 dark:text-ink-400">Password</label>
         <input
           type="password"
           value={password}
@@ -81,10 +80,10 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
         />
       </div>
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-      {notice && <p className="text-sm text-brand-700 dark:text-brand-500">{notice}</p>}
+      {notice && <p className="text-sm text-brand-600">{notice}</p>}
       <button
         disabled={busy}
-        className="w-full rounded-full bg-brand-600 py-3.5 font-semibold text-white shadow-lg shadow-brand-600/30 hover:bg-brand-700 disabled:opacity-50"
+        className="btn-primary w-full py-3.5"
       >
         {busy ? 'Please wait…' : mode === 'signup' ? 'Sign up' : 'Log in'}
       </button>
@@ -94,7 +93,7 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
           setMode((m) => (m === 'signin' ? 'signup' : 'signin'))
           setError('')
         }}
-        className="w-full text-center text-sm text-slate-500 dark:text-slate-400"
+        className="w-full text-center text-sm text-ink-500 dark:text-ink-400"
       >
         {mode === 'signin' ? (
           <>New here? <span className="font-semibold text-brand-600">Create an account</span></>

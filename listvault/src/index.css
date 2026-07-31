@@ -17,6 +17,29 @@ select {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  @apply bg-ink-50 text-ink-900 antialiased dark:bg-ink-950 dark:text-ink-100;
+  font-family: 'Plus Jakarta Sans Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+::selection {
+  @apply bg-brand-100 dark:bg-brand-800;
+}
+
+@layer components {
+  .surface {
+    @apply rounded-[20px] bg-white shadow-card dark:bg-ink-900;
+  }
+  .field {
+    @apply w-full rounded-2xl bg-ink-100 px-4 py-3.5 text-[15px] placeholder:text-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-500/60 dark:bg-ink-800;
+  }
+  .btn-primary {
+    @apply rounded-full bg-brand-600 font-semibold text-white shadow-lg shadow-brand-600/30 transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none;
+  }
+  .btn-ghost {
+    @apply rounded-full font-semibold text-brand-600 transition-colors hover:bg-brand-50 active:scale-[0.98] dark:hover:bg-brand-800/20;
+  }
+  .icon-btn {
+    @apply flex h-10 w-10 items-center justify-center rounded-full text-ink-500 transition-colors hover:bg-ink-100 active:scale-95 dark:text-ink-300 dark:hover:bg-ink-800;
+  }
 }

@@ -46,21 +46,21 @@ export default function Join() {
       {error ? (
         <p className="text-red-600 dark:text-red-400">{error}</p>
       ) : !peek ? (
-        <p className="text-slate-500 dark:text-slate-400">Checking invite…</p>
+        <p className="text-ink-500 dark:text-ink-400">Checking invite…</p>
       ) : (
         <>
-          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
+          <div className="surface p-6 shadow-sm">
             <p className="text-3xl">{peek.emoji ?? '📝'}</p>
             <p className="mt-2 text-lg font-semibold">{peek.name}</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-ink-500 dark:text-ink-400">
               {peek.member_count} member{peek.member_count === 1 ? '' : 's'}
             </p>
           </div>
           {session ? (
-            <p className="text-slate-500 dark:text-slate-400">Joining…</p>
+            <p className="text-ink-500 dark:text-ink-400">Joining…</p>
           ) : (
             <>
-              <p className="text-sm text-slate-600 dark:text-slate-300">Sign in or create an account to join:</p>
+              <p className="text-sm text-ink-600 dark:text-ink-300">Sign in or create an account to join:</p>
               <AuthForm />
             </>
           )}

@@ -19,7 +19,7 @@ export default function InstallPrompt() {
   return (
     <div className="mx-4 mb-3 rounded-xl border border-brand-100 dark:border-brand-800 bg-brand-50 dark:bg-brand-800/20 p-3 text-sm">
       <p className="mb-1 font-semibold">Install ListVault for the best experience</p>
-      <p className="text-slate-600 dark:text-slate-300">
+      <p className="text-ink-600 dark:text-ink-300">
         Tap the <span aria-label="share icon">Share</span> button in Safari, then{' '}
         <strong>Add to Home Screen</strong>. Notifications only work after installing.
       </p>

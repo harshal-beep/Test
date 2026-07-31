@@ -1,32 +1,45 @@
 import { ReactNode, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Archive, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
 import InstallPrompt from './InstallPrompt'
 import ThemeToggle from './ThemeToggle'
+import { ListComposer, TaskComposer } from './Composers'
 
 const leftTabs = [
-  { to: '/', label: 'Lists', icon: '📝' },
-  { to: '/notes', label: 'Notes', icon: '📒' }
+  { to: '/', label: 'Lists', Icon: ListTodo },
+  { to: '/notes', label: 'Notes', Icon: StickyNote }
 ]
 const rightTabs = [
-  { to: '/archive', label: 'Archive', icon: '🗄️' },
-  { to: '/search', label: 'Search', icon: '🔍' }
+  { to: '/archive', label: 'Archive', Icon: Archive },
+  { to: '/search', label: 'Search', Icon: Search }
 ]
 
-function Tab({ to, label, icon }: { to: string; label: string; icon: string }) {
+function Tab({ to, label, Icon }: { to: string; label: string; Icon: typeof ListTodo }) {
   return (
     <NavLink
       to={to}
       end={to === '/'}
       className={({ isActive }) =>
-        `flex flex-1 flex-col items-center gap-0.5 py-2 text-xs ${
-          isActive ? 'font-semibold text-brand-600' : 'text-slate-400'
+        `relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition-colors ${
+          isActive ? 'text-brand-600' : 'text-ink-400 hover:text-ink-600 dark:hover:text-ink-200'
         }`
       }
     >
-      <span aria-hidden>{icon}</span>
-      {label}
+      {({ isActive }) => (
+        <>
+          <Icon size={21} strokeWidth={isActive ? 2.4 : 2} />
+          {label}
+          {isActive && (
+            <motion.span
+              layoutId="tab-dot"
+              className="absolute -bottom-0.5 h-1 w-1 rounded-full bg-brand-600"
+            />
+          )}
+        </>
+      )}
     </NavLink>
   )
 }
@@ -35,68 +48,95 @@ export default function Layout({ children }: { children: ReactNode }) {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const [fabOpen, setFabOpen] = useState(false)
+  const [composer, setComposer] = useState<'task' | 'list' | null>(null)
+
+  const fabActions = [
+    { label: 'Task', Icon: CheckSquare, run: () => setComposer('task') },
+    { label: 'List', Icon: ListTodo, run: () => setComposer('list') },
+    { label: 'Note', Icon: NotebookPen, run: () => navigate('/notes/new') }
+  ]
 
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 px-4 py-3 backdrop-blur">
-        <NavLink to="/" className="text-lg font-extrabold">
-          <span className="text-slate-900 dark:text-slate-100">List</span>
-          <span className="text-brand-600">Vault</span>
+      <header className="sticky top-0 z-10 flex items-center justify-between bg-ink-50/90 px-5 py-3.5 backdrop-blur-md dark:bg-ink-950/90">
+        <NavLink to="/" className="text-lg font-extrabold tracking-tight">
+          List<span className="text-brand-600">Vault</span>
         </NavLink>
-        <span className="flex items-center gap-2">
+        <span className="flex items-center gap-1.5">
           <ThemeToggle />
           {profile?.is_admin && (
-            <NavLink to="/admin" aria-label="Admin" className="rounded-full p-1.5 text-lg hover:bg-slate-100 dark:hover:bg-slate-800">
-              🛠️
+            <NavLink to="/admin" aria-label="Admin" className="icon-btn text-sm font-bold">
+              ⚙
             </NavLink>
           )}
-          <NavLink to="/settings" aria-label="Settings">
-            <Avatar profile={profile} size={8} />
+          <NavLink to="/settings" aria-label="Settings" className="transition-transform active:scale-95">
+            <Avatar profile={profile} size={9} />
           </NavLink>
         </span>
       </header>
 
-      <main className="flex-1 px-4 py-4 pb-24">{children}</main>
+      <main className="flex-1 px-5 py-2 pb-28">{children}</main>
       <InstallPrompt />
 
-      {fabOpen && (
-        <div className="fixed inset-0 z-20" onClick={() => setFabOpen(false)}>
-          <div className="absolute bottom-24 left-1/2 flex -translate-x-1/2 flex-col gap-2">
-            <button
-              onClick={() => navigate('/?new=1')}
-              className="rounded-full bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold shadow-xl ring-1 ring-slate-200 dark:ring-slate-700"
-            >
-              📝 New list
-            </button>
-            <button
-              onClick={() => navigate('/notes/new')}
-              className="rounded-full bg-white dark:bg-slate-800 px-5 py-2.5 text-sm font-semibold shadow-xl ring-1 ring-slate-200 dark:ring-slate-700"
-            >
-              📒 New note
-            </button>
-          </div>
-        </div>
-      )}
+      {/* FAB actions */}
+      <AnimatePresence>
+        {fabOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-20 bg-ink-950/30 backdrop-blur-[2px]"
+            onClick={() => setFabOpen(false)}
+          >
+            <div className="absolute bottom-28 left-1/2 flex -translate-x-1/2 items-end gap-3">
+              {fabActions.map((a, i) => (
+                <motion.button
+                  key={a.label}
+                  initial={{ opacity: 0, y: 24, scale: 0.6 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 16, scale: 0.6 }}
+                  transition={{ type: 'spring', damping: 18, stiffness: 420, delay: i * 0.04 }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setFabOpen(false)
+                    a.run()
+                  }}
+                  className="flex w-20 flex-col items-center gap-1.5 rounded-3xl bg-white py-3.5 text-xs font-semibold shadow-float dark:bg-ink-800"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 dark:bg-brand-800/40">
+                    <a.Icon size={19} />
+                  </span>
+                  {a.label}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10">
-        <div className="mx-auto flex max-w-2xl items-center border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-2 pb-[env(safe-area-inset-bottom)]">
+      <nav className="fixed inset-x-0 bottom-0 z-30">
+        <div className="mx-auto flex max-w-2xl items-center border-t border-ink-100 bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-md dark:border-ink-800 dark:bg-ink-900/95">
           {leftTabs.map((t) => (
             <Tab key={t.to} {...t} />
           ))}
-          <button
+          <motion.button
+            whileTap={{ scale: 0.88 }}
             onClick={() => setFabOpen((o) => !o)}
             aria-label="Create"
-            className={`-mt-6 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 text-2xl font-light text-white shadow-lg shadow-brand-600/40 transition-transform ${
-              fabOpen ? 'rotate-45' : ''
-            }`}
+            className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white shadow-float shadow-brand-600/40"
           >
-            +
-          </button>
+            <motion.span animate={{ rotate: fabOpen ? 45 : 0 }} transition={{ type: 'spring', damping: 16, stiffness: 300 }}>
+              <Plus size={26} strokeWidth={2.4} />
+            </motion.span>
+          </motion.button>
           {rightTabs.map((t) => (
             <Tab key={t.to} {...t} />
           ))}
         </div>
       </nav>
+
+      <TaskComposer open={composer === 'task'} onClose={() => setComposer(null)} />
+      <ListComposer open={composer === 'list'} onClose={() => setComposer(null)} />
     </div>
   )
 }

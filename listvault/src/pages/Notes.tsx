@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Lock, NotebookPen, Search } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
-import { useAuth } from '../context/AuthContext'
+import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
 
-// Pastel note-card palette, cycled by position (mirrors the reference design)
+// Pastel note-card palette, cycled by position
 const PASTELS = [
   'bg-[#edebff] dark:bg-[#2b2952]',
   'bg-[#fff1e0] dark:bg-[#3d3325]',
@@ -14,7 +16,6 @@ const PASTELS = [
 ]
 
 export default function Notes() {
-  const { session } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
@@ -29,10 +30,7 @@ export default function Notes() {
   }, [])
 
   async function load() {
-    const { data } = await supabase
-      .from('lv_notes')
-      .select('*')
-      .order('updated_at', { ascending: false })
+    const { data } = await supabase.from('lv_notes').select('*').order('updated_at', { ascending: false })
     setNotes((data as Note[]) ?? [])
     setLoading(false)
   }
@@ -40,71 +38,79 @@ export default function Notes() {
   const visible = useMemo(() => {
     const q = filter.trim().toLowerCase()
     if (!q) return notes
-    return notes.filter(
-      (n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q)
-    )
+    return notes.filter((n) => n.title.toLowerCase().includes(q) || n.body.toLowerCase().includes(q))
   }, [notes, filter])
 
   return (
-    <div className="space-y-4">
+    <Page className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Notes</h1>
-        <Link
-          to="/notes/new"
-          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow hover:bg-brand-700"
-        >
+        <h1 className="text-[26px] font-extrabold tracking-tight">Notes</h1>
+        <Link to="/notes/new" className="btn-primary px-4 py-2 text-sm">
           + New note
         </Link>
       </div>
 
-      <input
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filter notes…"
-        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
-      />
+      <div className="relative">
+        <Search size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+        <input
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Search notes…"
+          className="field pl-11"
+        />
+      </div>
 
       {loading ? (
-        <p className="text-slate-500 dark:text-slate-400">Loading…</p>
+        <div className="columns-2 gap-3">
+          <Skeleton className="mb-3 h-36" />
+          <Skeleton className="mb-3 h-28" />
+          <Skeleton className="mb-3 h-28" />
+          <Skeleton className="mb-3 h-40" />
+        </div>
       ) : visible.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-500 dark:text-slate-400">
-          <p className="text-3xl">📒</p>
-          <p className="mt-2">
-            {notes.length === 0
-              ? 'No notes yet. Shared notes are visible to everyone; private notes only to you.'
-              : 'No notes match your filter.'}
-          </p>
-        </div>
+        <EmptyState
+          icon={<NotebookPen size={24} />}
+          title={notes.length === 0 ? 'No notes yet' : 'No matches'}
+          hint={
+            notes.length === 0
+              ? 'Shared notes are visible to everyone in your vault; private notes only to you.'
+              : 'Try a different search.'
+          }
+        />
       ) : (
-        <div className="columns-2 gap-3 [column-fill:_balance]">
+        <motion.div
+          variants={stagger.container}
+          initial="initial"
+          animate="animate"
+          className="columns-2 gap-3 [column-fill:_balance]"
+        >
           {visible.map((n, i) => (
-            <Link
-              key={n.id}
-              to={`/notes/${n.id}`}
-              className={`mb-3 block break-inside-avoid rounded-2xl p-4 shadow-sm transition-transform hover:-translate-y-0.5 ${
-                PASTELS[i % PASTELS.length]
-              }`}
-            >
-              <span className="flex items-start gap-1.5">
-                <span className="flex-1 font-semibold leading-snug">
-                  {n.title || n.body.slice(0, 60) || 'Untitled note'}
-                </span>
-                {n.is_private && (
-                  <span title={n.owner_id === session?.user.id ? 'Only you can see this' : ''}>🔒</span>
-                )}
-              </span>
-              {n.title && n.body && (
-                <span className="mt-1.5 block text-sm text-slate-600 dark:text-slate-300 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:4] overflow-hidden">
-                  {n.body}
-                </span>
-              )}
-              <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
-                {new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-              </span>
-            </Link>
+            <motion.div key={n.id} variants={stagger.item} className="mb-3 break-inside-avoid">
+              <motion.div whileTap={{ scale: 0.97 }}>
+                <Link
+                  to={`/notes/${n.id}`}
+                  className={`block rounded-[20px] p-4 shadow-card transition-shadow hover:shadow-float ${PASTELS[i % PASTELS.length]}`}
+                >
+                  <span className="flex items-start gap-1.5">
+                    <span className="flex-1 font-bold leading-snug">
+                      {n.title || n.body.slice(0, 60) || 'Untitled note'}
+                    </span>
+                    {n.is_private && <Lock size={14} className="mt-1 shrink-0 text-ink-500 dark:text-ink-400" />}
+                  </span>
+                  {n.title && n.body && (
+                    <span className="mt-1.5 block overflow-hidden text-sm leading-relaxed text-ink-600 [-webkit-box-orient:vertical] [-webkit-line-clamp:4] [display:-webkit-box] dark:text-ink-300">
+                      {n.body}
+                    </span>
+                  )}
+                  <span className="mt-2.5 block text-xs font-medium text-ink-500 dark:text-ink-400">
+                    {new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                  </span>
+                </Link>
+              </motion.div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
-    </div>
+    </Page>
   )
 }
