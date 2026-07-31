@@ -34,7 +34,7 @@ export default function Admin() {
   }
 
   if (!profile?.is_admin) {
-    return <p className="text-slate-500">This section is only available to admins.</p>
+    return <p className="text-slate-500 dark:text-slate-400">This section is only available to admins.</p>
   }
 
   async function addMember(e: FormEvent) {
@@ -87,13 +87,13 @@ export default function Admin() {
     <div className="space-y-5">
       <h1 className="text-xl font-bold">Admin</h1>
 
-      <form onSubmit={addMember} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <form onSubmit={addMember} className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <h2 className="font-semibold">Add a member</h2>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Name"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
         />
         <input
           type="email"
@@ -101,7 +101,7 @@ export default function Admin() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email"
           required
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
         />
         <input
           type="text"
@@ -110,7 +110,7 @@ export default function Admin() {
           placeholder="Temporary password (6+ characters)"
           minLength={6}
           required
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
         />
         <button
           disabled={busy}
@@ -118,19 +118,19 @@ export default function Admin() {
         >
           {busy ? 'Adding…' : 'Add member'}
         </button>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           The account is created ready to use — no email confirmation needed. Share the password
           with them; they can change it later.
         </p>
       </form>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {notice && <p className="text-sm text-brand-700">{notice}</p>}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <h2 className="mb-3 font-semibold">Members ({members.length})</h2>
         {loading ? (
-          <p className="text-slate-500">Loading…</p>
+          <p className="text-slate-500 dark:text-slate-400">Loading…</p>
         ) : (
           <ul className="space-y-3">
             {members.map((m) => (
@@ -141,7 +141,7 @@ export default function Admin() {
                     {m.display_name || m.email}
                     {m.id === session?.user.id && ' (you)'}
                   </span>
-                  <span className="text-xs text-slate-500">{m.email}</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">{m.email}</span>
                 </span>
                 {m.is_admin && (
                   <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-800">
@@ -150,10 +150,10 @@ export default function Admin() {
                 )}
                 {m.id !== session?.user.id && (
                   <>
-                    <button className="text-xs text-slate-600 underline" onClick={() => void toggleAdmin(m)}>
+                    <button className="text-xs text-slate-600 dark:text-slate-300 underline" onClick={() => void toggleAdmin(m)}>
                       {m.is_admin ? 'Revoke admin' : 'Make admin'}
                     </button>
-                    <button className="text-xs text-red-600 underline" onClick={() => void removeMember(m)}>
+                    <button className="text-xs text-red-600 dark:text-red-400 underline" onClick={() => void removeMember(m)}>
                       Remove
                     </button>
                   </>

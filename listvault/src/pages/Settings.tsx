@@ -51,7 +51,7 @@ export default function Settings() {
     <div className="space-y-6">
       <h1 className="text-xl font-bold">Settings</h1>
 
-      <section className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
         <Avatar profile={profile} size={12} />
         <div className="flex-1">
           <label className="text-xs font-semibold uppercase text-slate-400" htmlFor="display-name">
@@ -62,7 +62,7 @@ export default function Settings() {
               id="display-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-1.5 focus:border-brand-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 focus:border-brand-500 focus:outline-none"
             />
             <button onClick={() => void saveName()} className="rounded-lg bg-brand-600 px-3 py-1.5 text-sm font-medium text-white">
               {saved ? '✓' : 'Save'}
@@ -72,25 +72,25 @@ export default function Settings() {
         </div>
       </section>
 
-      <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+      <section className="space-y-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm shadow-sm">
         <h2 className="font-semibold">Your data</h2>
-        <p className="text-slate-500">
+        <p className="text-slate-500 dark:text-slate-400">
           Minimal data is stored: your name, email, and your lists. No ads, no data resale.
         </p>
         <div className="flex gap-3 pt-1">
-          <button onClick={() => void exportData()} className="rounded-lg border border-slate-300 px-3 py-1.5">
+          <button onClick={() => void exportData()} className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5">
             Export my data (JSON)
           </button>
         </div>
       </section>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       <section className="flex flex-wrap gap-3 text-sm">
-        <button onClick={() => void signOut()} className="rounded-lg border border-slate-300 px-4 py-2">
+        <button onClick={() => void signOut()} className="rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-2">
           Sign out
         </button>
-        <button onClick={() => void deleteAccount()} className="rounded-lg border border-red-300 px-4 py-2 text-red-600">
+        <button onClick={() => void deleteAccount()} className="rounded-lg border border-red-300 px-4 py-2 text-red-600 dark:text-red-400">
           Delete account
         </button>
       </section>

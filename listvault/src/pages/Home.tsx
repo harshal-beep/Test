@@ -91,14 +91,14 @@ export default function Home() {
       </div>
 
       {showCreate && (
-        <form onSubmit={createList} className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <form onSubmit={createList} className="space-y-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm">
           <input
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="List name — e.g. Weekly groceries"
             maxLength={120}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
           />
           <div className="flex flex-wrap gap-2">
             {EMOJIS.map((em) => (
@@ -106,7 +106,7 @@ export default function Home() {
                 key={em}
                 type="button"
                 onClick={() => setEmoji(em)}
-                className={`rounded-lg p-1.5 text-xl ${emoji === em ? 'bg-brand-100 ring-2 ring-brand-500' : 'bg-slate-100'}`}
+                className={`rounded-lg p-1.5 text-xl ${emoji === em ? 'bg-brand-100 ring-2 ring-brand-500' : 'bg-slate-100 dark:bg-slate-800'}`}
               >
                 {em}
               </button>
@@ -130,12 +130,12 @@ export default function Home() {
         </form>
       )}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {loading ? (
-        <p className="text-slate-500">Loading…</p>
+        <p className="text-slate-500 dark:text-slate-400">Loading…</p>
       ) : lists.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+        <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 p-8 text-center text-slate-500 dark:text-slate-400">
           <p className="text-3xl">🛒</p>
           <p className="mt-2">No lists yet. Create one in under 5 seconds.</p>
         </div>
@@ -145,7 +145,7 @@ export default function Home() {
             <li key={l.id}>
               <Link
                 to={`/list/${l.id}`}
-                className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-brand-500"
+                className="flex items-center gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm hover:border-brand-500"
               >
                 <span
                   className="flex h-10 w-10 items-center justify-center rounded-lg text-xl"
@@ -167,9 +167,9 @@ export default function Home() {
           onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
           placeholder="Have a join code? e.g. K7MPQ2"
           maxLength={6}
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 uppercase tracking-widest focus:border-brand-500 focus:outline-none"
+          className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 uppercase tracking-widest focus:border-brand-500 focus:outline-none"
         />
-        <button className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50">
+        <button className="rounded-lg border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-50 dark:bg-brand-800/20">
           Join
         </button>
       </form>

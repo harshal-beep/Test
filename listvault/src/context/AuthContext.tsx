@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (!isConfigured) {
     return (
-      <div className="mx-auto mt-24 max-w-md rounded-xl border border-amber-300 bg-amber-50 p-6 text-sm">
+      <div className="mx-auto mt-24 max-w-md rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-6 text-sm">
         <h1 className="mb-2 text-lg font-semibold">ListVault is not configured</h1>
         <p>
           Copy <code>.env.example</code> to <code>.env.local</code> and set{' '}

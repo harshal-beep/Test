@@ -43,6 +43,17 @@ export interface Item {
   pending?: boolean
 }
 
+export interface Note {
+  id: string
+  title: string
+  body: string
+  owner_id: string
+  is_private: boolean
+  updated_by: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface SearchResult {
   list_id: string
   list_name: string

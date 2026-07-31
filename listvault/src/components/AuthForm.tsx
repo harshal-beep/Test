@@ -46,7 +46,7 @@ export default function AuthForm() {
           onChange={(e) => setName(e.target.value)}
           placeholder="Your name"
           autoComplete="name"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+          className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
         />
       )}
       <input
@@ -56,7 +56,7 @@ export default function AuthForm() {
         placeholder="Email"
         autoComplete="email"
         required
-        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
       />
       <input
         type="password"
@@ -66,9 +66,9 @@ export default function AuthForm() {
         autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
         minLength={6}
         required
-        className="w-full rounded-lg border border-slate-300 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
+        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2.5 focus:border-brand-500 focus:outline-none"
       />
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       {notice && <p className="text-sm text-brand-700">{notice}</p>}
       <button
         disabled={busy}

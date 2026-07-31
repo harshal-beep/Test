@@ -23,10 +23,10 @@ export default function ListDetail() {
   const [editText, setEditText] = useState('')
   const [error, setError] = useState('')
 
-  if (loading) return <p className="text-slate-500">Loading…</p>
+  if (loading) return <p className="text-slate-500 dark:text-slate-400">Loading…</p>
   if (notFound || !list)
     return (
-      <div className="text-center text-slate-500">
+      <div className="text-center text-slate-500 dark:text-slate-400">
         <p>This list doesn’t exist or you’re not a member.</p>
         <Link className="text-brand-700 underline" to="/">Back to my lists</Link>
       </div>
@@ -99,14 +99,14 @@ export default function ListDetail() {
     const checkedBy = profileOf(item.checked_by)
     const expanded = expandedItem === item.id
     return (
-      <li key={item.id} className={`rounded-lg border bg-white ${item.pending ? 'opacity-60' : ''} border-slate-200`}>
+      <li key={item.id} className={`rounded-lg border bg-white dark:bg-slate-900 ${item.pending ? 'opacity-60' : ''} border-slate-200 dark:border-slate-800`}>
         <div className="flex items-center gap-2 px-3 py-2">
           <button
             disabled={archived}
             onClick={() => void toggleItem(item)}
             aria-label={item.checked ? 'Uncheck' : 'Check'}
             className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${
-              item.checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300'
+              item.checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300 dark:border-slate-700'
             } ${archived ? 'opacity-50' : ''}`}
           >
             {item.checked && '✓'}
@@ -145,7 +145,7 @@ export default function ListDetail() {
           </span>
         </div>
         {expanded && (
-          <div className="border-t border-slate-100 px-3 py-2 text-xs text-slate-500">
+          <div className="border-t border-slate-100 dark:border-slate-800 px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
             <p>
               Added by <strong>{addedBy?.display_name ?? 'someone'}</strong>{' '}
               {new Date(item.created_at).toLocaleString()}
@@ -170,7 +170,7 @@ export default function ListDetail() {
                 </button>
                 <button className="underline" onClick={() => void moveItem(item, -1)}>Move up</button>
                 <button className="underline" onClick={() => void moveItem(item, 1)}>Move down</button>
-                <button className="text-red-600 underline" onClick={() => void deleteItem(item)}>Delete</button>
+                <button className="text-red-600 dark:text-red-400 underline" onClick={() => void deleteItem(item)}>Delete</button>
               </div>
             )}
           </div>
@@ -186,7 +186,7 @@ export default function ListDetail() {
           <span className="text-2xl">{list.emoji ?? '📝'}</span>
           <div>
             <h1 className="text-xl font-bold leading-tight">{list.name}</h1>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               {archived
                 ? `Archived ${list.closed_at ? new Date(list.closed_at).toLocaleDateString() : ''}`
                 : synced
@@ -198,7 +198,7 @@ export default function ListDetail() {
         <div className="flex gap-1">
           <button
             onClick={() => setShowMembers((s) => !s)}
-            className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 text-sm"
             aria-label="Members"
           >
             👥 {members.length}
@@ -214,14 +214,14 @@ export default function ListDetail() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {showShare && !archived && (
-        <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <div className="space-y-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm shadow-sm">
           <p className="font-semibold">Invite people</p>
           <p>
             Join code:{' '}
-            <code className="rounded bg-slate-100 px-2 py-0.5 text-base font-bold tracking-widest">
+            <code className="rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-base font-bold tracking-widest">
               {list.join_code}
             </code>
           </p>
@@ -235,23 +235,23 @@ export default function ListDetail() {
               Share on WhatsApp
             </a>
             <button
-              className="rounded-lg border border-slate-300 px-3 py-1.5"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5"
               onClick={() => void navigator.clipboard.writeText(shareUrl)}
             >
               Copy link
             </button>
             {isOwner && (
-              <button className="rounded-lg border border-slate-300 px-3 py-1.5" onClick={() => void regenerateCode()}>
+              <button className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5" onClick={() => void regenerateCode()}>
                 Regenerate code
               </button>
             )}
           </div>
-          <p className="text-xs text-slate-500">Anyone with the link joins as an editor.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Anyone with the link joins as an editor.</p>
         </div>
       )}
 
       {showMembers && (
-        <ul className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
+        <ul className="space-y-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm shadow-sm">
           {members.map((m) => (
             <li key={m.user_id} className="flex items-center gap-2">
               <Avatar profile={m.profile} size={6} />
@@ -261,7 +261,7 @@ export default function ListDetail() {
               </span>
               <span className="text-xs uppercase text-slate-400">{m.role}</span>
               {isOwner && m.role !== 'owner' && (
-                <button className="text-xs text-red-600 underline" onClick={() => void removeMember(m.user_id)}>
+                <button className="text-xs text-red-600 dark:text-red-400 underline" onClick={() => void removeMember(m.user_id)}>
                   Remove
                 </button>
               )}
@@ -276,7 +276,7 @@ export default function ListDetail() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Add items — one per line"
-            className="flex-1 rounded-lg border border-slate-300 px-3 py-2 focus:border-brand-500 focus:outline-none"
+            className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 focus:border-brand-500 focus:outline-none"
           />
           <button className="rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white hover:bg-brand-700">
             Add
@@ -295,7 +295,7 @@ export default function ListDetail() {
         </>
       )}
 
-      <div className="space-y-2 border-t border-slate-200 pt-4">
+      <div className="space-y-2 border-t border-slate-200 dark:border-slate-800 pt-4">
         {archived && (
           <div className="flex flex-wrap gap-2">
             <button
@@ -311,7 +311,7 @@ export default function ListDetail() {
               Duplicate without checked items
             </button>
             {isOwner && canReopen(list) && (
-              <button onClick={() => void reopenList()} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+              <button onClick={() => void reopenList()} className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-2 text-sm">
                 Reopen (within 24h)
               </button>
             )}
@@ -321,13 +321,13 @@ export default function ListDetail() {
           <div className="flex flex-wrap gap-3 text-sm">
             {!archived && (
               <>
-                <button className="text-slate-600 underline" onClick={() => void renameList()}>Rename</button>
-                <button className="text-slate-600 underline" onClick={() => void closeList()}>
+                <button className="text-slate-600 dark:text-slate-300 underline" onClick={() => void renameList()}>Rename</button>
+                <button className="text-slate-600 dark:text-slate-300 underline" onClick={() => void closeList()}>
                   Close &amp; archive
                 </button>
               </>
             )}
-            <button className="text-red-600 underline" onClick={() => void deleteList()}>Delete list</button>
+            <button className="text-red-600 dark:text-red-400 underline" onClick={() => void deleteList()}>Delete list</button>
           </div>
         )}
       </div>

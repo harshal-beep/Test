@@ -44,23 +44,23 @@ export default function Join() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
       <h1 className="text-2xl font-bold text-brand-700">ListVault</h1>
       {error ? (
-        <p className="text-red-600">{error}</p>
+        <p className="text-red-600 dark:text-red-400">{error}</p>
       ) : !peek ? (
-        <p className="text-slate-500">Checking invite…</p>
+        <p className="text-slate-500 dark:text-slate-400">Checking invite…</p>
       ) : (
         <>
-          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
             <p className="text-3xl">{peek.emoji ?? '📝'}</p>
             <p className="mt-2 text-lg font-semibold">{peek.name}</p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 dark:text-slate-400">
               {peek.member_count} member{peek.member_count === 1 ? '' : 's'}
             </p>
           </div>
           {session ? (
-            <p className="text-slate-500">Joining…</p>
+            <p className="text-slate-500 dark:text-slate-400">Joining…</p>
           ) : (
             <>
-              <p className="text-sm text-slate-600">Sign in or create an account to join:</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Sign in or create an account to join:</p>
               <AuthForm />
             </>
           )}

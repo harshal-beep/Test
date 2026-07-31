@@ -9,6 +9,8 @@ import Archive from './pages/Archive'
 import Search from './pages/Search'
 import Settings from './pages/Settings'
 import Admin from './pages/Admin'
+import Notes from './pages/Notes'
+import NoteEditor from './pages/NoteEditor'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -32,6 +34,8 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/list/:id" element={<ListDetail />} />
+                  <Route path="/notes" element={<Notes />} />
+                  <Route path="/notes/:id" element={<NoteEditor />} />
                   <Route path="/archive" element={<Archive />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/settings" element={<Settings />} />
