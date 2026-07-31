@@ -1,8 +1,8 @@
 // lv-ai — DEPLOYED to Supabase project jxpxwxnrdljqzxxhlhkx.
 // AI assist for notes: summarize, fix grammar, format into a list.
-// Calls OpenRouter (default model anthropic/claude-haiku-4.5; override with
-// the OPENROUTER_MODEL env var). The API key comes from the OPENROUTER_API_KEY
-// env var if set, otherwise from the service-role-only lv_secrets table.
+// Calls OpenRouter (default model deepseek/deepseek-v4-flash). Both the API
+// key and model resolve from env vars (OPENROUTER_API_KEY / OPENROUTER_MODEL)
+// when set, otherwise from the service-role-only lv_secrets table.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -10,7 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 }
 
-const MODEL = Deno.env.get('OPENROUTER_MODEL') ?? 'anthropic/claude-haiku-4.5'
+const DEFAULT_MODEL = 'deepseek/deepseek-v4-flash'
 
 const PROMPTS: Record<string, string> = {
   summarize:
@@ -40,13 +40,20 @@ Deno.serve(async (req) => {
     const { data: userData, error: userErr } = await callerClient.auth.getUser()
     if (userErr || !userData.user) return json({ error: 'not signed in' }, 401)
 
-    // Key: env var wins; otherwise the service-role-only lv_secrets table
+    // Config: env vars win; otherwise the service-role-only lv_secrets table
     let apiKey = Deno.env.get('OPENROUTER_API_KEY')
-    if (!apiKey) {
+    let model = Deno.env.get('OPENROUTER_MODEL')
+    if (!apiKey || !model) {
       const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-      const { data } = await admin.from('lv_secrets').select('value').eq('key', 'OPENROUTER_API_KEY').maybeSingle()
-      apiKey = data?.value
+      const { data } = await admin
+        .from('lv_secrets')
+        .select('key, value')
+        .in('key', ['OPENROUTER_API_KEY', 'OPENROUTER_MODEL'])
+      const map = Object.fromEntries((data ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
+      apiKey = apiKey ?? map.OPENROUTER_API_KEY
+      model = model ?? map.OPENROUTER_MODEL
     }
+    model = model ?? DEFAULT_MODEL
     if (!apiKey) {
       return json({ error: 'AI is not configured yet. Ask the admin to add an OPENROUTER_API_KEY.' }, 503)
     }
@@ -66,7 +73,7 @@ Deno.serve(async (req) => {
         'X-Title': 'HaMaara'
       },
       body: JSON.stringify({
-        model: MODEL,
+        model,
         max_tokens: 4096,
         messages: [{ role: 'user', content: `${prompt}\n\n<note>\n${text}\n</note>` }]
       })
