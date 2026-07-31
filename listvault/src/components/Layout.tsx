@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Archive, Flame, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare } from 'lucide-react'
+import { Archive, Flame, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
 import InstallPrompt from './InstallPrompt'
@@ -70,8 +70,8 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
           <ThemeToggle />
           {profile?.is_admin && (
-            <NavLink to="/admin" aria-label="Admin" className="icon-btn text-sm font-bold">
-              ⚙
+            <NavLink to="/admin" aria-label="Manage people" className="icon-btn">
+              <Users size={19} />
             </NavLink>
           )}
           <NavLink to="/settings" aria-label="Settings" className="transition-transform active:scale-95">

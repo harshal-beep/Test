@@ -1,6 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { UserPlus, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { Profile } from '../lib/types'
 import Avatar from '../components/Avatar'
 import { Page, useConfirm, useToast } from '../components/ui'
 
@@ -13,6 +16,15 @@ export default function Settings() {
   const [name, setName] = useState(profile?.display_name ?? '')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [household, setHousehold] = useState<Profile[]>([])
+
+  useEffect(() => {
+    supabase
+      .from('lv_profiles')
+      .select('*')
+      .order('created_at')
+      .then(({ data }) => setHousehold((data as Profile[]) ?? []))
+  }, [])
 
   async function saveName() {
     if (!profile || !name.trim()) return
@@ -93,6 +105,40 @@ export default function Settings() {
           </div>
           <p className="mt-1 text-xs text-ink-400">{profile?.email}</p>
         </div>
+      </section>
+
+      {/* Our home — the household everyone shares */}
+      <section className="surface space-y-3 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 font-bold">
+            <Users size={18} className="text-brand-600" /> Our home
+          </h2>
+          <span className="text-xs text-ink-400">{household.length} people</span>
+        </div>
+        <p className="text-sm text-ink-500 dark:text-ink-400">
+          Everyone here shares all lists, notes and habits automatically.
+        </p>
+        <ul className="space-y-2.5">
+          {household.map((m) => (
+            <li key={m.id} className="flex items-center gap-3">
+              <Avatar profile={m} size={8} />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                {m.display_name || m.email}
+                {m.id === profile?.id && ' (you)'}
+              </span>
+              {m.is_admin && (
+                <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800 dark:bg-brand-800 dark:text-brand-100">
+                  admin
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+        {profile?.is_admin && (
+          <Link to="/admin" className="btn-primary flex w-full items-center justify-center gap-2 py-3 text-sm">
+            <UserPlus size={16} /> Add or remove people
+          </Link>
+        )}
       </section>
 
       <section className="space-y-2.5 surface p-4 text-sm shadow-sm">

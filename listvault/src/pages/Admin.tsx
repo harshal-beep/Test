@@ -108,7 +108,10 @@ export default function Admin() {
 
   return (
     <Page className="space-y-5">
-      <h1 className="text-[26px] font-extrabold tracking-tight">Admin</h1>
+      <div>
+        <h1 className="text-[26px] font-extrabold tracking-tight">Our home</h1>
+        <p className="text-sm text-ink-500 dark:text-ink-400">Add people to HaMaara and manage access.</p>
+      </div>
 
       {/* How invites work */}
       <div className="flex gap-3 rounded-[20px] bg-brand-50 p-4 text-sm leading-relaxed text-ink-600 dark:bg-brand-800/20 dark:text-ink-300">
