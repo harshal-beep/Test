@@ -7,10 +7,10 @@ import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
-const TEAL = [15, 118, 110]
-const LIGHT = [240, 253, 250]
-const MID = [13, 148, 136]
-const DARK = [17, 94, 89]
+const TEAL = [108, 99, 255]
+const LIGHT = [245, 244, 255]
+const MID = [139, 131, 255]
+const DARK = [61, 55, 163]
 
 function crc32(buf) {
   let c

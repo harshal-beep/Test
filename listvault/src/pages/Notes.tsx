@@ -4,6 +4,15 @@ import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 
+// Pastel note-card palette, cycled by position (mirrors the reference design)
+const PASTELS = [
+  'bg-[#edebff] dark:bg-[#2b2952]',
+  'bg-[#fff1e0] dark:bg-[#3d3325]',
+  'bg-[#e4f7ee] dark:bg-[#22382f]',
+  'bg-[#ffe9f0] dark:bg-[#3c2733]',
+  'bg-[#e8f1ff] dark:bg-[#24314a]'
+]
+
 export default function Notes() {
   const { session } = useAuth()
   const [notes, setNotes] = useState<Note[]>([])
@@ -67,38 +76,34 @@ export default function Notes() {
           </p>
         </div>
       ) : (
-        <ul className="space-y-2">
-          {visible.map((n) => (
-            <li key={n.id}>
-              <Link
-                to={`/notes/${n.id}`}
-                className="block rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm hover:border-brand-500"
-              >
-                <span className="flex items-center gap-2">
-                  <span className="flex-1 font-medium">
-                    {n.title || n.body.slice(0, 60) || 'Untitled note'}
-                  </span>
-                  {n.is_private && (
-                    <span
-                      className="rounded-full bg-slate-100 dark:bg-slate-800 px-2 py-0.5 text-xs text-slate-500 dark:text-slate-400"
-                      title={n.owner_id === session?.user.id ? 'Only you can see this' : ''}
-                    >
-                      🔒 private
-                    </span>
-                  )}
+        <div className="columns-2 gap-3 [column-fill:_balance]">
+          {visible.map((n, i) => (
+            <Link
+              key={n.id}
+              to={`/notes/${n.id}`}
+              className={`mb-3 block break-inside-avoid rounded-2xl p-4 shadow-sm transition-transform hover:-translate-y-0.5 ${
+                PASTELS[i % PASTELS.length]
+              }`}
+            >
+              <span className="flex items-start gap-1.5">
+                <span className="flex-1 font-semibold leading-snug">
+                  {n.title || n.body.slice(0, 60) || 'Untitled note'}
                 </span>
-                {n.title && n.body && (
-                  <span className="mt-1 block truncate text-sm text-slate-500 dark:text-slate-400">
-                    {n.body.split('\n')[0]}
-                  </span>
+                {n.is_private && (
+                  <span title={n.owner_id === session?.user.id ? 'Only you can see this' : ''}>🔒</span>
                 )}
-                <span className="mt-1 block text-xs text-slate-400">
-                  {new Date(n.updated_at).toLocaleString()}
+              </span>
+              {n.title && n.body && (
+                <span className="mt-1.5 block text-sm text-slate-600 dark:text-slate-300 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:4] overflow-hidden">
+                  {n.body}
                 </span>
-              </Link>
-            </li>
+              )}
+              <span className="mt-2 block text-xs text-slate-500 dark:text-slate-400">
+                {new Date(n.updated_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+              </span>
+            </Link>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )

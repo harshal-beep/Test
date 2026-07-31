@@ -12,7 +12,7 @@ export default defineConfig({
         name: 'ListVault',
         short_name: 'ListVault',
         description: 'Shared lists with a permanent archive',
-        theme_color: '#0f766e',
+        theme_color: '#6c63ff',
         background_color: '#f8fafc',
         display: 'standalone',
         start_url: '/',
