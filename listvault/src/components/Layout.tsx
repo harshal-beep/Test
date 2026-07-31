@@ -10,8 +10,11 @@ const tabs = [
   { to: '/search', label: 'Search', icon: '🔍' }
 ]
 
+const adminTab = { to: '/admin', label: 'Admin', icon: '🛠️' }
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { profile } = useAuth()
+  const visibleTabs = profile?.is_admin ? [...tabs, adminTab] : tabs
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
@@ -25,7 +28,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <main className="flex-1 px-4 py-4">{children}</main>
       <InstallPrompt />
       <nav className="sticky bottom-0 z-10 flex border-t border-slate-200 bg-white">
-        {tabs.map((t) => (
+        {visibleTabs.map((t) => (
           <NavLink
             key={t.to}
             to={t.to}

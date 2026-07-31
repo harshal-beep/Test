@@ -23,15 +23,15 @@ export default function Home() {
     // Live-update the home screen when lists change (renames, closes, new shares)
     const channel = supabase
       .channel('home-lists')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lists' }, () => void loadLists())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'list_members' }, () => void loadLists())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_lists' }, () => void loadLists())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_list_members' }, () => void loadLists())
       .subscribe()
     return () => void supabase.removeChannel(channel)
   }, [])
 
   async function loadLists() {
     const { data } = await supabase
-      .from('lists')
+      .from('lv_lists')
       .select('*')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
@@ -49,7 +49,7 @@ export default function Home() {
       console.warn('listvault: active list cap (100) hit')
     }
     const { data, error: err } = await supabase
-      .from('lists')
+      .from('lv_lists')
       .insert({ name: trimmed, emoji, color, owner_id: session.user.id })
       .select()
       .single()
@@ -70,7 +70,7 @@ export default function Home() {
       setError('Codes are 6 characters')
       return
     }
-    const { error: err } = await supabase.rpc('join_list_by_code', { p_code: code })
+    const { error: err } = await supabase.rpc('lv_join_list_by_code', { p_code: code })
     if (err) setError(err.message)
     else {
       setJoinCode('')

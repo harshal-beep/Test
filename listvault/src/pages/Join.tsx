@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import AuthForm from '../components/AuthForm'
 
 interface Peek {
   name: string
@@ -17,13 +18,13 @@ interface Peek {
 export default function Join() {
   const { code = '' } = useParams()
   const navigate = useNavigate()
-  const { session, loading, signInWithGoogle } = useAuth()
+  const { session, loading } = useAuth()
   const [peek, setPeek] = useState<Peek | null>(null)
   const [error, setError] = useState('')
   const [joining, setJoining] = useState(false)
 
   useEffect(() => {
-    supabase.rpc('peek_list', { p_code: code }).then(({ data }) => {
+    supabase.rpc('lv_peek_list', { p_code: code }).then(({ data }) => {
       const row = (data as Peek[] | null)?.[0]
       if (row) setPeek(row)
       else setError('This invite link is invalid or the list was closed.')
@@ -33,7 +34,7 @@ export default function Join() {
   useEffect(() => {
     if (loading || !session || !peek || joining) return
     setJoining(true)
-    supabase.rpc('join_list_by_code', { p_code: code }).then(({ data, error: err }) => {
+    supabase.rpc('lv_join_list_by_code', { p_code: code }).then(({ data, error: err }) => {
       if (err) setError(err.message)
       else navigate(`/list/${data}`, { replace: true })
     })
@@ -58,12 +59,10 @@ export default function Join() {
           {session ? (
             <p className="text-slate-500">Joining…</p>
           ) : (
-            <button
-              onClick={() => void signInWithGoogle(window.location.href)}
-              className="rounded-full bg-brand-600 px-6 py-3 font-semibold text-white shadow hover:bg-brand-700"
-            >
-              Sign in with Google to join
-            </button>
+            <>
+              <p className="text-sm text-slate-600">Sign in or create an account to join:</p>
+              <AuthForm />
+            </>
           )}
         </>
       )}

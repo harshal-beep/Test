@@ -17,7 +17,7 @@ export default function Search() {
     e?.preventDefault()
     if (!query.trim()) return
     setError('')
-    const { data, error: err } = await supabase.rpc('search_lists', {
+    const { data, error: err } = await supabase.rpc('lv_search_lists', {
       p_query: query.trim(),
       p_status: status,
       p_year: year === '' ? null : year

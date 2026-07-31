@@ -4,6 +4,7 @@ export interface Profile {
   avatar_url: string | null
   email: string | null
   provider: string
+  is_admin: boolean
 }
 
 export interface List {

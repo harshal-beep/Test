@@ -52,38 +52,38 @@ export default function ListDetail() {
 
   async function closeList() {
     if (!confirm(`Close "${list!.name}"? It moves to your Archive and becomes read-only. You can reopen within 24 hours.`)) return
-    await supabase.from('lists').update({ status: 'archived', closed_at: new Date().toISOString() }).eq('id', id)
+    await supabase.from('lv_lists').update({ status: 'archived', closed_at: new Date().toISOString() }).eq('id', id)
   }
 
   async function reopenList() {
-    await supabase.from('lists').update({ status: 'active', closed_at: null }).eq('id', id)
+    await supabase.from('lv_lists').update({ status: 'active', closed_at: null }).eq('id', id)
   }
 
   async function deleteList() {
     if (!confirm(`Permanently delete "${list!.name}" and all its items? This cannot be undone.`)) return
-    await supabase.from('lists').delete().eq('id', id)
+    await supabase.from('lv_lists').delete().eq('id', id)
     navigate('/')
   }
 
   async function renameList() {
     const name = prompt('Rename list', list!.name)?.trim()
     if (!name) return
-    await supabase.from('lists').update({ name }).eq('id', id)
+    await supabase.from('lv_lists').update({ name }).eq('id', id)
   }
 
   async function regenerateCode() {
     if (!confirm('Regenerate the join code? The old link stops working.')) return
-    const { error: err } = await supabase.rpc('regenerate_join_code', { p_list_id: id })
+    const { error: err } = await supabase.rpc('lv_regenerate_join_code', { p_list_id: id })
     if (err) setError(err.message)
   }
 
   async function removeMember(userId: string) {
     if (!confirm('Remove this member from the list?')) return
-    await supabase.from('list_members').delete().eq('list_id', id).eq('user_id', userId)
+    await supabase.from('lv_list_members').delete().eq('list_id', id).eq('user_id', userId)
   }
 
   async function duplicate(includeChecked: boolean) {
-    const { data, error: err } = await supabase.rpc('duplicate_list', {
+    const { data, error: err } = await supabase.rpc('lv_duplicate_list', {
       p_list_id: id,
       p_include_checked: includeChecked
     })

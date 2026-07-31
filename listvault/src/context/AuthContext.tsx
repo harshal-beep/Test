@@ -7,7 +7,9 @@ interface AuthState {
   session: Session | null
   profile: Profile | null
   loading: boolean
-  signInWithGoogle: (redirectTo?: string) => Promise<void>
+  /** Returns true when the account needs email confirmation before sign-in. */
+  signUpWithEmail: (email: string, password: string, displayName: string) => Promise<boolean>
+  signInWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
 }
@@ -39,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user.id])
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single()
+    const { data } = await supabase.from('lv_profiles').select('*').eq('id', userId).single()
     if (data) setProfile(data as Profile)
   }
 
@@ -47,11 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     profile,
     loading,
-    signInWithGoogle: async (redirectTo) => {
-      await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: redirectTo ?? window.location.origin }
+    signUpWithEmail: async (email, password, displayName) => {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: displayName } }
       })
+      if (error) throw error
+      // No session back means the project requires email confirmation first.
+      return !data.session
+    },
+    signInWithEmail: async (email, password) => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
     },
     signOut: async () => {
       await supabase.auth.signOut()

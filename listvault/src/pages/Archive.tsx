@@ -10,7 +10,7 @@ export default function Archive() {
 
   useEffect(() => {
     supabase
-      .from('lists')
+      .from('lv_lists')
       .select('*, items(count)')
       .eq('status', 'archived')
       .order('closed_at', { ascending: false })

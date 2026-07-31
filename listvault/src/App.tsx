@@ -8,6 +8,7 @@ import Join from './pages/Join'
 import Archive from './pages/Archive'
 import Search from './pages/Search'
 import Settings from './pages/Settings'
+import Admin from './pages/Admin'
 
 export default function App() {
   const { session, loading } = useAuth()
@@ -34,6 +35,7 @@ export default function App() {
                   <Route path="/archive" element={<Archive />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/admin" element={<Admin />} />
                 </Routes>
               </Layout>
             }

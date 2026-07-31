@@ -12,7 +12,7 @@ export default function Settings() {
   async function saveName() {
     if (!profile || !name.trim()) return
     const { error: err } = await supabase
-      .from('profiles')
+      .from('lv_profiles')
       .update({ display_name: name.trim() })
       .eq('id', profile.id)
     if (err) setError(err.message)
@@ -25,7 +25,7 @@ export default function Settings() {
 
   async function exportData() {
     setError('')
-    const { data, error: err } = await supabase.rpc('export_my_data')
+    const { data, error: err } = await supabase.rpc('lv_export_my_data')
     if (err) {
       setError(err.message)
       return
@@ -42,7 +42,7 @@ export default function Settings() {
   async function deleteAccount() {
     if (!confirm('Delete your account and all lists you own? This cannot be undone.')) return
     if (!confirm('Really delete everything? Archived lists you own are removed too.')) return
-    const { error: err } = await supabase.rpc('delete_my_account')
+    const { error: err } = await supabase.rpc('lv_delete_my_account')
     if (err) setError(err.message)
     else await signOut()
   }
@@ -75,7 +75,7 @@ export default function Settings() {
       <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm">
         <h2 className="font-semibold">Your data</h2>
         <p className="text-slate-500">
-          Minimal data is stored: your Google name, email, photo, and your lists. No ads, no data resale.
+          Minimal data is stored: your name, email, and your lists. No ads, no data resale.
         </p>
         <div className="flex gap-3 pt-1">
           <button onClick={() => void exportData()} className="rounded-lg border border-slate-300 px-3 py-1.5">

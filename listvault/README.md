@@ -23,30 +23,44 @@ and last-write-wins per item.
   search across active + archived (Postgres `tsvector`), duplicate any archived list into
   a new active one (optionally excluding checked items). Never auto-deleted; only the
   owner can permanently delete, with confirmation.
-- **Auth & account** — Sign in with Google only (v1); display-name editing; JSON data
-  export; self-serve account deletion. The `profiles.provider` column exists now so
-  adding Sign in with Apple later is a migration, not a rewrite.
+- **Auth & account** — email/password signup and sign-in via Supabase Auth;
+  display-name editing; JSON data export; self-serve account deletion. The
+  `lv_profiles.provider` column exists so adding Google/Apple sign-in later is a
+  migration, not a rewrite.
+- **Admin section** — the first account to sign up becomes admin. Admins get an Admin
+  tab where they can add members (name + email + temporary password, created via the
+  `lv-admin-users` Edge Function — no email confirmation needed), grant/revoke admin,
+  and remove accounts.
 - **iOS install flow** — guided "Add to Home Screen" prompt on first visit from iOS
   Safari (push on iOS only works after install).
 
 ## Getting started
 
-### 1. Supabase
+### Backend (already provisioned)
 
-1. Create a project at [supabase.com](https://supabase.com).
-2. Run the migration: paste `supabase/migrations/0001_init.sql` into the SQL editor
-   (or `supabase db push` with the CLI).
-3. Enable the **Google** provider under Authentication → Providers and add your app's
-   URL(s) to the redirect allowlist.
+The backend is **live** on the Supabase project `jxpxwxnrdljqzxxhlhkx` ("Jugaad AI",
+shared with other apps — all ListVault objects are `lv_` prefixed):
 
-### 2. App
+- `supabase/migrations/0001_init.sql` is applied (tables, RLS, RPCs, realtime).
+- The `lv-admin-users` Edge Function is deployed (admin member management).
+
+To move to a dedicated project later, run the same migration and redeploy the
+function, then swap the two values in `.env.local`.
+
+### App
 
 ```bash
 cd listvault
-cp .env.example .env.local   # fill in VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY
+cp .env.example .env.local   # already contains the live URL + anon key
 npm install
 npm run dev
 ```
+
+Sign up with email + password — the **first account becomes admin** automatically.
+Note: self-signup sends a confirmation email (Supabase default); accounts added from
+the Admin tab skip confirmation and can sign in immediately. When deploying, set the
+project's Site URL (Authentication → URL Configuration) to your deployed URL so
+confirmation links land in the right place.
 
 `npm run build` produces a static PWA in `dist/` — deploy to Vercel or Cloudflare Pages.
 The `/j/:code` route must rewrite to `index.html` (default SPA behaviour on both hosts).
@@ -62,11 +76,13 @@ is stubbed at the schema level via `list_members.muted`.
 
 ```
 listvault/
-├── supabase/migrations/0001_init.sql   # schema, RLS, RPCs (join/search/duplicate/export)
+├── supabase/
+│   ├── migrations/0001_init.sql        # schema, RLS, RPCs (applied)
+│   └── functions/lv-admin-users/       # admin member management (deployed)
 ├── src/
-│   ├── context/AuthContext.tsx         # Google sign-in via Supabase Auth
+│   ├── context/AuthContext.tsx         # email auth via Supabase Auth
 │   ├── hooks/useListDetail.ts          # realtime + optimistic sync engine
-│   ├── pages/                          # Home, ListDetail, Join, Archive, Search, Settings
-│   └── components/                     # Layout, Avatar, iOS install prompt
+│   ├── pages/                          # Home, ListDetail, Join, Archive, Search, Settings, Admin
+│   └── components/                     # Layout, Avatar, AuthForm, iOS install prompt
 └── vite.config.ts                      # PWA manifest + Workbox caching rules
 ```
