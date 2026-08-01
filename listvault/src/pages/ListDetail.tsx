@@ -635,9 +635,10 @@ export default function ListDetail() {
       {!archived && (
         <form
           onSubmit={submit}
-          className="fixed inset-x-0 z-10 mx-auto max-w-2xl px-5 pb-2 transition-[bottom] duration-150"
-          style={{ bottom: kbInset > 0 ? kbInset + 8 : 68 }}
+          className="fixed inset-x-0 bottom-[68px] z-10 px-5 pb-2 transition-[bottom] duration-150 md:bottom-6 md:pl-64"
+          style={kbInset > 0 ? { bottom: kbInset + 8 } : undefined}
         >
+          <div className="mx-auto max-w-2xl md:max-w-3xl">
           <div className="flex items-center gap-2 rounded-full bg-white p-1.5 pl-5 shadow-float ring-1 ring-ink-100 dark:bg-ink-900 dark:ring-ink-700">
             <input
               value={input}
@@ -653,6 +654,7 @@ export default function ListDetail() {
             >
               <Send size={17} />
             </motion.button>
+          </div>
           </div>
         </form>
       )}

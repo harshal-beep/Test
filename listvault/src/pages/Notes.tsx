@@ -142,7 +142,7 @@ export default function Notes() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <Skeleton className="h-36" />
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
@@ -166,7 +166,7 @@ export default function Notes() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.25 }}
-                className="grid grid-cols-2 items-start gap-3"
+                className="grid grid-cols-2 items-start gap-3 md:grid-cols-3"
               >
                 {visible.map((n) => (
                   <NoteCard

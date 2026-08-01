@@ -245,7 +245,7 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
@@ -258,7 +258,7 @@ export default function Home() {
             hint="Tap + to create your first list — it takes five seconds."
           />
         ) : (
-          <motion.div variants={stagger.container} initial="initial" animate="animate" className="grid grid-cols-2 gap-3">
+          <motion.div variants={stagger.container} initial="initial" animate="animate" className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {lists.map((l) => {
               const pct = l.total === 0 ? 0 : Math.round((l.done / l.total) * 100)
               return (
