@@ -83,7 +83,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </span>
       </header>
 
-      <main className="flex-1 px-5 py-2 pb-28">{children}</main>
+      <main className="flex-1 px-5 py-2 pb-[calc(7rem+env(safe-area-inset-bottom))]">{children}</main>
       <InstallPrompt />
 
       {/* FAB actions */}

@@ -1,9 +1,10 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Camera, UserPlus, Users } from 'lucide-react'
+import { Camera, Monitor, Moon, Smartphone, Sun, UserPlus, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { processAvatar } from '../lib/avatarUpload'
+import { applyThemeMode, getThemeMode, ThemeMode } from '../lib/theme'
 import { Profile } from '../lib/types'
 import Avatar from '../components/Avatar'
 import { Page, useConfirm, useToast } from '../components/ui'
@@ -20,6 +21,10 @@ export default function Settings() {
   const [household, setHousehold] = useState<Profile[]>([])
   const [photoBusy, setPhotoBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getThemeMode)
+  const standalone =
+    window.matchMedia('(display-mode: standalone)').matches ||
+    (navigator as unknown as { standalone?: boolean }).standalone === true
 
   useEffect(() => {
     supabase
@@ -200,6 +205,56 @@ export default function Settings() {
         )}
       </section>
 
+      {/* Appearance */}
+      <section className="surface space-y-3 p-4 text-sm">
+        <h2 className="font-semibold">Appearance</h2>
+        <div className="flex gap-2">
+          {(
+            [
+              { mode: 'light', label: 'Light', Icon: Sun },
+              { mode: 'dark', label: 'Dark', Icon: Moon },
+              { mode: 'system', label: 'System', Icon: Monitor }
+            ] as const
+          ).map(({ mode, label, Icon }) => (
+            <button
+              key={mode}
+              onClick={() => {
+                applyThemeMode(mode)
+                setThemeMode(mode)
+              }}
+              className={`flex flex-1 flex-col items-center gap-1.5 rounded-2xl py-3 text-xs font-semibold transition-all active:scale-95 ${
+                themeMode === mode
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                  : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'
+              }`}
+            >
+              <Icon size={17} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-ink-400">System follows your phone's light/dark setting.</p>
+      </section>
+
+      {/* Install as an app */}
+      <section className="surface space-y-2 p-4 text-sm">
+        <h2 className="flex items-center gap-2 font-semibold">
+          <Smartphone size={17} className="text-brand-600" /> HaMaara as an app
+        </h2>
+        {standalone ? (
+          <p className="text-ink-500 dark:text-ink-400">
+            Installed ✓ — you're running the full-screen app.
+          </p>
+        ) : (
+          <p className="leading-relaxed text-ink-500 dark:text-ink-400">
+            Open hamaara.vercel.app in Safari or Chrome, tap the <strong>Share</strong> icon
+            (bottom bar in Safari, next to the address bar in Chrome), then{' '}
+            <strong>Add to Home Screen</strong>. HaMaara opens full-screen with its own icon —
+            no browser bars.
+          </p>
+        )}
+      </section>
+
       <section className="space-y-2.5 surface p-4 text-sm shadow-sm">
         <h2 className="font-semibold">Change password</h2>
         <div className="flex gap-2">
@@ -219,6 +274,21 @@ export default function Settings() {
             {pwBusy ? '…' : 'Update'}
           </button>
         </div>
+        <button
+          onClick={async () => {
+            if (
+              await confirmSheet('Sign out everywhere?', {
+                body: 'Every device logged into this account is signed out, including this one. Sign back in with your password.',
+                confirmLabel: 'Sign out everywhere'
+              })
+            ) {
+              await supabase.auth.signOut({ scope: 'global' })
+            }
+          }}
+          className="pt-1 text-xs font-medium text-ink-400 underline"
+        >
+          Sign out on all devices
+        </button>
       </section>
 
       <section className="space-y-2 surface p-4 text-sm shadow-sm">
@@ -243,6 +313,10 @@ export default function Settings() {
           Delete account
         </button>
       </section>
+
+      <p className="pb-2 text-center text-xs text-ink-400">
+        Ha<span className="font-semibold text-brand-600">Maara</span> · hamaara, together ❤️
+      </p>
     </Page>
   )
 }
