@@ -1,6 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Send, SmilePlus, X } from 'lucide-react'
+import { Send, SmilePlus, X } from '../lib/icons'
 import { ItemComment, ItemReaction, Profile, REACTION_EMOJIS } from '../lib/types'
 import Avatar from './Avatar'
 

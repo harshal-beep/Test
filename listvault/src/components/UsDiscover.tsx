@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { CalendarDays, Compass, ExternalLink, ListPlus, MapPin, Sparkles, X } from 'lucide-react'
+import { CalendarDays, Compass, ExternalLink, ListPlus, MapPin, Sparkles, X } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { List, Profile, UsEvent } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

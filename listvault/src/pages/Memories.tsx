@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { Sparkles } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Copy, Info, ShieldCheck, UserPlus } from 'lucide-react'
+import { Copy, Info, ShieldCheck, UserPlus } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

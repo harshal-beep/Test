@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CalendarHeart, ListTodo, Plus } from 'lucide-react'
+import { CalendarHeart, ListTodo, Plus } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

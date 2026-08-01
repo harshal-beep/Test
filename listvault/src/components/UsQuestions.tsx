@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Hourglass, MessageCircleQuestion, Sparkles, Trash2 } from 'lucide-react'
+import { Hourglass, MessageCircleQuestion, Sparkles, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Profile, Question, QuestionAnswer, QuestionMood, QuestionRound } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

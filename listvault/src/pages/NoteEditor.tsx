@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, ListChecks, ListPlus, Lock, LockOpen, Pin, Sparkles, SpellCheck, Trash2, WrapText } from 'lucide-react'
+import { ArrowLeft, Check, ListChecks, ListPlus, Lock, LockOpen, Pin, Sparkles, SpellCheck, Trash2, WrapText } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
 import { NOTE_COLOR_KEYS, NOTE_COLORS } from '../lib/noteColors'

@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, Camera, Monitor, Moon, Smartphone, Sparkles, Sun, UserPlus, Users } from 'lucide-react'
+import { Archive, Camera, Monitor, Moon, Smartphone, Sparkles, Sun, UserPlus, Users } from '../lib/icons'
 import TasteQuiz from '../components/TasteQuiz'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'

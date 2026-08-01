@@ -12,7 +12,7 @@ import {
   useState
 } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Check, X } from 'lucide-react'
+import { Check, X } from '../lib/icons'
 
 /* ---------------------------------- Page ---------------------------------- */
 

@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Flame, Heart, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare, Users } from 'lucide-react'
+import { Flame, Heart, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare, Users } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
 import InstallPrompt from './InstallPrompt'

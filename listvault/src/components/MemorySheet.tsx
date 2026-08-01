@@ -1,6 +1,6 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ImagePlus, Trash2 } from 'lucide-react'
+import { ImagePlus, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { processPhoto } from '../lib/images'
 import { Item } from '../lib/types'

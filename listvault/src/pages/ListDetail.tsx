@@ -27,7 +27,7 @@ import {
   Trash2,
   Users,
   X
-} from 'lucide-react'
+} from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Item, Profile, canReopen } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

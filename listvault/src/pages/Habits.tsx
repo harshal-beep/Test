@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Flame, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Flame, Pencil, Plus, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Habit, HabitCheck, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'

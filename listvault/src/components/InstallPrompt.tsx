@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X } from '../lib/icons'
 
 // Guided "Add to Home Screen" nudge on iOS. Floats above the bottom nav as a
 // dismissible card; the full instructions live permanently in Settings.

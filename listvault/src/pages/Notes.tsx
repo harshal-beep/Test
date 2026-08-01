@@ -11,7 +11,7 @@ import {
 } from '@dnd-kit/core'
 import { arrayMove, rectSortingStrategy, SortableContext, useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Lock, NotebookPen, Pin, Search } from 'lucide-react'
+import { Lock, NotebookPen, Pin, Search } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
 import { NOTE_COLORS, noteColorKey } from '../lib/noteColors'

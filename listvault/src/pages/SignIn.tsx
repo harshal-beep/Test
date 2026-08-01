@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from '../lib/icons'
 import AuthForm from '../components/AuthForm'
 
 const SLIDES = [
