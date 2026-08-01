@@ -38,12 +38,34 @@ export interface Item {
   checked_at: string | null
   /** Assignees; null/empty = unassigned. Can be one person or the whole household. */
   assigned_to: string[] | null
+  /** The day you plan to do this together (ISO yyyy-mm-dd). */
+  planned_for: string | null
+  /** Set once done: what it was like, and a photo. */
+  memory_note: string | null
+  memory_photo: string | null
   position: number
   created_at: string
   updated_at: string
   // true while an optimistic write is awaiting server confirmation
   pending?: boolean
 }
+
+export interface ItemReaction {
+  item_id: string
+  user_id: string
+  emoji: string
+  created_at: string
+}
+
+export interface ItemComment {
+  id: string
+  item_id: string
+  user_id: string
+  body: string
+  created_at: string
+}
+
+export const REACTION_EMOJIS = ['❤️', '🔥', '😍', '😂', '👍'] as const
 
 export interface Note {
   id: string

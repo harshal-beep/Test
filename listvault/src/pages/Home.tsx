@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ListTodo, Plus } from 'lucide-react'
+import { CalendarHeart, ListTodo, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +10,29 @@ import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
 import { ListComposer } from '../components/Composers'
 
 type ListRow = List & { total: number; done: number }
+
+interface PlannedRow {
+  id: string
+  list_id: string
+  text: string
+  planned_for: string
+}
+
+function isoToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Days from today to an ISO day, counted in whole local days. */
+function daysUntil(day: string): number {
+  return Math.round((new Date(day).getTime() - new Date(isoToday()).getTime()) / 86400000)
+}
+
+function countdownLabel(days: number): string {
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Tomorrow'
+  return `In ${days} days`
+}
 
 interface FeedEntry {
   key: string
@@ -48,18 +71,36 @@ export default function Home() {
   const [composerOpen, setComposerOpen] = useState(false)
   const [feed, setFeed] = useState<FeedEntry[]>([])
   const [feedProfiles, setFeedProfiles] = useState<Profile[]>([])
+  const [planned, setPlanned] = useState<PlannedRow[]>([])
 
   useEffect(() => {
     void loadLists()
     void loadFeed()
+    void loadPlanned()
     const channel = supabase
       .channel('home-lists')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_lists' }, () => void loadLists())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_items' }, () => { void loadLists(); void loadFeed() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_items' }, () => {
+        void loadLists()
+        void loadFeed()
+        void loadPlanned()
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_list_members' }, () => void loadLists())
       .subscribe()
     return () => void supabase.removeChannel(channel)
   }, [])
+
+  /** Things with a date pencilled in, today onwards. */
+  async function loadPlanned() {
+    const { data } = await supabase
+      .from('lv_items')
+      .select('id, list_id, text, planned_for')
+      .eq('checked', false)
+      .gte('planned_for', isoToday())
+      .order('planned_for')
+      .limit(3)
+    setPlanned((data as PlannedRow[]) ?? [])
+  }
 
   async function loadFeed() {
     const [items, notes, habitChecks, profs] = await Promise.all([
@@ -143,6 +184,56 @@ export default function Home() {
           {lists.length} active list{lists.length === 1 ? '' : 's'} — hamaara, together
         </p>
       </motion.div>
+
+      {/* Next together */}
+      {planned.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.05 }}
+          className="space-y-2"
+        >
+          <Link to={`/list/${planned[0].list_id}`} className="surface flex items-center gap-4 p-4">
+            <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-800/30">
+              <span className="text-xl font-extrabold leading-none">
+                {daysUntil(planned[0].planned_for) === 0 ? '★' : daysUntil(planned[0].planned_for)}
+              </span>
+              {daysUntil(planned[0].planned_for) !== 0 && (
+                <span className="text-[9px] font-bold uppercase tracking-wide">
+                  {daysUntil(planned[0].planned_for) === 1 ? 'day' : 'days'}
+                </span>
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600">
+                <CalendarHeart size={12} /> Next together
+              </span>
+              <span className="mt-0.5 block truncate text-[17px] font-bold">{planned[0].text}</span>
+              <span className="block text-xs text-ink-500 dark:text-ink-400">
+                {countdownLabel(daysUntil(planned[0].planned_for))} ·{' '}
+                {new Date(planned[0].planned_for).toLocaleDateString(undefined, {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long'
+                })}
+              </span>
+            </span>
+          </Link>
+          {planned.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-0.5">
+              {planned.slice(1).map((p) => (
+                <Link
+                  key={p.id}
+                  to={`/list/${p.list_id}`}
+                  className="shrink-0 rounded-full bg-ink-100 px-3.5 py-1.5 text-xs font-semibold text-ink-600 dark:bg-ink-800 dark:text-ink-300"
+                >
+                  {countdownLabel(daysUntil(p.planned_for))} · {p.text}
+                </Link>
+              ))}
+            </div>
+          )}
+        </motion.section>
+      )}
 
       {/* Lists */}
       <section className="space-y-3">

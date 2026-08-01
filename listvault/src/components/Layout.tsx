@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Archive, Flame, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare, Users } from 'lucide-react'
+import { Flame, Heart, ListTodo, NotebookPen, Plus, Search, StickyNote, CheckSquare, Users } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
 import InstallPrompt from './InstallPrompt'
@@ -15,7 +15,7 @@ const leftTabs = [
 ]
 const rightTabs = [
   { to: '/habits', label: 'Habits', Icon: Flame },
-  { to: '/archive', label: 'Archive', Icon: Archive }
+  { to: '/memories', label: 'Memories', Icon: Heart }
 ]
 
 function Tab({ to, label, Icon }: { to: string; label: string; Icon: typeof ListTodo }) {

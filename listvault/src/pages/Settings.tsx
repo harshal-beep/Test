@@ -1,9 +1,9 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Camera, Monitor, Moon, Smartphone, Sun, UserPlus, Users } from 'lucide-react'
+import { Archive, Camera, Monitor, Moon, Smartphone, Sun, UserPlus, Users } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { processAvatar } from '../lib/avatarUpload'
+import { processAvatar } from '../lib/images'
 import { applyThemeMode, getThemeMode, ThemeMode } from '../lib/theme'
 import { Profile } from '../lib/types'
 import Avatar from '../components/Avatar'
@@ -204,6 +204,10 @@ export default function Settings() {
           </Link>
         )}
       </section>
+
+      <Link to="/archive" className="surface flex items-center gap-3 p-4 text-sm font-medium">
+        <Archive size={18} className="text-brand-600" /> Archived lists
+      </Link>
 
       {/* Appearance */}
       <section className="surface space-y-3 p-4 text-sm">

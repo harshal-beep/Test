@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { Item, List, Profile } from '../lib/types'
+import { Item, ItemComment, ItemReaction, List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -13,6 +13,8 @@ export function useListDetail(listId: string) {
   const [list, setList] = useState<List | null>(null)
   const [items, setItems] = useState<Item[]>([])
   const [household, setHousehold] = useState<Profile[]>([])
+  const [reactions, setReactions] = useState<ItemReaction[]>([])
+  const [comments, setComments] = useState<ItemComment[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [synced, setSynced] = useState(true)
@@ -29,11 +31,28 @@ export function useListDetail(listId: string) {
       setLoading(false)
       return
     }
+    const rows = (itemsRes.data as Item[]) ?? []
     setList(listRes.data as List)
-    setItems((itemsRes.data as Item[]) ?? [])
+    setItems(rows)
     setHousehold((membersRes.data as Profile[]) ?? [])
     setLoading(false)
+    void loadSocial(rows.map((i) => i.id))
   }, [listId])
+
+  /** Reactions and comments for this list's items, in two flat queries. */
+  const loadSocial = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) {
+      setReactions([])
+      setComments([])
+      return
+    }
+    const [r, c] = await Promise.all([
+      supabase.from('lv_item_reactions').select('*').in('item_id', ids),
+      supabase.from('lv_item_comments').select('*').in('item_id', ids).order('created_at')
+    ])
+    setReactions((r.data as ItemReaction[]) ?? [])
+    setComments((c.data as ItemComment[]) ?? [])
+  }, [])
 
   useEffect(() => {
     void load()
@@ -65,9 +84,22 @@ export function useListDetail(listId: string) {
           else setList(payload.new as List)
         }
       )
+      // reactions/comments carry no list_id, so refetch for this list's items
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_item_reactions' }, () =>
+        setItems((prev) => {
+          void loadSocial(prev.map((i) => i.id))
+          return prev
+        })
+      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_item_comments' }, () =>
+        setItems((prev) => {
+          void loadSocial(prev.map((i) => i.id))
+          return prev
+        })
+      )
       .subscribe()
     return () => void supabase.removeChannel(channel)
-  }, [listId, load])
+  }, [listId, load, loadSocial])
 
   function track(id: string) {
     pendingIds.current.add(id)
@@ -102,6 +134,9 @@ export function useListDetail(listId: string) {
       checked_by: null,
       checked_at: null,
       assigned_to: null,
+      planned_for: null,
+      memory_note: null,
+      memory_photo: null,
       position: basePos + i,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -110,7 +145,18 @@ export function useListDetail(listId: string) {
     rows.forEach((r) => track(r.id))
     setItems((prev) => [...prev, ...rows])
     const { error } = await supabase.from('lv_items').insert(
-      rows.map(({ pending: _p, created_at: _c, updated_at: _u, checked_at: _ca, checked_by: _cb, ...r }) => r)
+      rows.map(
+        ({
+          pending: _p,
+          created_at: _c,
+          updated_at: _u,
+          checked_at: _ca,
+          checked_by: _cb,
+          memory_note: _mn,
+          memory_photo: _mp,
+          ...r
+        }) => r
+      )
     )
     if (error) {
       rows.forEach((r) => settle(r.id))
@@ -160,6 +206,63 @@ export function useListDetail(listId: string) {
     settle(item.id)
   }
 
+  /** Pencil in the day you'll do this together (or null to clear). */
+  async function planItem(item: Item, day: string | null) {
+    track(item.id)
+    setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, planned_for: day } : i)))
+    await supabase.from('lv_items').update({ planned_for: day }).eq('id', item.id)
+    settle(item.id)
+  }
+
+  /** Attach how it went + a photo once something is done. */
+  async function saveMemory(item: Item, note: string | null, photo: string | null) {
+    track(item.id)
+    setItems((prev) =>
+      prev.map((i) => (i.id === item.id ? { ...i, memory_note: note, memory_photo: photo } : i))
+    )
+    await supabase.from('lv_items').update({ memory_note: note, memory_photo: photo }).eq('id', item.id)
+    settle(item.id)
+  }
+
+  async function toggleReaction(itemId: string, emoji: string) {
+    if (!session) return
+    const userId = session.user.id
+    const mine = reactions.some((r) => r.item_id === itemId && r.user_id === userId && r.emoji === emoji)
+    if (mine) {
+      setReactions((prev) =>
+        prev.filter((r) => !(r.item_id === itemId && r.user_id === userId && r.emoji === emoji))
+      )
+      await supabase.from('lv_item_reactions').delete().match({ item_id: itemId, user_id: userId, emoji })
+    } else {
+      setReactions((prev) => [
+        ...prev,
+        { item_id: itemId, user_id: userId, emoji, created_at: new Date().toISOString() }
+      ])
+      await supabase.from('lv_item_reactions').insert({ item_id: itemId, user_id: userId, emoji })
+    }
+  }
+
+  async function addComment(itemId: string, body: string) {
+    if (!session) return
+    const trimmed = body.trim().slice(0, 1000)
+    if (!trimmed) return
+    const row: ItemComment = {
+      id: crypto.randomUUID(),
+      item_id: itemId,
+      user_id: session.user.id,
+      body: trimmed,
+      created_at: new Date().toISOString()
+    }
+    setComments((prev) => [...prev, row])
+    const { error } = await supabase.from('lv_item_comments').insert(row)
+    if (error) setComments((prev) => prev.filter((c) => c.id !== row.id))
+  }
+
+  async function deleteComment(id: string) {
+    setComments((prev) => prev.filter((c) => c.id !== id))
+    await supabase.from('lv_item_comments').delete().eq('id', id)
+  }
+
   /** Set an explicit fractional position (used by drag & drop). */
   async function placeItem(item: Item, newPos: number) {
     track(item.id)
@@ -194,6 +297,15 @@ export function useListDetail(listId: string) {
     [household]
   )
 
+  const reactionsFor = useCallback(
+    (itemId: string) => reactions.filter((r) => r.item_id === itemId),
+    [reactions]
+  )
+  const commentsFor = useCallback(
+    (itemId: string) => comments.filter((c) => c.item_id === itemId),
+    [comments]
+  )
+
   return {
     list,
     items: [...items].sort((a, b) => a.position - b.position),
@@ -209,6 +321,13 @@ export function useListDetail(listId: string) {
     moveItem,
     placeItem,
     assignItem,
+    planItem,
+    saveMemory,
+    toggleReaction,
+    addComment,
+    deleteComment,
+    reactionsFor,
+    commentsFor,
     profileOf,
     reload: load
   }

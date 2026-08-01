@@ -15,6 +15,7 @@ import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } 
 import { CSS } from '@dnd-kit/utilities'
 import {
   ArrowLeft,
+  CalendarDays,
   Check,
   Copy,
   GripVertical,
@@ -22,6 +23,7 @@ import {
   Pencil,
   RotateCcw,
   Send,
+  Shuffle,
   Trash2,
   Users,
   X
@@ -32,7 +34,25 @@ import { useAuth } from '../context/AuthContext'
 import { useKeyboardInset } from '../lib/useKeyboardInset'
 import { useListDetail } from '../hooks/useListDetail'
 import Avatar from '../components/Avatar'
+import ItemSocial from '../components/ItemSocial'
+import MemorySheet from '../components/MemorySheet'
 import { AnimatedCheck, BottomSheet, Page, Skeleton, useConfirm, useToast } from '../components/ui'
+
+/** Local yyyy-mm-dd (not UTC — avoids the date shifting for late-evening picks). */
+function isoToday(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function whenLabel(day: string): string {
+  const today = isoToday()
+  if (day === today) return 'Today'
+  const diff = Math.round((new Date(day).getTime() - new Date(today).getTime()) / 86400000)
+  if (diff === 1) return 'Tomorrow'
+  if (diff > 1 && diff < 7) return `in ${diff} days`
+  if (diff < 0) return new Date(day).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+  return new Date(day).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })
+}
 
 const SWIPE_THRESHOLD = 72
 
@@ -45,7 +65,9 @@ export default function ListDetail() {
   const kbInset = useKeyboardInset()
   const {
     list, items, household, loading, notFound, synced, isOwner,
-    addItems, toggleItem, editItem, deleteItem, placeItem, assignItem, profileOf
+    addItems, toggleItem, editItem, deleteItem, placeItem, assignItem,
+    planItem, saveMemory, toggleReaction, addComment, deleteComment,
+    reactionsFor, commentsFor, profileOf
   } = useListDetail(id)
 
   const [input, setInput] = useState('')
@@ -54,6 +76,8 @@ export default function ListDetail() {
   const [editing, setEditing] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [filter, setFilter] = useState<'all' | 'mine'>('all')
+  const [memoryFor, setMemoryFor] = useState<Item | null>(null)
+  const [surprise, setSurprise] = useState<Item | null>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }))
   const myId = session?.user.id
@@ -100,13 +124,28 @@ export default function ListDetail() {
     }
   }
 
-  /** Toggle with a celebration when the last open task gets done. */
+  /** Toggle, celebrate the last one, and offer to keep it as a memory. */
   function handleToggle(item: Item) {
-    if (!item.checked && unchecked.length === 1) {
-      confetti({ particleCount: 110, spread: 75, origin: { y: 0.75 }, colors: ['#6c63ff', '#8b83ff', '#ffd166', '#25D366'] })
-      toast('Sab ho gaya! 🎉')
+    if (!item.checked) {
+      if (unchecked.length === 1) {
+        confetti({ particleCount: 110, spread: 75, origin: { y: 0.75 }, colors: ['#6c63ff', '#8b83ff', '#ffd166', '#25D366'] })
+        toast('Sab ho gaya! 🎉')
+      }
+      setMemoryFor({ ...item, checked: true })
     }
     void toggleItem(item)
+  }
+
+  /** Pick something at random from what's still open. */
+  function surpriseUs() {
+    const pool = unchecked
+    if (pool.length === 0) {
+      toast('Nothing left to pick — add some ideas first')
+      return
+    }
+    const pick = pool[Math.floor(Math.random() * pool.length)]
+    setSurprise(pick)
+    confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 }, colors: ['#6c63ff', '#ffd166'] })
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -265,11 +304,25 @@ export default function ListDetail() {
               onClick={() => setExpanded(isExpanded ? null : item.id)}
             >
               <span className="block truncate">{item.text}</span>
-              {assignees.length > 0 && !item.checked && (
-                <span className={`mt-0.5 block text-xs ${assignedToMe ? 'font-semibold text-brand-600' : 'text-ink-400'}`}>
-                  {forLabel}
-                </span>
-              )}
+              <span className="mt-0.5 flex items-center gap-2 text-xs">
+                {item.planned_for && !item.checked && (
+                  <span className="flex items-center gap-1 font-semibold text-brand-600">
+                    <CalendarDays size={11} /> {whenLabel(item.planned_for)}
+                  </span>
+                )}
+                {assignees.length > 0 && !item.checked && (
+                  <span className={assignedToMe ? 'font-semibold text-brand-600' : 'text-ink-400'}>{forLabel}</span>
+                )}
+                {item.checked && item.memory_photo && <span className="text-ink-400">📷 memory saved</span>}
+                {reactionsFor(item.id).length > 0 && (
+                  <span className="text-ink-400">
+                    {[...new Set(reactionsFor(item.id).map((r) => r.emoji))].join('')}
+                  </span>
+                )}
+                {commentsFor(item.id).length > 0 && (
+                  <span className="text-ink-400">💬 {commentsFor(item.id).length}</span>
+                )}
+              </span>
             </button>
           )}
           <span className="flex shrink-0 -space-x-1.5">
@@ -341,6 +394,40 @@ export default function ListDetail() {
                     )}
                   </div>
                 )}
+                {/* When are we doing this? */}
+                {!archived && !item.checked && (
+                  <div className="mb-2.5 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-ink-500 dark:text-ink-400">When:</span>
+                    <input
+                      type="date"
+                      value={item.planned_for ?? ''}
+                      onChange={(e) => void planItem(item, e.target.value || null)}
+                      className="rounded-full bg-ink-100 px-3 py-1 text-xs font-medium dark:bg-ink-800"
+                    />
+                    {item.planned_for && (
+                      <button onClick={() => void planItem(item, null)} aria-label="Clear date" className="icon-btn h-7 w-7">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* The memory, once it's done */}
+                {item.checked && (item.memory_photo || item.memory_note) && (
+                  <div className="mb-2.5 overflow-hidden rounded-2xl bg-ink-50 dark:bg-ink-800/60">
+                    {item.memory_photo && <img src={item.memory_photo} alt="" className="max-h-52 w-full object-cover" />}
+                    {item.memory_note && <p className="px-3 py-2 text-sm italic">“{item.memory_note}”</p>}
+                  </div>
+                )}
+                {item.checked && !archived && (
+                  <button
+                    onClick={() => setMemoryFor(item)}
+                    className="mb-2.5 text-xs font-semibold text-brand-600"
+                  >
+                    {item.memory_photo || item.memory_note ? 'Edit memory' : '+ Add a photo or note'}
+                  </button>
+                )}
+
                 <p className="text-xs text-ink-500 dark:text-ink-400">
                   Added by <strong>{addedBy?.display_name ?? 'someone'}</strong> ·{' '}
                   {new Date(item.created_at).toLocaleString()}
@@ -351,6 +438,17 @@ export default function ListDetail() {
                     {new Date(item.checked_at).toLocaleString()}
                   </p>
                 )}
+                <ItemSocial
+                  itemId={item.id}
+                  myId={myId}
+                  reactions={reactionsFor(item.id)}
+                  comments={commentsFor(item.id)}
+                  profileOf={profileOf}
+                  onReact={toggleReaction}
+                  onComment={addComment}
+                  onDeleteComment={deleteComment}
+                />
+
                 {!archived && (
                   <div className="mt-2 flex gap-1">
                     <button
@@ -422,6 +520,11 @@ export default function ListDetail() {
                 : 'Syncing…'}
           </p>
         </div>
+        {!archived && unchecked.length > 1 && (
+          <button onClick={surpriseUs} className="icon-btn" aria-label="Surprise us">
+            <Shuffle size={19} />
+          </button>
+        )}
         <button onClick={() => setSheet('members')} className="icon-btn" aria-label="Members">
           <Users size={19} />
         </button>
@@ -553,6 +656,35 @@ export default function ListDetail() {
           </div>
         </form>
       )}
+
+      <MemorySheet item={memoryFor} onClose={() => setMemoryFor(null)} onSave={saveMemory} />
+
+      {/* Surprise us */}
+      <BottomSheet open={surprise !== null} onClose={() => setSurprise(null)} title="Let's do this one ✨">
+        {surprise && (
+          <div className="space-y-4 pb-1 text-center">
+            <p className="px-2 text-[22px] font-extrabold leading-snug">{surprise.text}</p>
+            {surprise.planned_for && (
+              <p className="text-sm text-brand-600">Already planned for {whenLabel(surprise.planned_for)}</p>
+            )}
+            <div className="flex gap-3">
+              <button onClick={surpriseUs} className="flex-1 rounded-full bg-ink-100 py-3 font-semibold dark:bg-ink-800">
+                Pick again
+              </button>
+              <button
+                onClick={() => {
+                  void planItem(surprise, isoToday())
+                  setSurprise(null)
+                  toast('Planned for today 🎉')
+                }}
+                className="btn-primary flex-1 py-3"
+              >
+                Do it today
+              </button>
+            </div>
+          </div>
+        )}
+      </BottomSheet>
 
       {/* Household sheet */}
       <BottomSheet open={sheet === 'members'} onClose={() => setSheet(null)} title={`Our home · ${household.length}`}>
