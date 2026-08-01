@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from './context/AuthContext'
 import Layout from './components/Layout'
 import SignIn from './pages/SignIn'
@@ -10,7 +10,7 @@ import Settings from './pages/Settings'
 import Admin from './pages/Admin'
 import Notes from './pages/Notes'
 import Habits from './pages/Habits'
-import Memories from './pages/Memories'
+import Us from './pages/Us'
 import NoteEditor from './pages/NoteEditor'
 
 export default function App() {
@@ -36,7 +36,8 @@ export default function App() {
                   <Route path="/notes" element={<Notes />} />
                   <Route path="/notes/:id" element={<NoteEditor />} />
                   <Route path="/habits" element={<Habits />} />
-                  <Route path="/memories" element={<Memories />} />
+                  <Route path="/us" element={<Us />} />
+                  <Route path="/memories" element={<Navigate to="/us" replace />} />
                   <Route path="/archive" element={<Archive />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/settings" element={<Settings />} />

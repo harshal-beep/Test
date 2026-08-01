@@ -5,6 +5,59 @@ export interface Profile {
   email: string | null
   provider: string
   is_admin: boolean
+  tastes: Tastes | null
+}
+
+/** Per-person taste quiz answers; feeds the Discover ranking. */
+export interface Tastes {
+  cuisines: string[]
+  diet: string
+  vibe: string
+  setting: string
+  budget: string
+  interests: string[]
+  free_time: string[]
+}
+
+export type QuestionMood = 'fun' | 'memories' | 'preferences' | 'deeper'
+
+export interface Question {
+  id: string
+  text: string
+  mood: QuestionMood
+  source: string
+  created_at: string
+}
+
+export interface QuestionRound {
+  id: string
+  question_id: string
+  opened_by: string
+  opened_at: string
+  revealed_at: string | null
+  question?: Question
+}
+
+export interface QuestionAnswer {
+  round_id: string
+  user_id: string
+  body: string
+  created_at: string
+}
+
+export interface UsEvent {
+  id: string
+  source: string
+  title: string
+  category: string | null
+  venue: string | null
+  area: string | null
+  starts_on: string | null
+  price_text: string | null
+  url: string | null
+  reason: string | null
+  score: number | null
+  fetched_at: string
 }
 
 export interface List {

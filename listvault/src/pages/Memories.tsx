@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase'
 import { Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
-import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
+import { EmptyState, Skeleton, stagger } from '../components/ui'
 
 interface MemoryRow {
   id: string
@@ -23,8 +23,9 @@ function monthLabel(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 }
 
-/** Everything the two of you have actually done, newest first. */
-export default function Memories() {
+/** Everything the two of you have actually done, newest first. Rendered as a
+ * section inside the Us tab. */
+export default function MemoriesSection() {
   const { profile } = useAuth()
   const [rows, setRows] = useState<MemoryRow[]>([])
   const [people, setPeople] = useState<Profile[]>([])
@@ -70,15 +71,12 @@ export default function Memories() {
   const withPhotos = rows.filter((r) => r.memory_photo).length
 
   return (
-    <Page className="space-y-5">
-      <div>
-        <h1 className="text-[26px] font-extrabold tracking-tight">Memories</h1>
+    <div className="space-y-5">
+      {rows.length > 0 && (
         <p className="text-sm text-ink-500 dark:text-ink-400">
-          {rows.length === 0
-            ? 'Things you two have done together'
-            : `${rows.length} things done together${withPhotos > 0 ? ` · ${withPhotos} with photos` : ''}`}
+          {rows.length} things done together{withPhotos > 0 ? ` · ${withPhotos} with photos` : ''}
         </p>
-      </div>
+      )}
 
       {loading ? (
         <div className="space-y-3">
@@ -134,6 +132,6 @@ export default function Memories() {
           </section>
         ))
       )}
-    </Page>
+    </div>
   )
 }

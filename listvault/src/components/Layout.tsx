@@ -15,7 +15,7 @@ const leftTabs = [
 ]
 const rightTabs = [
   { to: '/habits', label: 'Habits', Icon: Flame },
-  { to: '/memories', label: 'Memories', Icon: Heart }
+  { to: '/us', label: 'Us', Icon: Heart }
 ]
 
 function Tab({ to, label, Icon }: { to: string; label: string; Icon: typeof ListTodo }) {

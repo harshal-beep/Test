@@ -1,6 +1,7 @@
 import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, Camera, Monitor, Moon, Smartphone, Sun, UserPlus, Users } from 'lucide-react'
+import { Archive, Camera, Monitor, Moon, Smartphone, Sparkles, Sun, UserPlus, Users } from 'lucide-react'
+import TasteQuiz from '../components/TasteQuiz'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { processAvatar } from '../lib/images'
@@ -22,6 +23,7 @@ export default function Settings() {
   const [photoBusy, setPhotoBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getThemeMode)
+  const [quizOpen, setQuizOpen] = useState(false)
   const standalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     (navigator as unknown as { standalone?: boolean }).standalone === true
@@ -205,9 +207,19 @@ export default function Settings() {
         )}
       </section>
 
+      <button
+        onClick={() => setQuizOpen(true)}
+        className="surface flex w-full items-center gap-3 p-4 text-left text-sm font-medium"
+      >
+        <Sparkles size={18} className="text-brand-600" /> Your tastes
+        <span className="ml-auto text-xs text-ink-400">{profile?.tastes ? 'Saved' : 'Not set'}</span>
+      </button>
+
       <Link to="/archive" className="surface flex items-center gap-3 p-4 text-sm font-medium">
         <Archive size={18} className="text-brand-600" /> Archived lists
       </Link>
+
+      <TasteQuiz open={quizOpen} onClose={() => setQuizOpen(false)} />
 
       {/* Appearance */}
       <section className="surface space-y-3 p-4 text-sm">
