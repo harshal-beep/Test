@@ -53,9 +53,16 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
     setLoading(false)
   }
 
+  /** Every explicit action teaches the ranker what you like. */
+  function learn(category: string | null, weight: number, source: string) {
+    if (!myId || !category) return
+    void supabase.from('lv_taste_signals').insert({ user_id: myId, category, weight, source })
+  }
+
   async function hide(ev: UsEvent) {
     if (!myId) return
     setHidden((prev) => new Set([...prev, ev.id]))
+    learn(ev.category, -4, 'event_hide')
     await supabase.from('lv_event_hides').insert({ event_id: ev.id, user_id: myId })
   }
 
@@ -76,7 +83,10 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
       planned_for: addFor.starts_on
     })
     if (error) toast(error.message)
-    else toast(`Added to ${list.emoji ?? ''} ${list.name} ✨`)
+    else {
+      toast(`Added to ${list.emoji ?? ''} ${list.name} ✨`)
+      learn(addFor.category, 3, 'event_add')
+    }
     setAddFor(null)
   }
 

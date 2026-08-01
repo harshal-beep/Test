@@ -113,32 +113,194 @@ Only include events you found on real pages, with their real dates. Skip anythin
     .filter((e) => e.title)
 }
 
-/** Score cached events against both partners' tastes; writes reason/score. */
-async function rankEvents(admin: SupabaseClient, apiKey: string, model: string) {
-  const [{ data: events }, { data: profiles }] = await Promise.all([
-    admin.from('lv_events').select('id, title, category, venue, area, price_text').limit(40),
-    admin.from('lv_profiles').select('display_name, tastes')
-  ])
-  if (!events || events.length === 0) return
-  const tastes = (profiles ?? [])
-    .filter((p) => p.tastes)
-    .map((p) => `${p.display_name}: ${JSON.stringify(p.tastes)}`)
-    .join('\n')
+/* ------------------------- recommendation engine -------------------------
+ * Deterministic and explainable: every score is a sum of named factors, and
+ * the reason line is generated from the top contributing factors — no AI in
+ * the scoring loop. AI is used once per refresh, only to classify free-text
+ * item history ("street pani puri" → food) into categories.
+ *
+ * Signals per user, per category (with exponential decay, 60-day half-life):
+ *   +3  added a Discover event to a list        (client-written, event_add)
+ *   -4  hid a Discover event                    (client-written, event_hide)
+ *   +2  completed an item of this category      (derived here from history)
+ * Quiz interests map to categories at +2 each (no decay — they're explicit).
+ *
+ * Per-user event score  = 50 + 28·affinity(category) + budget fit ± 8
+ *                          + setting fit ± 5 (outdoor only)
+ * Couple score          = 0.6·min(A, B) + 0.4·mean(A, B)
+ * min-weighting means an event one of you dislikes can't win on the other's
+ * enthusiasm alone — it has to work for both.
+ * ------------------------------------------------------------------------ */
 
-  const prompt = `Two partners use a shared app. Their tastes:\n${tastes || '(no taste profiles yet — judge general couple appeal)'}\n\nEvents in Mumbai:\n${JSON.stringify(
-    events
-  )}\n\nScore each event 0-100 for how well it suits BOTH of them doing it together, with a warm one-line reason referencing their tastes when possible (e.g. "You both said live music"). Reply with ONLY a JSON array: [{"id": string, "score": number, "reason": string}]`
-  const out = await openrouter(apiKey, model, prompt, 6000)
-  const ranks = extractArray(out) as { id: string; score: number; reason: string }[]
+const CATEGORIES = ['music', 'comedy', 'theatre', 'art', 'food', 'workshop', 'market', 'outdoor', 'other']
+
+const INTEREST_TO_CATEGORY: Record<string, string[]> = {
+  'Live music': ['music'],
+  Comedy: ['comedy'],
+  Art: ['art'],
+  Films: ['other'],
+  'Nature & walks': ['outdoor'],
+  Sports: ['outdoor'],
+  Shopping: ['market'],
+  Theatre: ['theatre'],
+  Photography: ['art', 'outdoor'],
+  'Board games': ['workshop']
+}
+
+const HALF_LIFE_DAYS = 60
+
+interface TastesJson {
+  cuisines?: string[]
+  budget?: string
+  setting?: string
+  interests?: string[]
+}
+
+function decay(createdAt: string): number {
+  const days = (Date.now() - new Date(createdAt).getTime()) / 86400000
+  return Math.pow(0.5, days / HALF_LIFE_DAYS)
+}
+
+/** ₹-band (1-3) from free-form price text; null when unknown. */
+function priceBand(priceText: string | null): number | null {
+  if (!priceText) return null
+  if (/free/i.test(priceText)) return 1
+  const nums = priceText.match(/\d[\d,]*/g)?.map((n) => parseInt(n.replace(/,/g, ''), 10)) ?? []
+  if (nums.length === 0) return null
+  const min = Math.min(...nums)
+  return min < 500 ? 1 : min <= 1500 ? 2 : 3
+}
+
+/** Per-user category affinity in [-1, 1] from signals + quiz interests. */
+function buildAffinity(
+  tastes: TastesJson | null,
+  signals: { category: string; weight: number; created_at: string }[]
+): Map<string, number> {
+  const raw = new Map<string, number>()
+  for (const c of CATEGORIES) raw.set(c, 0)
+  for (const s of signals) {
+    raw.set(s.category, (raw.get(s.category) ?? 0) + s.weight * decay(s.created_at))
+  }
+  for (const interest of tastes?.interests ?? []) {
+    for (const c of INTEREST_TO_CATEGORY[interest] ?? []) raw.set(c, (raw.get(c) ?? 0) + 2)
+  }
+  if ((tastes?.cuisines?.length ?? 0) > 0) raw.set('food', (raw.get('food') ?? 0) + 2)
+  const peak = Math.max(1, ...[...raw.values()].map(Math.abs))
+  const norm = new Map<string, number>()
+  for (const [c, v] of raw) norm.set(c, v / peak)
+  return norm
+}
+
+interface UserModel {
+  name: string
+  tastes: TastesJson | null
+  affinity: Map<string, number>
+}
+
+function scoreForUser(u: UserModel, ev: { category: string | null; price_text: string | null }): number {
+  let s = 50
+  const cat = ev.category ?? 'other'
+  s += 28 * (u.affinity.get(cat) ?? 0)
+  const band = priceBand(ev.price_text)
+  const budget = u.tastes?.budget ? u.tastes.budget.length : null // '₹₹' → 2
+  if (band !== null && budget !== null) s += Math.abs(band - budget) <= 0 ? 8 : Math.abs(band - budget) === 1 ? 0 : -8
+  if (cat === 'outdoor' && u.tastes?.setting) {
+    s += u.tastes.setting === 'Outdoor' || u.tastes.setting === 'Both' ? 5 : -5
+  }
+  return Math.max(0, Math.min(100, s))
+}
+
+/** Human reason from the top contributing factors — fully deterministic. */
+function reasonFor(a: UserModel, b: UserModel, ev: { category: string | null; price_text: string | null }): string {
+  const cat = ev.category ?? 'other'
+  const CAT_PHRASE: Record<string, string> = {
+    music: 'live music',
+    comedy: 'comedy nights',
+    theatre: 'theatre',
+    art: 'art things',
+    food: 'food adventures',
+    workshop: 'trying things hands-on',
+    market: 'markets and browsing',
+    outdoor: 'being outdoors',
+    other: 'new experiences'
+  }
+  const phrase = CAT_PHRASE[cat]
+  const aLikes = (a.affinity.get(cat) ?? 0) > 0.25
+  const bLikes = (b.affinity.get(cat) ?? 0) > 0.25
+  const parts: string[] = []
+  if (aLikes && bLikes) parts.push(`You both keep choosing ${phrase}`)
+  else if (aLikes) parts.push(`${a.name} loves ${phrase}`)
+  else if (bLikes) parts.push(`${b.name} loves ${phrase}`)
+  const band = priceBand(ev.price_text)
+  const budgets = [a, b].map((u) => (u.tastes?.budget ? u.tastes.budget.length : null))
+  if (band !== null && budgets.every((x) => x !== null && Math.abs(band - x) <= 0)) {
+    parts.push('fits your usual budget')
+  }
+  if (parts.length === 0) return 'Something different to try together'
+  return parts.join(' — ')
+}
+
+/** Classify recent completed items into categories (the one AI call). */
+async function historySignals(
+  admin: SupabaseClient,
+  apiKey: string,
+  model: string
+): Promise<{ user_id: string; category: string; created_at: string }[]> {
+  const { data: items } = await admin
+    .from('lv_items')
+    .select('text, checked_by, checked_at')
+    .eq('checked', true)
+    .not('checked_at', 'is', null)
+    .not('checked_by', 'is', null)
+    .order('checked_at', { ascending: false })
+    .limit(40)
+  if (!items || items.length === 0) return []
+  try {
+    const prompt = `Classify each activity into exactly one category from: ${CATEGORIES.join(', ')}. Household chores, groceries or unclear items → "skip". Reply with ONLY a JSON array of strings, same order and length as the input, e.g. ["food","skip","music"].\n\n${JSON.stringify(items.map((i) => i.text))}`
+    const out = await openrouter(apiKey, model, prompt, 2000)
+    const cats = extractArray(out) as string[]
+    return items
+      .map((it, i) => ({ user_id: it.checked_by as string, category: cats[i], created_at: it.checked_at as string }))
+      .filter((r) => CATEGORIES.includes(r.category))
+  } catch {
+    return [] // classification is a bonus, never a blocker
+  }
+}
+
+/** Score cached events for the couple; writes score + explainable reason. */
+async function rankEvents(admin: SupabaseClient, apiKey: string, model: string) {
+  const [{ data: events }, { data: profiles }, { data: signals }, history] = await Promise.all([
+    admin.from('lv_events').select('id, category, price_text').limit(60),
+    admin.from('lv_profiles').select('id, display_name, tastes'),
+    admin
+      .from('lv_taste_signals')
+      .select('user_id, category, weight, created_at')
+      .gte('created_at', new Date(Date.now() - 180 * 86400000).toISOString()),
+    historySignals(admin, apiKey, model)
+  ])
+  if (!events || events.length === 0 || !profiles || profiles.length === 0) return
+
+  const users: UserModel[] = profiles.slice(0, 2).map((p) => {
+    const own = (signals ?? []).filter((s) => s.user_id === p.id)
+    const ownHistory = history.filter((h) => h.user_id === p.id).map((h) => ({ category: h.category, weight: 2, created_at: h.created_at }))
+    return {
+      name: (p.display_name as string)?.split(' ')[0] || 'Partner',
+      tastes: p.tastes as TastesJson | null,
+      affinity: buildAffinity(p.tastes as TastesJson | null, [...own, ...ownHistory])
+    }
+  })
+  const [a, b] = users.length === 2 ? users : [users[0], users[0]]
+
   await Promise.all(
-    ranks
-      .filter((r) => r.id && typeof r.score === 'number')
-      .map((r) =>
-        admin
-          .from('lv_events')
-          .update({ score: Math.max(0, Math.min(100, Math.round(r.score))), reason: String(r.reason ?? '').slice(0, 300) })
-          .eq('id', r.id)
-      )
+    events.map((ev) => {
+      const sa = scoreForUser(a, ev)
+      const sb = scoreForUser(b, ev)
+      const couple = Math.round(0.6 * Math.min(sa, sb) + 0.4 * ((sa + sb) / 2))
+      return admin
+        .from('lv_events')
+        .update({ score: couple, reason: reasonFor(a, b, ev).slice(0, 300) })
+        .eq('id', ev.id)
+    })
   )
 }
 
@@ -215,11 +377,21 @@ Deno.serve(async (req) => {
 
 Do NOT repeat or closely paraphrase any of these existing questions:\n${(existing ?? []).map((q: { text: string }) => `- ${q.text}`).join('\n')}
 
-Reply with ONLY a JSON array: [{"text": string, "mood": "fun|memories|preferences|deeper"}]`
+For about half the questions include "options": an array of 2-4 short predefined choices (this-or-that style); for the rest omit options so the answer is free text.
+
+Reply with ONLY a JSON array: [{"text": string, "mood": "fun|memories|preferences|deeper", "options": [string] or omitted}]`
       const out = await openrouter(apiKey, model, prompt, 4000)
-      const arr = (extractArray(out) as { text: string; mood: string }[])
+      const arr = (extractArray(out) as { text: string; mood: string; options?: string[] }[])
         .filter((q) => q.text && ['fun', 'memories', 'preferences', 'deeper'].includes(q.mood))
-        .map((q) => ({ text: String(q.text).slice(0, 300), mood: q.mood, source: 'ai' }))
+        .map((q) => ({
+          text: String(q.text).slice(0, 300),
+          mood: q.mood,
+          source: 'ai',
+          options:
+            Array.isArray(q.options) && q.options.length >= 2
+              ? q.options.slice(0, 4).map((o) => String(o).slice(0, 120))
+              : null
+        }))
       if (arr.length === 0) return json({ error: 'no questions generated' }, 502)
       const { error: qErr } = await admin
         .from('lv_questions')

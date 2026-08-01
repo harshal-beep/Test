@@ -26,6 +26,8 @@ export interface Question {
   text: string
   mood: QuestionMood
   source: string
+  /** Predefined choices; null = free-text only. Text stays optional alongside chips. */
+  options: string[] | null
   created_at: string
 }
 
@@ -41,7 +43,8 @@ export interface QuestionRound {
 export interface QuestionAnswer {
   round_id: string
   user_id: string
-  body: string
+  body: string | null
+  choice: string | null
   created_at: string
 }
 

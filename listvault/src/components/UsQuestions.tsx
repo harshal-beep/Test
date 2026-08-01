@@ -29,6 +29,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
   const [loading, setLoading] = useState(true)
   const [answering, setAnswering] = useState<QuestionRound | null>(null)
   const [draft, setDraft] = useState('')
+  const [choice, setChoice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -84,11 +85,14 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
   }
 
   async function submitAnswer() {
-    if (!myId || !answering || !draft.trim()) return
+    if (!myId || !answering) return
+    const hasOptions = !!answering.question?.options?.length
+    const body = draft.trim() ? draft.trim().slice(0, 2000) : null
+    if (hasOptions ? !choice : !body) return
     setBusy(true)
     const { error } = await supabase
       .from('lv_question_answers')
-      .insert({ round_id: answering.id, user_id: myId, body: draft.trim().slice(0, 2000) })
+      .insert({ round_id: answering.id, user_id: myId, body, choice: hasOptions ? choice : null })
     setBusy(false)
     if (error) {
       toast(error.message)
@@ -97,6 +101,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
     const partnerAnswered = (progress.get(answering.id) ?? []).some((u) => u !== myId)
     setAnswering(null)
     setDraft('')
+    setChoice(null)
     if (partnerAnswered) {
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#6c63ff', '#ffd166', '#ff6b9d'] })
       toast('Revealed! See what you both said 💜')
@@ -206,24 +211,41 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
                     </span>
                   </div>
                   <p className="font-bold leading-snug">{q?.text}</p>
-                  <div className="space-y-2.5">
-                    {answersOf(r.id).map((a) => {
-                      const who = profileOf(a.user_id)
-                      return (
-                        <div key={a.user_id} className="flex items-start gap-2.5">
-                          <span className="mt-0.5 shrink-0">
-                            <Avatar profile={who} size={6} />
-                          </span>
-                          <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-ink-50 px-3 py-2 dark:bg-ink-800/60">
-                            <p className="text-xs font-semibold text-ink-400">
-                              {a.user_id === myId ? 'You' : who?.display_name?.split(' ')[0] || 'Partner'}
-                            </p>
-                            <p className="text-sm leading-relaxed">{a.body}</p>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
+                  {(() => {
+                    const rows = answersOf(r.id)
+                    const matched =
+                      rows.length === 2 && rows[0].choice !== null && rows[0].choice === rows[1].choice
+                    return (
+                      <div className="space-y-2.5">
+                        {matched && (
+                          <p className="rounded-xl bg-amber-50 px-3 py-2 text-center text-xs font-bold text-amber-700 dark:bg-amber-900/30 dark:text-amber-200">
+                            You both picked the same — it's a match! 🎉
+                          </p>
+                        )}
+                        {rows.map((a) => {
+                          const who = profileOf(a.user_id)
+                          return (
+                            <div key={a.user_id} className="flex items-start gap-2.5">
+                              <span className="mt-0.5 shrink-0">
+                                <Avatar profile={who} size={6} />
+                              </span>
+                              <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm bg-ink-50 px-3 py-2 dark:bg-ink-800/60">
+                                <p className="text-xs font-semibold text-ink-400">
+                                  {a.user_id === myId ? 'You' : who?.display_name?.split(' ')[0] || 'Partner'}
+                                </p>
+                                {a.choice && (
+                                  <span className="mt-1 inline-block rounded-full bg-brand-100 px-2.5 py-1 text-xs font-bold text-brand-700 dark:bg-brand-800/40 dark:text-brand-200">
+                                    {a.choice}
+                                  </span>
+                                )}
+                                {a.body && <p className="mt-1 text-sm leading-relaxed">{a.body}</p>}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </motion.div>
               )
             })}
@@ -245,21 +267,51 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
         onClose={() => {
           setAnswering(null)
           setDraft('')
+          setChoice(null)
         }}
         title="Your answer"
       >
         {answering && (
           <div className="space-y-4 pb-1">
             <p className="font-bold leading-snug">{answering.question?.text}</p>
-            <textarea
-              autoFocus
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Honest answers only 😌"
-              rows={4}
-              maxLength={2000}
-              className="field resize-none"
-            />
+            {answering.question?.options?.length ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {answering.question.options.map((opt) => (
+                    <motion.button
+                      key={opt}
+                      whileTap={{ scale: 0.93 }}
+                      onClick={() => setChoice((c) => (c === opt ? null : opt))}
+                      className={`rounded-full px-3.5 py-2.5 text-[13px] font-semibold transition-all ${
+                        choice === opt
+                          ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                          : 'bg-ink-100 text-ink-600 dark:bg-ink-800 dark:text-ink-300'
+                      }`}
+                    >
+                      {opt}
+                    </motion.button>
+                  ))}
+                </div>
+                <textarea
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder="Add a line about it (optional)"
+                  rows={2}
+                  maxLength={2000}
+                  className="field resize-none"
+                />
+              </>
+            ) : (
+              <textarea
+                autoFocus
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                placeholder="Honest answers only 😌"
+                rows={4}
+                maxLength={2000}
+                className="field resize-none"
+              />
+            )}
             <p className="text-xs text-ink-400">
               Hidden from {partner?.display_name?.split(' ')[0] || 'your partner'} until they answer too.
             </p>
@@ -267,7 +319,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => void submitAnswer()}
-                disabled={busy || !draft.trim()}
+                disabled={busy || (answering.question?.options?.length ? !choice : !draft.trim())}
                 className="btn-primary w-full py-3.5"
               >
                 {busy ? 'Saving…' : 'Lock in my answer'}
