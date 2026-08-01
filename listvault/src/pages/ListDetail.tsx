@@ -128,7 +128,7 @@ export default function ListDetail() {
   function handleToggle(item: Item) {
     if (!item.checked) {
       if (unchecked.length === 1) {
-        confetti({ particleCount: 110, spread: 75, origin: { y: 0.75 }, colors: ['#6c63ff', '#8b83ff', '#ffd166', '#25D366'] })
+        confetti({ particleCount: 110, spread: 75, origin: { y: 0.75 }, colors: ['#948ce9', '#aba3f0', '#ffe0a3', '#a8e6c9'] })
         toast('Sab ho gaya! 🎉')
       }
       setMemoryFor({ ...item, checked: true })
@@ -145,7 +145,7 @@ export default function ListDetail() {
     }
     const pick = pool[Math.floor(Math.random() * pool.length)]
     setSurprise(pick)
-    confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 }, colors: ['#6c63ff', '#ffd166'] })
+    confetti({ particleCount: 60, spread: 60, origin: { y: 0.7 }, colors: ['#948ce9', '#ffe0a3'] })
   }
 
   function onDragEnd(e: DragEndEvent) {
@@ -540,7 +540,7 @@ export default function ListDetail() {
             animate={{ width: `${pct}%` }}
             transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
             className="h-full rounded-full"
-            style={{ backgroundColor: list.color ?? '#6c63ff' }}
+            style={{ backgroundColor: list.color ?? '#948ce9' }}
           />
         </div>
       )}

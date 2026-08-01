@@ -38,7 +38,7 @@ select {
 
 /* Keyboard users get a visible ring; touch taps stay clean */
 :focus-visible {
-  outline: 2px solid #8b83ff;
+  outline: 2px solid #aba3f0;
   outline-offset: 2px;
 }
 

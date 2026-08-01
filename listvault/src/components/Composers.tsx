@@ -11,7 +11,7 @@ import { useAuth } from '../context/AuthContext'
 import { BottomSheet, useToast } from './ui'
 
 export const LIST_EMOJIS = ['🛒', '🏠', '🎉', '🧺', '💊', '📦', '🍱', '✅']
-export const LIST_COLORS = ['#6c63ff', '#2563eb', '#d97706', '#db2777', '#0d9488', '#dc2626']
+export const LIST_COLORS = ['#948ce9', '#93bff2', '#f4c17e', '#f0a2c0', '#7fcfbf', '#ef9f9f']
 
 export function ListComposer({
   open,

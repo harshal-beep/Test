@@ -5,16 +5,17 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Pastel lavender scale — soft by design; 600 is the primary action tint
         brand: {
-          50: '#f5f4ff',
-          100: '#e6e4ff',
-          200: '#cdc9ff',
-          400: '#a49dff',
-          500: '#8b83ff',
-          600: '#6c63ff',
-          700: '#574ee0',
-          800: '#3d37a3',
-          900: '#1d1b4c'
+          50: '#f8f7ff',
+          100: '#efedff',
+          200: '#e0dcff',
+          400: '#c0baf7',
+          500: '#aba3f0',
+          600: '#948ce9',
+          700: '#8078d6',
+          800: '#4c4694',
+          900: '#262350'
         },
         // Warm neutral scale ("ink") — softer than slate, tuned for the Notely look
         ink: {

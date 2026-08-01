@@ -9,11 +9,11 @@ const SLIDES = [
     hint: 'Groceries, chores, plans — everyone sees changes live, with who-added-what.',
     art: (
       <g>
-        <rect x="52" y="42" width="96" height="122" rx="14" fill="#6c63ff" />
+        <rect x="52" y="42" width="96" height="122" rx="14" fill="#948ce9" />
         <rect x="64" y="56" width="72" height="94" rx="8" fill="#f5f4ff" />
-        <path d="M76 78l7 7 14-16" stroke="#6c63ff" strokeWidth="6.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M76 78l7 7 14-16" stroke="#948ce9" strokeWidth="6.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
         <rect x="102" y="76" width="26" height="6" rx="3" fill="#cdc9ff" />
-        <path d="M76 106l7 7 14-16" stroke="#6c63ff" strokeWidth="6.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M76 106l7 7 14-16" stroke="#948ce9" strokeWidth="6.5" fill="none" strokeLinecap="round" strokeLinejoin="round" />
         <rect x="102" y="104" width="26" height="6" rx="3" fill="#cdc9ff" />
         <circle cx="76" cy="134" r="7" fill="none" stroke="#cdc9ff" strokeWidth="4" />
         <rect x="94" y="131" width="34" height="6" rx="3" fill="#cdc9ff" />
@@ -25,13 +25,13 @@ const SLIDES = [
     hint: 'Summarize, fix grammar, or turn rambles into clean lists with one tap.',
     art: (
       <g>
-        <rect x="48" y="52" width="104" height="100" rx="16" fill="#6c63ff" />
+        <rect x="48" y="52" width="104" height="100" rx="16" fill="#948ce9" />
         <rect x="60" y="66" width="80" height="8" rx="4" fill="#f5f4ff" />
         <rect x="60" y="84" width="62" height="6" rx="3" fill="#cdc9ff" />
         <rect x="60" y="98" width="72" height="6" rx="3" fill="#cdc9ff" />
         <rect x="60" y="112" width="48" height="6" rx="3" fill="#cdc9ff" />
-        <path d="M144 132l4.5 10 10 4.5-10 4.5-4.5 10-4.5-10-10-4.5 10-4.5z" fill="#ffd166" />
-        <path d="M56 148l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#8b83ff" />
+        <path d="M144 132l4.5 10 10 4.5-10 4.5-4.5 10-4.5-10-10-4.5 10-4.5z" fill="#ffe0a3" />
+        <path d="M56 148l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#aba3f0" />
       </g>
     )
   },
@@ -40,8 +40,8 @@ const SLIDES = [
     hint: 'Closed lists live forever in your Archive — search them, reuse them, any time.',
     art: (
       <g>
-        <rect x="50" y="70" width="100" height="84" rx="14" fill="#6c63ff" />
-        <rect x="44" y="52" width="112" height="28" rx="10" fill="#8b83ff" />
+        <rect x="50" y="70" width="100" height="84" rx="14" fill="#948ce9" />
+        <rect x="44" y="52" width="112" height="28" rx="10" fill="#aba3f0" />
         <rect x="82" y="92" width="36" height="10" rx="5" fill="#f5f4ff" />
         <circle cx="100" cy="128" r="14" fill="none" stroke="#f5f4ff" strokeWidth="5" />
         <path d="M110 138l10 10" stroke="#f5f4ff" strokeWidth="5" strokeLinecap="round" />
@@ -81,7 +81,7 @@ export default function SignIn() {
             className="space-y-7"
           >
             <svg viewBox="0 0 200 200" className="mx-auto h-52 w-52" aria-hidden>
-              <circle cx="100" cy="100" r="88" fill="#6c63ff" opacity="0.08" />
+              <circle cx="100" cy="100" r="88" fill="#948ce9" opacity="0.08" />
               {SLIDES[slide].art}
             </svg>
             <div>

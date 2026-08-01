@@ -103,7 +103,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
     setDraft('')
     setChoice(null)
     if (partnerAnswered) {
-      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#6c63ff', '#ffd166', '#ff6b9d'] })
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#948ce9', '#ffe0a3', '#f6b6cc'] })
       toast('Revealed! See what you both said 💜')
     } else {
       toast('Saved — hidden until both of you answer 🤫')
@@ -137,7 +137,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
       <motion.button
         whileTap={{ scale: 0.97 }}
         onClick={() => void draw()}
-        className="relative w-full overflow-hidden rounded-[24px] bg-gradient-to-br from-brand-500 via-brand-600 to-brand-800 p-5 text-left text-white shadow-float shadow-brand-600/25"
+        className="relative w-full overflow-hidden rounded-[24px] bg-gradient-to-br from-brand-200 via-brand-400 to-brand-500 p-5 text-left text-ink-900 shadow-float shadow-brand-600/25"
       >
         <div className="absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10" />
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider opacity-80">

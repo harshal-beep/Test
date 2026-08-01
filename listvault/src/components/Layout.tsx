@@ -131,7 +131,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             whileTap={{ scale: 0.88 }}
             onClick={() => setFabOpen((o) => !o)}
             aria-label="Create"
-            className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-float shadow-brand-600/50"
+            className="-mt-7 flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-float shadow-brand-600/50"
           >
             <motion.span animate={{ rotate: fabOpen ? 45 : 0 }} transition={{ type: 'spring', damping: 16, stiffness: 300 }}>
               <Plus size={26} strokeWidth={2.4} />

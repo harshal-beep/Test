@@ -18,7 +18,7 @@ import {
 } from '../components/ui'
 
 const HABIT_EMOJIS = ['💧', '🏃', '🧘', '📖', '💊', '🥗', '🛏️', '📵']
-const HABIT_COLORS = ['#6c63ff', '#0d9488', '#d97706', '#db2777', '#2563eb', '#dc2626']
+const HABIT_COLORS = ['#948ce9', '#7fcfbf', '#f4c17e', '#f0a2c0', '#93bff2', '#ef9f9f']
 
 function isoDay(offset = 0): string {
   const d = new Date()
@@ -41,7 +41,7 @@ const CELEBRATE = {
   particleCount: 110,
   spread: 75,
   origin: { y: 0.75 },
-  colors: ['#6c63ff', '#8b83ff', '#ffd166', '#25D366']
+  colors: ['#948ce9', '#aba3f0', '#ffe0a3', '#a8e6c9']
 }
 const STREAK_MILESTONES = [7, 14, 30, 50, 100]
 
@@ -221,7 +221,7 @@ export default function Habits() {
               >
                 <span
                   className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-2xl"
-                  style={{ backgroundColor: (h.color ?? '#6c63ff') + '20' }}
+                  style={{ backgroundColor: (h.color ?? '#948ce9') + '20' }}
                 >
                   {h.emoji ?? '✨'}
                 </span>
@@ -265,7 +265,7 @@ export default function Habits() {
                             className={`block h-2 w-2 rounded-full transition-colors ${
                               on ? '' : 'bg-ink-200 dark:bg-ink-700'
                             }`}
-                            style={on ? { backgroundColor: h.color ?? '#6c63ff' } : undefined}
+                            style={on ? { backgroundColor: h.color ?? '#948ce9' } : undefined}
                           />
                         </button>
                       )
@@ -337,7 +337,7 @@ export default function Habits() {
                         <span
                           key={off}
                           className={`h-2 w-2 rounded-full ${days.has(isoDay(off)) ? '' : 'bg-ink-200 dark:bg-ink-700'}`}
-                          style={days.has(isoDay(off)) ? { backgroundColor: manage.color ?? '#6c63ff' } : undefined}
+                          style={days.has(isoDay(off)) ? { backgroundColor: manage.color ?? '#948ce9' } : undefined}
                         />
                       ))}
                     </span>

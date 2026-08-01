@@ -141,7 +141,7 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={() => setQuizOpen(true)}
-          className="w-full rounded-[24px] bg-gradient-to-br from-amber-400 via-rose-400 to-brand-600 p-5 text-left text-white shadow-float"
+          className="w-full rounded-[24px] bg-gradient-to-br from-amber-200 via-rose-200 to-brand-400 p-5 text-left text-ink-900 shadow-float"
         >
           <p className="text-xs font-bold uppercase tracking-wider opacity-85">2-minute quiz</p>
           <p className="mt-1 text-[19px] font-bold leading-snug">Tell us your tastes</p>

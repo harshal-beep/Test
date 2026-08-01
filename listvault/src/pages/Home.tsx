@@ -59,9 +59,9 @@ function greeting(): string {
 /** The hero follows the sky: sunrise tones, daytime indigo, evening violet. */
 function heroGradient(): string {
   const h = new Date().getHours()
-  if (h < 12) return 'from-amber-400 via-rose-400 to-brand-600'
-  if (h < 17) return 'from-brand-500 via-brand-600 to-brand-800'
-  return 'from-brand-700 via-brand-800 to-brand-900'
+  if (h < 12) return 'from-amber-200 via-rose-200 to-brand-400'
+  if (h < 17) return 'from-brand-200 via-brand-400 to-brand-500'
+  return 'from-brand-400 via-brand-500 to-brand-700'
 }
 
 export default function Home() {
@@ -168,7 +168,7 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br p-5 text-white shadow-float shadow-brand-600/25 ${heroGradient()}`}
+        className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br p-5 text-ink-900 shadow-float shadow-brand-600/25 ${heroGradient()}`}
       >
         <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="absolute -right-2 top-16 h-16 w-16 rounded-full bg-white/10" />
@@ -266,7 +266,7 @@ export default function Home() {
                   <Link to={`/list/${l.id}`} className="surface block p-4 transition-shadow hover:shadow-float">
                     <span
                       className="flex h-11 w-11 items-center justify-center rounded-2xl text-xl"
-                      style={{ backgroundColor: (l.color ?? '#6c63ff') + '20' }}
+                      style={{ backgroundColor: (l.color ?? '#948ce9') + '20' }}
                     >
                       {l.emoji ?? '📝'}
                     </span>
@@ -280,7 +280,7 @@ export default function Home() {
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1], delay: 0.15 }}
                         className="block h-full rounded-full"
-                        style={{ backgroundColor: l.color ?? '#6c63ff' }}
+                        style={{ backgroundColor: l.color ?? '#948ce9' }}
                       />
                     </span>
                   </Link>

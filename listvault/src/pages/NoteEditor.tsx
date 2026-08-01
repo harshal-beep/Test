@@ -143,7 +143,7 @@ export default function NoteEditor() {
     }
     const { data: list, error: le } = await supabase
       .from('lv_lists')
-      .insert({ name: (title.trim() || lines[0]).slice(0, 60), emoji: '📝', color: '#6c63ff', owner_id: session.user.id })
+      .insert({ name: (title.trim() || lines[0]).slice(0, 60), emoji: '📝', color: '#948ce9', owner_id: session.user.id })
       .select()
       .single()
     if (le) {
