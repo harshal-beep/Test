@@ -1,107 +1,104 @@
 # HaMaara — research-backed feature roadmap
 
-Date: 2026-08-01
+Date: 2026-08-01 (revised after clarifying the actual use case)
 Method: Composio (Exa web search + Perplexity Sonar Pro, high search context) over App Store /
 Play reviews, couple-app comparisons and mobile UX research sources; plus direct web searches.
 
-Apps studied: Cupla, Between, Cozi, OurHome, Maple, Sweepy, Tody, Nipto, Agenda,
-Mental Loadless, Eqwity Mind, fiftyfifty, FairShare, Connected, Candle, Lovio.
+## What HaMaara is actually for
 
-## Where HaMaara already stands
+Two people who **live separately**. The app is for:
 
-Strong: real-time sync, multi-assignee tasks ("both of us"), swipe + drag interactions,
-shared/private notes with AI, shared habits with streaks and weekly goals, activity feed,
-household model with no join codes, installable PWA, light/dark/system.
+1. **Things we want to do together** — date ideas, places to eat, activities, trips.
+   (Real lists in use: "date card game", "street pani puri", "Street Photography",
+   "Beach walk", restaurant picks.)
+2. **Shared notes.**
+3. **A habit tracker** — same habit, each person's own streak.
 
-The 2026 couple-app comparisons list the table stakes as: real-time sync, clear assignment,
-grocery lists, in-app context/communication. HaMaara has the first two well covered.
+It is **not** a household-management app. Groceries, chores, meal planning, chore rotation
+and mental-load/fairness scoring are all out of scope — that research applies to
+cohabiting couples and was set aside.
 
-## Tier 1 — the real gaps (highest impact per unit of work)
+## What this means for the backlog
 
-### 1. Recurring / repeating tasks
-The single most common complaint in shared-todo reviews: routine chores (bins, laundry,
-dishes) can't repeat. Household lists are inherently cyclical; HaMaara has no repeat at all.
+The centre of gravity is a **shared wishlist of experiences**, and the emotional payoff is
+**doing them and remembering them** — not clearing a chore queue. Two consequences:
 
-UX: a "Repeat" row in the task editor — None / Daily / Weekdays / Weekly (day) / Monthly.
-Completing an occurrence creates the next one and keeps completion history (which feeds #2).
-Show a small repeat glyph + next date on the row. Support household-owned recurring tasks
-either partner can claim.
+- Completing an item is a *milestone*, not a dismissal. It should be celebrated and kept.
+- Because the two people are apart, the list is also a **conversation** and the calendar
+  question is "when are we next together", not "who does the dishes".
 
-### 2. Rotation, "who did it last", and a fairness view
-An entire 2026 app category (Mental Loadless, Eqwity Mind, fiftyfifty, FairShare) exists
-purely to make household load visible. Reddit threads on couple apps ask for "who did it
-last" and balance, not just assignment.
+## Tier 1 — fits the real use case
 
-UX: per-recurring-task ownership = A / B / **Rotate** / Anyone, with "Next up: A" on the chip.
-A "Balance" card: share of completed work over 7/30 days, optional 1-3 weight per task,
-"Last done by A, 2 days ago" on each chore, tap for history. Keep language supportive —
-"balance", never "winning".
+### 1. Memories: completed items become a shared timeline
+When "street pani puri" gets ticked, it shouldn't just grey out and vanish under Done.
+It becomes a thing you did together, with a date and optionally a photo.
 
-### 3. Gentle nudges + digests, not notification spam
-Reviews repeatedly show over-notification causes conflict and abandonment; UX guidance for
-task apps recommends batching low-priority alerts into digests.
+UX: on completion, offer "Add a photo / a line about it". A **Memories** view — reverse
+chronological, photo cards, "Last year you did…". Reuses the avatar storage bucket pattern
+(migration 0013) for image upload.
+Why: this is the payoff of the entire app for this couple; no competitor feature required.
 
-UX: default "Gentle mode" — one daily digest ("3 for you, 2 for both, 1 overdue") and a
-weekly balance recap. Critical/overdue-only as the alternative. In-app nudge banner on open:
-"2 small things today — 5-minute blitz?" that filters to today.
-Blocked on push infrastructure (see Constraints); the in-app banner is not.
+### 2. Plan a date: "planned for" + countdown
+Living apart makes *when* the scarce resource. An item can be scheduled ("Sat 9 Aug"),
+and the home screen shows **"Next together: 6 days — Beach walk"**.
 
-## Tier 2 — rich and natural fits
+UX: optional date on any item; a "Coming up" strip at the top of Home; a countdown card.
+Long-distance couple apps universally centre a countdown — it is the single most emotionally
+effective feature in that category.
 
-4. **Grocery mode with aisle categories.** Cupla is actively criticised for poor grocery
-   handling. Add a list type where items auto-categorise (Produce / Dairy / Pantry /
-   Household) with collapsible sections. HaMaara already has an AI edge function to do the
-   categorising.
-5. **Points / kudos on completion.** Stack on existing streak logic; scoreboard card in the
-   feed. Supportive framing, tied to the fairness numbers.
-6. **Meal planning → groceries.** Week grid, each meal pushes ingredients into the grocery
-   list. Pairs with #4; AI can propose "3 vegetarian nights".
-7. **Rituals / check-in prompts.** Between and Cupla differentiate on rituals. Ship as habit
-   templates (Weekly check-in, Date night, Walk together) with rotating AI prompts —
-   "What felt heavy this week?" — behind a "logistics only" toggle.
-8. **Appreciation taps.** Lightweight "thank you"/heart on a task someone completed. The
-   emotional layer users of Lovelee/Lovio/Connected respond to, at almost no cost.
+### 3. Reactions and comments on items
+Because they are apart, the list *is* the conversation. Research on shared-list apps flags
+in-app comments on the item — instead of a parallel text thread — as a top request.
 
-## Tier 3 — bigger bets
+UX: tap an item → react (❤️ 🔥 😍) or leave a short comment; reactions show inline as small
+emoji on the row. Feeds the activity feed.
 
-9. **Shared calendar.** Cozi/Maple win on calendar + lists + chores in one place. MVP:
-   internal "Today / This week" strip and due-date overlay; external Google/Apple sync later.
-10. **Mental-load board.** Fair Play-style domains (Food, Cleaning, Admin, Health, Social)
-    with ownership per domain and a load index. Strategic differentiator, heaviest lift.
-11. **Presence-weighted fairness.** Adjust balance when one partner travels. Needs 9 + 2.
+### 4. "Surprise us" picker
+A shuffle button on a wishlist list: "What should we do this weekend?" → picks one at random
+(optionally filtered to unplanned items).
+Tiny to build, directly serves the core journey.
 
-## UI/UX richness patterns worth adopting
+## Tier 2 — still valid from the research
 
-- **Quick daily wins (2-3 min)** — the "blitz" filter above; the strongest retention pattern
-  in 2026 productivity UX research.
-- **Progress visualisation** beyond streaks — weekly recap cards in the feed.
-- **Layout personalisation** — surface the sections each person actually uses.
-- **Micro-interactions** — already strong here (confetti, check burst, gliding tab pill).
+5. **Appreciation taps** — a heart/thank-you on something the other person added or did.
+   The emotional layer Lovelee / Lovio / Connected users respond to.
+6. **Rituals / check-in prompts** — "Weekly check-in", "Call night" as habit templates with
+   rotating AI prompts ("What felt heavy this week?"), behind a logistics-only toggle.
+7. **Gentle nudges, not notification spam** — one daily digest at most; reviews show
+   over-notification causes conflict and abandonment in couple apps. The in-app version
+   (a nudge banner on open) needs no push infrastructure.
+8. **Quick daily wins** — the strongest retention pattern in 2026 mobile UX research:
+   something meaningful possible in 2-3 minutes. Habits already do this; a "today" strip
+   would extend it.
 
-## Competitor mistakes to deliberately avoid
+## Dropped as not applicable
 
-- Aggressive subscription prompts and ads after purchase (Cupla, Between) — HaMaara is free
-  and private; keep it that way.
-- Bolting on AI where it annoys rather than helps (a live Cupla complaint) — HaMaara's AI is
-  opt-in per action, which is the right shape.
-- Missing shared checklists inside a "couples" app (Between) — HaMaara's core strength.
+- Grocery mode, aisle categorisation, meal planning — they do not shop together.
+- Chore rotation, "who did it last", fairness/balance scoring, mental-load domain boards —
+  these solve cohabiting-household load, which does not exist here.
+- Recurring tasks — largely covered by the habit tracker for this use case; low priority.
 
 ## Constraints specific to a PWA
 
 - **iOS home-screen widgets are not available to web apps.** Native couple apps lean heavily
-  on widgets; HaMaara cannot match that. The nearest equivalent is an installed PWA with a
-  fast, glanceable home screen.
+  on widgets (countdowns, love notes); HaMaara structurally cannot match that. Nearest
+  equivalent is the installed PWA with a fast, glanceable home screen.
 - **Push notifications require the installed PWA** (iOS 16.4+) plus service-worker work.
-  This gates the digest feature and habit reminders.
+  This gates digests and habit reminders.
 - **Voice input** is unreliable in iOS WebKit — previously assessed and skipped.
+
+## Competitor mistakes to keep avoiding
+
+- Aggressive subscription prompts and ads after purchase (Cupla, Between).
+- AI bolted on where it annoys rather than helps (a live Cupla complaint) — HaMaara's AI is
+  opt-in per action, which is the right shape.
 
 ## Suggested build order
 
-1. Recurring tasks
-2. Rotation + "who did it last" + Balance view
-3. Grocery mode with aisle categories
-4. Appreciation taps + points/kudos
-5. In-app gentle nudge banner (digest push after notification groundwork)
-6. Meal planning
-7. Rituals and prompts
-8. Calendar, then mental-load board
+1. Memories (photo + note on completion, Memories timeline)
+2. Plan a date ("planned for" + next-together countdown on Home)
+3. Reactions / comments on items
+4. Surprise-us picker
+5. Appreciation taps
+6. Rituals and prompts
+7. In-app gentle nudge banner (push digests after notification groundwork)
