@@ -27,6 +27,7 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [finding, setFinding] = useState(false)
   const [quizOpen, setQuizOpen] = useState(false)
   const [addFor, setAddFor] = useState<UsEvent | null>(null)
   const [lists, setLists] = useState<List[]>([])
@@ -57,6 +58,20 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
   function learn(category: string | null, weight: number, source: string) {
     if (!myId || !category) return
     void supabase.from('lv_taste_signals').insert({ user_id: myId, category, weight, source })
+  }
+
+  /** On-demand sweep for fresh events (server enforces a 2h cooldown). */
+  async function findMore() {
+    setFinding(true)
+    const { data, error } = await supabase.functions.invoke('lv-us', { body: { action: 'more_events' } })
+    setFinding(false)
+    if (error) toast(error.message)
+    else if (data?.error) toast(data.error)
+    else if (data?.result === 'cooldown') toast('Freshly searched — try again in a couple of hours ⏳')
+    else {
+      await load()
+      toast(`Found ${data?.count ?? 'new'} events across Mumbai 🔎`)
+    }
   }
 
   async function hide(ev: UsEvent) {
@@ -215,6 +230,13 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
               </div>
             </motion.div>
           ))}
+          <button
+            onClick={() => void findMore()}
+            disabled={finding}
+            className="btn-ghost w-full border border-brand-200 py-3 text-sm disabled:opacity-60 dark:border-brand-800"
+          >
+            {finding ? 'Searching Mumbai… (takes ~30s)' : '🔎 Find more events'}
+          </button>
           <p className="text-center text-xs text-ink-400">
             Found by AI on the public web — tap the link to verify before booking.
           </p>

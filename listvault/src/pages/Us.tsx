@@ -5,13 +5,15 @@ import { Profile } from '../lib/types'
 import MemoriesSection from './Memories'
 import UsQuestions from '../components/UsQuestions'
 import UsDiscover from '../components/UsDiscover'
+import UsMoney from '../components/UsMoney'
 import { Page } from '../components/ui'
 
-type Segment = 'questions' | 'discover' | 'memories'
+type Segment = 'questions' | 'discover' | 'money' | 'memories'
 
 const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'questions', label: 'Questions' },
   { key: 'discover', label: 'Discover' },
+  { key: 'money', label: 'Money' },
   { key: 'memories', label: 'Memories' }
 ]
 
@@ -62,6 +64,7 @@ export default function Us() {
 
       {segment === 'questions' && <UsQuestions household={household} />}
       {segment === 'discover' && <UsDiscover household={household} />}
+      {segment === 'money' && <UsMoney household={household} />}
       {segment === 'memories' && <MemoriesSection />}
     </Page>
   )

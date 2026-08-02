@@ -90,11 +90,11 @@ async function fetchAllEvents(apiKey: string): Promise<EventRow[]> {
   })).filter((e) => e.title)
 }
 
-/** AI web curation via OpenRouter's `:online` search-enabled variant. */
-async function fetchAiEvents(apiKey: string, model: string): Promise<EventRow[]> {
-  const prompt = `Search the web for events and things to do in Mumbai, India between ${istToday()} and 14 days later that would suit a couple in their 20s-30s: concerts and gigs, standup comedy, theatre, art exhibitions, food festivals and pop-ups, workshops, markets, outdoor experiences.
+/** One focused AI web search via OpenRouter's `:online` variant. */
+async function fetchAiEvents(apiKey: string, model: string, focus: string): Promise<EventRow[]> {
+  const prompt = `Search the web for ${focus} happening in Mumbai, India between ${istToday()} and 14 days later, suitable for a couple in their 20s-30s.
 
-Reply with ONLY a JSON array (no prose, no markdown fences) of up to 25 objects:
+Reply with ONLY a JSON array (no prose, no markdown fences) of up to 12 objects:
 [{"title": string, "category": "music|comedy|theatre|art|food|workshop|market|outdoor|other", "venue": string or null, "area": string (neighbourhood, e.g. "Lower Parel") or null, "starts_on": "YYYY-MM-DD" or null, "price_text": string like "₹499 onwards" or "Free" or null, "url": source link string or null}]
 
 Only include events you found on real pages, with their real dates. Skip anything already past.`
@@ -111,6 +111,48 @@ Only include events you found on real pages, with their real dates. Skip anythin
       url: e.url ? String(e.url).slice(0, 500) : null
     }))
     .filter((e) => e.title)
+}
+
+/** Five parallel category sweeps — one search each, merged and deduped. */
+const EVENT_SWEEPS = [
+  'standup comedy shows and open mics',
+  'concerts, live gigs and music nights',
+  'food festivals, pop-ups, markets and flea bazaars',
+  'art exhibitions, theatre plays and cultural events',
+  'workshops, outdoor experiences and unusual date activities'
+]
+
+async function gatherAiEvents(apiKey: string, model: string): Promise<EventRow[]> {
+  const settled = await Promise.allSettled(EVENT_SWEEPS.map((f) => fetchAiEvents(apiKey, model, f)))
+  const all = settled.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+  // dedupe on normalized title; keep the first (usually most specific) hit
+  const seen = new Set<string>()
+  const out: EventRow[] = []
+  for (const e of all) {
+    const key = e.title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(e)
+  }
+  return out.slice(0, 50)
+}
+
+/** Merge new finds into the pool and drop what's past — never a full wipe,
+ * so per-person hides survive refreshes. */
+async function mergeEvents(admin: SupabaseClient, rows: EventRow[], source: string): Promise<string | null> {
+  await admin.from('lv_events').delete().lt('starts_on', istToday())
+  await admin
+    .from('lv_events')
+    .delete()
+    .is('starts_on', null)
+    .lt('fetched_at', new Date(Date.now() - 7 * 86400000).toISOString())
+  const { error } = await admin
+    .from('lv_events')
+    .upsert(rows.map((r) => ({ ...r, source, fetched_at: new Date().toISOString() })), {
+      onConflict: 'title,starts_on',
+      ignoreDuplicates: true
+    })
+  return error ? error.message : null
 }
 
 /* ------------------------- recommendation engine -------------------------
@@ -270,7 +312,7 @@ async function historySignals(
 /** Score cached events for the couple; writes score + explainable reason. */
 async function rankEvents(admin: SupabaseClient, apiKey: string, model: string) {
   const [{ data: events }, { data: profiles }, { data: signals }, history] = await Promise.all([
-    admin.from('lv_events').select('id, category, price_text').limit(60),
+    admin.from('lv_events').select('id, category, price_text').limit(100),
     admin.from('lv_profiles').select('id, display_name, tastes'),
     admin
       .from('lv_taste_signals')
@@ -348,22 +390,37 @@ Deno.serve(async (req) => {
           rows = await fetchAllEvents(secrets.ALLEVENTS_API_KEY)
           source = 'allevents'
         } catch {
-          rows = await fetchAiEvents(apiKey, model)
+          rows = await gatherAiEvents(apiKey, model)
         }
       } else {
-        rows = await fetchAiEvents(apiKey, model)
+        rows = await gatherAiEvents(apiKey, model)
       }
       if (rows.length === 0) return json({ error: 'no events found this time' }, 502)
 
-      // Replace the cache wholesale: hides cascade, stale listings vanish.
-      await admin.from('lv_events').delete().neq('id', '00000000-0000-0000-0000-000000000000')
-      const { error: insErr } = await admin
-        .from('lv_events')
-        .upsert(rows.map((r) => ({ ...r, source })), { onConflict: 'title,starts_on', ignoreDuplicates: true })
-      if (insErr) return json({ error: insErr.message }, 500)
+      const mergeErr = await mergeEvents(admin, rows, source)
+      if (mergeErr) return json({ error: mergeErr }, 500)
 
       await rankEvents(admin, apiKey, model)
       return json({ result: 'refreshed', count: rows.length, source })
+    }
+
+    // On-demand "find more": another sweep, gated to once per 2 hours.
+    if (action === 'more_events') {
+      const { data: newest } = await admin
+        .from('lv_events')
+        .select('fetched_at')
+        .order('fetched_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (newest && Date.now() - new Date(newest.fetched_at).getTime() < 2 * 3600e3) {
+        return json({ result: 'cooldown' })
+      }
+      const rows = await gatherAiEvents(apiKey, model)
+      if (rows.length === 0) return json({ error: 'no events found this time' }, 502)
+      const mergeErr = await mergeEvents(admin, rows, 'ai')
+      if (mergeErr) return json({ error: mergeErr }, 500)
+      await rankEvents(admin, apiKey, model)
+      return json({ result: 'refreshed', count: rows.length })
     }
 
     if (action === 'rerank_events') {

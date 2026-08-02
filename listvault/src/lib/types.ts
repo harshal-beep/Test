@@ -48,6 +48,27 @@ export interface QuestionAnswer {
   created_at: string
 }
 
+export interface Expense {
+  id: string
+  description: string
+  amount: number
+  paid_by: string
+  /** What the other person owes the payer for this expense. */
+  owed_amount: number
+  spent_on: string
+  created_by: string
+  created_at: string
+}
+
+export interface Settlement {
+  id: string
+  from_user: string
+  to_user: string
+  amount: number
+  created_by: string
+  created_at: string
+}
+
 export interface UsEvent {
   id: string
   source: string
