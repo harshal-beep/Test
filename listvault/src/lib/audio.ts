@@ -1,7 +1,8 @@
 /**
- * Voice-note capture and conversion. iOS records AAC in an mp4 container;
- * models want plain WAV — so we decode whatever MediaRecorder produced and
- * re-encode 16 kHz mono 16-bit WAV (small enough to ship as base64).
+ * Voice-note capture. We tap raw PCM straight off the microphone with Web
+ * Audio instead of MediaRecorder — iOS Safari records AAC/mp4 that its own
+ * decodeAudioData often cannot decode back, so there must be no decode step.
+ * stop() resolves to a ready 16 kHz mono 16-bit WAV.
  */
 
 export interface Recorder {
@@ -9,49 +10,77 @@ export interface Recorder {
   cancel: () => void
 }
 
-export async function recordAudio(): Promise<Recorder> {
+export async function recordAudio(targetRate = 16000): Promise<Recorder> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  const rec = new MediaRecorder(stream)
-  const chunks: BlobPart[] = []
-  rec.ondataavailable = (e) => e.data.size > 0 && chunks.push(e.data)
-  rec.start()
-  const cleanup = () => stream.getTracks().forEach((t) => t.stop())
-  return {
-    stop: () =>
-      new Promise<Blob>((resolve) => {
-        rec.onstop = () => {
-          cleanup()
-          resolve(new Blob(chunks, { type: rec.mimeType || 'audio/mp4' }))
-        }
-        rec.stop()
-      }),
-    cancel: () => {
-      try {
-        rec.stop()
-      } catch {
-        /* already stopped */
-      }
-      cleanup()
+  const Ctx =
+    window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+  const ctx = new Ctx()
+  await ctx.resume()
+  const sourceRate = ctx.sampleRate
+
+  const source = ctx.createMediaStreamSource(stream)
+  const proc = ctx.createScriptProcessor(4096, 1, 1)
+  // Safari only fires onaudioprocess when the graph reaches the destination;
+  // route through a muted gain so the mic never plays back out loud.
+  const mute = ctx.createGain()
+  mute.gain.value = 0
+
+  const chunks: Float32Array[] = []
+  proc.onaudioprocess = (e) => chunks.push(new Float32Array(e.inputBuffer.getChannelData(0)))
+  source.connect(proc)
+  proc.connect(mute)
+  mute.connect(ctx.destination)
+
+  let done = false
+  const teardown = () => {
+    if (done) return
+    done = true
+    proc.onaudioprocess = null
+    try {
+      source.disconnect()
+      proc.disconnect()
+      mute.disconnect()
+    } catch {
+      /* graph already torn down */
     }
+    stream.getTracks().forEach((t) => t.stop())
+    void ctx.close()
+  }
+
+  return {
+    stop: async () => {
+      teardown()
+      const pcm = mergeChunks(chunks)
+      if (pcm.length === 0) throw new Error('No audio captured — try again')
+      return encodeWav(downsample(pcm, sourceRate, targetRate), targetRate)
+    },
+    cancel: teardown
   }
 }
 
-/** Decode any recorded blob → 16 kHz mono 16-bit WAV. */
-export async function blobToWav(blob: Blob, targetRate = 16000): Promise<Blob> {
-  const ctx = new AudioContext()
-  try {
-    const decoded = await ctx.decodeAudioData(await blob.arrayBuffer())
-    const frames = Math.max(1, Math.ceil(decoded.duration * targetRate))
-    const off = new OfflineAudioContext(1, frames, targetRate)
-    const src = off.createBufferSource()
-    src.buffer = decoded
-    src.connect(off.destination)
-    src.start()
-    const rendered = await off.startRendering()
-    return encodeWav(rendered.getChannelData(0), targetRate)
-  } finally {
-    void ctx.close()
+function mergeChunks(chunks: Float32Array[]): Float32Array {
+  const out = new Float32Array(chunks.reduce((n, c) => n + c.length, 0))
+  let off = 0
+  for (const c of chunks) {
+    out.set(c, off)
+    off += c.length
   }
+  return out
+}
+
+/** Block-average downsample — the averaging doubles as a crude low-pass, fine for speech. */
+function downsample(pcm: Float32Array, from: number, to: number): Float32Array {
+  if (to >= from) return pcm
+  const ratio = from / to
+  const out = new Float32Array(Math.floor(pcm.length / ratio))
+  for (let i = 0; i < out.length; i++) {
+    const start = Math.floor(i * ratio)
+    const end = Math.min(pcm.length, Math.max(start + 1, Math.floor((i + 1) * ratio)))
+    let sum = 0
+    for (let j = start; j < end; j++) sum += pcm[j]
+    out[i] = sum / (end - start)
+  }
+  return out
 }
 
 function encodeWav(pcm: Float32Array, sampleRate: number): Blob {

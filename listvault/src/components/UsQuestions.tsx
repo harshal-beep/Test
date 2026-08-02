@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Hourglass, MessageCircleQuestion, Mic, Sparkles, Square, Trash2 } from '../lib/icons'
-import { blobToBase64, blobToWav, recordAudio, Recorder } from '../lib/audio'
+import { blobToBase64, recordAudio, Recorder } from '../lib/audio'
 import { supabase } from '../lib/supabase'
 import { Profile, Question, QuestionAnswer, QuestionMood, QuestionRound } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
@@ -95,8 +95,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
     if (rec === 'recording') {
       setRec('busy')
       try {
-        const blob = await recorder.current!.stop()
-        const wav = await blobToWav(blob)
+        const wav = await recorder.current!.stop()
         const b64 = await blobToBase64(wav)
         const { data, error } = await supabase.functions.invoke('lv-us', {
           body: { action: 'transcribe', audio: b64 }
