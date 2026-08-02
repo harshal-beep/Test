@@ -68,6 +68,40 @@ async function openrouter(
   return out
 }
 
+/** Vision call: prompt + image data URL. Used by receipt scanning. */
+async function openrouterVision(apiKey: string, model: string, prompt: string, imageDataUrl: string): Promise<string> {
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://hamaara.vercel.app',
+      'X-Title': 'HaMaara'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: imageDataUrl } }
+          ]
+        }
+      ]
+    })
+  })
+  const data = await resp.json()
+  if (!resp.ok || data.error) throw new Error(data?.error?.message ?? `AI provider error (${resp.status})`)
+  const out = (data.choices?.[0]?.message?.content ?? '').trim()
+  if (!out) throw new Error('empty AI response')
+  return out
+}
+
+// DeepSeek has no vision; these do, tried in order (override: RECEIPT_MODEL secret).
+const RECEIPT_MODELS = ['qwen/qwen3.7-flash', 'google/gemma-4-31b-it:free']
+
 /** AllEvents.in — used when the admin has stored an ALLEVENTS_API_KEY secret. */
 async function fetchAllEvents(apiKey: string): Promise<EventRow[]> {
   const resp = await fetch('https://api.allevents.in/events/list/', {
@@ -363,13 +397,59 @@ Deno.serve(async (req) => {
     const { data: secretRows } = await admin
       .from('lv_secrets')
       .select('key, value')
-      .in('key', ['OPENROUTER_API_KEY', 'OPENROUTER_MODEL', 'ALLEVENTS_API_KEY'])
+      .in('key', ['OPENROUTER_API_KEY', 'OPENROUTER_MODEL', 'ALLEVENTS_API_KEY', 'RECEIPT_MODEL'])
     const secrets = Object.fromEntries((secretRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
     const apiKey = Deno.env.get('OPENROUTER_API_KEY') ?? secrets.OPENROUTER_API_KEY
     const model = Deno.env.get('OPENROUTER_MODEL') ?? secrets.OPENROUTER_MODEL ?? DEFAULT_MODEL
     if (!apiKey) return json({ error: 'AI is not configured yet.' }, 503)
 
-    const { action } = await req.json()
+    const body = await req.json()
+    const action = body.action
+
+    // Splitwise-Pro-style receipt scan: photo in, structured expense out.
+    if (action === 'scan_receipt') {
+      const image = body.image
+      if (typeof image !== 'string' || !image.startsWith('data:image/')) {
+        return json({ error: 'image data URL required' }, 400)
+      }
+      if (image.length > 2_500_000) return json({ error: 'image too large' }, 400)
+      const prompt = `This is a photo of a bill/receipt (likely from India). Extract:
+{"description": short merchant/what it was (e.g. "Dinner at Jai Hind"), "amount": final total paid as a number (no currency symbol), "category": one of "food|travel|fun|shopping|other", "items": up to 12 line items as [{"name": string, "price": number}] or []}
+Reply with ONLY that JSON object. If it is not a readable bill, reply {"error": "not a bill"}.`
+      const models = [secrets.RECEIPT_MODEL, ...RECEIPT_MODELS].filter(Boolean) as string[]
+      let lastErr = 'no vision model available'
+      for (const m of models) {
+        try {
+          const out = await openrouterVision(apiKey, m, prompt, image)
+          const start = out.indexOf('{')
+          const end = out.lastIndexOf('}')
+          if (start === -1 || end <= start) throw new Error('no JSON in reply')
+          const parsed = JSON.parse(out.slice(start, end + 1))
+          if (parsed.error) return json({ error: "Couldn't read a bill in that photo" }, 422)
+          const amount = Number(parsed.amount)
+          if (!isFinite(amount) || amount <= 0) throw new Error('no amount found')
+          return json({
+            result: {
+              description: String(parsed.description ?? 'Scanned bill').slice(0, 200),
+              amount: Math.round(amount * 100) / 100,
+              category: ['food', 'travel', 'fun', 'shopping', 'other'].includes(parsed.category) ? parsed.category : 'other',
+              items: Array.isArray(parsed.items)
+                ? parsed.items
+                    .slice(0, 12)
+                    .map((i: { name?: unknown; price?: unknown }) => ({
+                      name: String(i.name ?? '').slice(0, 80),
+                      price: Number(i.price) || 0
+                    }))
+                    .filter((i: { name: string }) => i.name)
+                : []
+            }
+          })
+        } catch (e) {
+          lastErr = (e as Error).message
+        }
+      }
+      return json({ error: `Scan failed: ${lastErr}` }, 502)
+    }
 
     if (action === 'refresh_events') {
       // Staleness gate lives server-side so many clients can't stampede it.

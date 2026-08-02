@@ -56,9 +56,20 @@ export interface Expense {
   /** What the other person owes the payer for this expense. */
   owed_amount: number
   spent_on: string
+  category: string | null
+  receipt_url: string | null
+  items: { name: string; price: number }[] | null
   created_by: string
   created_at: string
 }
+
+export const EXPENSE_CATEGORIES = [
+  { key: 'food', label: 'Food', emoji: '🍽️' },
+  { key: 'travel', label: 'Travel', emoji: '🚕' },
+  { key: 'fun', label: 'Fun', emoji: '🎟️' },
+  { key: 'shopping', label: 'Shopping', emoji: '🛍️' },
+  { key: 'other', label: 'Other', emoji: '📦' }
+] as const
 
 export interface Settlement {
   id: string
