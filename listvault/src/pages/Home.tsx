@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CalendarHeart, ListTodo, Plus } from '../lib/icons'
+import { CalendarHeart, ListTodo, Plus, Wallet } from '../lib/icons'
 import { supabase } from '../lib/supabase'
-import { List, Profile } from '../lib/types'
+import { computeBalance, inr } from '../lib/money'
+import { Expense, List, Profile, Settlement } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
@@ -72,11 +73,14 @@ export default function Home() {
   const [feed, setFeed] = useState<FeedEntry[]>([])
   const [feedProfiles, setFeedProfiles] = useState<Profile[]>([])
   const [planned, setPlanned] = useState<PlannedRow[]>([])
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [settlements, setSettlements] = useState<Settlement[]>([])
 
   useEffect(() => {
     void loadLists()
     void loadFeed()
     void loadPlanned()
+    void loadMoney()
     const channel = supabase
       .channel('home-lists')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_lists' }, () => void loadLists())
@@ -86,9 +90,21 @@ export default function Home() {
         void loadPlanned()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_list_members' }, () => void loadLists())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_expenses' }, () => void loadMoney())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_settlements' }, () => void loadMoney())
       .subscribe()
     return () => void supabase.removeChannel(channel)
   }, [])
+
+  /** Just enough of the ledger to show the balance up top. */
+  async function loadMoney() {
+    const [e, st] = await Promise.all([
+      supabase.from('lv_expenses').select('*'),
+      supabase.from('lv_settlements').select('*')
+    ])
+    setExpenses((e.data as Expense[]) ?? [])
+    setSettlements((st.data as Settlement[]) ?? [])
+  }
 
   /** Things with a date pencilled in, today onwards. */
   async function loadPlanned() {
@@ -155,6 +171,9 @@ export default function Home() {
 
   const pending = lists.reduce((sum, l) => sum + (l.total - l.done), 0)
   const firstName = (profile?.display_name ?? '').split(' ')[0]
+  const balance = computeBalance(expenses, settlements, profile?.id)
+  const partnerFirst =
+    feedProfiles.find((p) => p.id !== profile?.id)?.display_name?.split(' ')[0] || 'Partner'
 
   return (
     <Page className="space-y-6">
@@ -183,6 +202,37 @@ export default function Home() {
         <p className="mt-0.5 text-sm opacity-80">
           {lists.length} active list{lists.length === 1 ? '' : 's'} — hamaara, together
         </p>
+      </motion.div>
+
+      {/* Money — primary card on the home menu */}
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+        <Link to="/money" className="surface flex items-center gap-4 p-4">
+          <span
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
+              balance === 0
+                ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
+                : balance > 0
+                  ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-300'
+                  : 'bg-rose-50 text-rose-500 dark:bg-rose-900/30 dark:text-rose-300'
+            }`}
+          >
+            <Wallet size={22} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-bold uppercase tracking-wider text-ink-400">Money</span>
+            {balance === 0 ? (
+              <span className="block text-[17px] font-bold">All settled ✅</span>
+            ) : (
+              <span className="block text-[17px] font-bold">
+                {balance > 0 ? `${partnerFirst} owes you ` : `You owe ${partnerFirst} `}
+                <span className={balance > 0 ? 'text-emerald-600' : 'text-rose-500'}>{inr(balance)}</span>
+              </span>
+            )}
+            <span className="block text-xs text-ink-500 dark:text-ink-400">
+              {balance === 0 ? 'Add an expense whenever' : 'Tap to view or settle up'}
+            </span>
+          </span>
+        </Link>
       </motion.div>
 
       {/* Next together */}

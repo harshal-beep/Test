@@ -11,7 +11,8 @@ import {
   Plus,
   Search,
   StickyNote,
-  Users
+  Users,
+  Wallet
 } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
@@ -93,6 +94,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
   const sideLinks = [
     ...leftTabs,
+    { to: '/money', label: 'Money', Icon: Wallet },
     ...rightTabs,
     { to: '/search', label: 'Search', Icon: Search },
     { to: '/archive', label: 'Archive', Icon: Archive }

@@ -3,13 +3,11 @@ import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Plus, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
+import { computeBalance, inr } from '../lib/money'
 import { Expense, Profile, Settlement } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import Avatar from './Avatar'
 import { BottomSheet, EmptyState, Skeleton, stagger, useConfirm, useToast } from './ui'
-
-const inr = (n: number) =>
-  `₹${Math.abs(n).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 
 type Split = 'half' | 'full' | 'custom'
 
@@ -56,17 +54,7 @@ export default function UsMoney({ household }: { household: Profile[] }) {
     setLoading(false)
   }
 
-  /** Positive → partner owes me; negative → I owe partner. */
-  const balance = useMemo(() => {
-    if (!myId) return 0
-    let b = 0
-    for (const e of expenses) b += e.paid_by === myId ? e.owed_amount : -e.owed_amount
-    for (const s of settlements) {
-      if (s.to_user === myId) b -= s.amount
-      else if (s.from_user === myId) b += s.amount
-    }
-    return Math.round(b * 100) / 100
-  }, [expenses, settlements, myId])
+  const balance = useMemo(() => computeBalance(expenses, settlements, myId), [expenses, settlements, myId])
 
   async function addExpense(e: FormEvent) {
     e.preventDefault()
