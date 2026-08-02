@@ -12,6 +12,7 @@ import Notes from './pages/Notes'
 import Habits from './pages/Habits'
 import Us from './pages/Us'
 import Money from './pages/Money'
+import CalendarPage from './pages/CalendarPage'
 import NoteEditor from './pages/NoteEditor'
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
                   <Route path="/habits" element={<Habits />} />
                   <Route path="/us" element={<Us />} />
                   <Route path="/money" element={<Money />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/memories" element={<Navigate to="/us" replace />} />
                   <Route path="/archive" element={<Archive />} />
                   <Route path="/search" element={<Search />} />

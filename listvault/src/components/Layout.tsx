@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   Archive,
+  CalendarDays,
   CheckSquare,
   Flame,
   Heart,
@@ -95,6 +96,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   const sideLinks = [
     ...leftTabs,
     { to: '/money', label: 'Money', Icon: Wallet },
+    { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
     ...rightTabs,
     { to: '/search', label: 'Search', Icon: Search },
     { to: '/archive', label: 'Archive', Icon: Archive }

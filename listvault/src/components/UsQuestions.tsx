@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Hourglass, MessageCircleQuestion, Sparkles, Trash2 } from '../lib/icons'
+import { Hourglass, MessageCircleQuestion, Mic, Sparkles, Square, Trash2 } from '../lib/icons'
+import { blobToBase64, blobToWav, recordAudio, Recorder } from '../lib/audio'
 import { supabase } from '../lib/supabase'
 import { Profile, Question, QuestionAnswer, QuestionMood, QuestionRound } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
@@ -31,6 +32,10 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
   const [draft, setDraft] = useState('')
   const [choice, setChoice] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [mood, setMood] = useState<QuestionMood | 'any'>('any')
+  const [rec, setRec] = useState<'idle' | 'recording' | 'busy'>('idle')
+  const [voiceUrl, setVoiceUrl] = useState<string | null>(null)
+  const recorder = useRef<Recorder | null>(null)
 
   useEffect(() => {
     void load()
@@ -71,17 +76,56 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
       toast(`Answer the ${MAX_OPEN} open cards first 😉`)
       return
     }
-    if (unused.length === 0) {
-      toast('Deck is empty — asking AI for more…')
+    const pool = mood === 'any' ? unused : unused.filter((q) => q.mood === mood)
+    if (pool.length === 0) {
+      toast(mood === 'any' ? 'Deck is empty — asking AI for more…' : `No ${mood} cards left — asking AI for more…`)
       await supabase.functions.invoke('lv-us', { body: { action: 'more_questions' } })
       await load()
       return
     }
-    const pick = unused[Math.floor(Math.random() * unused.length)]
+    const pick = pool[Math.floor(Math.random() * pool.length)]
     const { error } = await supabase.from('lv_question_rounds').insert({ question_id: pick.id, opened_by: myId })
     if (error) toast(error.message)
     // top up quietly when the deck runs low
     if (unused.length <= 5) void supabase.functions.invoke('lv-us', { body: { action: 'more_questions' } })
+  }
+
+  /** Hold-free voice notes: tap mic, speak, tap stop → AI transcribes. */
+  async function toggleRecord() {
+    if (rec === 'recording') {
+      setRec('busy')
+      try {
+        const blob = await recorder.current!.stop()
+        const wav = await blobToWav(blob)
+        const b64 = await blobToBase64(wav)
+        const { data, error } = await supabase.functions.invoke('lv-us', {
+          body: { action: 'transcribe', audio: b64 }
+        })
+        if (error) throw error
+        if (data?.error) throw new Error(data.error)
+        const text = data.result as string
+        setDraft((d) => (d.trim() ? `${d.trim()} ${text}` : text))
+        if (myId) {
+          const path = `${myId}/${crypto.randomUUID()}.wav`
+          const { error: upErr } = await supabase.storage
+            .from('lv-voice')
+            .upload(path, wav, { contentType: 'audio/wav', cacheControl: '3600' })
+          if (!upErr) setVoiceUrl(supabase.storage.from('lv-voice').getPublicUrl(path).data.publicUrl)
+        }
+        toast('Heard you ✨ — edit the text if needed')
+      } catch (err) {
+        toast((err as Error).message)
+      }
+      recorder.current = null
+      setRec('idle')
+    } else if (rec === 'idle') {
+      try {
+        recorder.current = await recordAudio()
+        setRec('recording')
+      } catch {
+        toast('Microphone permission needed')
+      }
+    }
   }
 
   async function submitAnswer() {
@@ -92,7 +136,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
     setBusy(true)
     const { error } = await supabase
       .from('lv_question_answers')
-      .insert({ round_id: answering.id, user_id: myId, body, choice: hasOptions ? choice : null })
+      .insert({ round_id: answering.id, user_id: myId, body, choice: hasOptions ? choice : null, voice_url: voiceUrl })
     setBusy(false)
     if (error) {
       toast(error.message)
@@ -102,6 +146,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
     setAnswering(null)
     setDraft('')
     setChoice(null)
+    setVoiceUrl(null)
     if (partnerAnswered) {
       confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 }, colors: ['#948ce9', '#ffe0a3', '#f6b6cc'] })
       toast('Revealed! See what you both said 💜')
@@ -148,6 +193,29 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
           You each answer blind — it unlocks when you've both answered. {revealed.length > 0 && `${revealed.length} answered together so far.`}
         </p>
       </motion.button>
+
+      {/* Mood picker — which kind of card to draw */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setMood('any')}
+          className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+            mood === 'any' ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900' : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'
+          }`}
+        >
+          🎲 Surprise us
+        </button>
+        {(Object.keys(MOOD_META) as QuestionMood[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMood(m)}
+            className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all active:scale-95 ${
+              mood === m ? MOOD_META[m].tint + ' ring-2 ring-ink-900/20 dark:ring-white/25' : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'
+            }`}
+          >
+            {MOOD_META[m].emoji} {MOOD_META[m].label}
+          </button>
+        ))}
+      </div>
 
       {/* Open cards */}
       {open.map((r) => {
@@ -239,6 +307,9 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
                                   </span>
                                 )}
                                 {a.body && <p className="mt-1 text-sm leading-relaxed">{a.body}</p>}
+                                {a.voice_url && (
+                                  <audio controls preload="none" src={a.voice_url} className="mt-2 h-9 w-full" />
+                                )}
                               </div>
                             </div>
                           )
@@ -265,9 +336,13 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
       <BottomSheet
         open={answering !== null}
         onClose={() => {
+          recorder.current?.cancel()
+          recorder.current = null
+          setRec('idle')
           setAnswering(null)
           setDraft('')
           setChoice(null)
+          setVoiceUrl(null)
         }}
         title="Your answer"
       >
@@ -312,6 +387,32 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
                 className="field resize-none"
               />
             )}
+            {/* Voice note → transcription */}
+            <div className="flex items-center gap-2.5">
+              <motion.button
+                type="button"
+                whileTap={{ scale: 0.9 }}
+                onClick={() => void toggleRecord()}
+                disabled={rec === 'busy'}
+                aria-label={rec === 'recording' ? 'Stop recording' : 'Record a voice note'}
+                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                  rec === 'recording'
+                    ? 'animate-pulse bg-rose-500 text-white'
+                    : 'bg-brand-50 text-brand-600 dark:bg-brand-800/30'
+                } disabled:opacity-50`}
+              >
+                {rec === 'recording' ? <Square size={16} /> : <Mic size={18} />}
+              </motion.button>
+              <p className="text-xs text-ink-400">
+                {rec === 'recording'
+                  ? 'Listening… tap to stop'
+                  : rec === 'busy'
+                    ? 'Transcribing your voice note…'
+                    : voiceUrl
+                      ? 'Voice note attached ✓ — it reveals along with the text'
+                      : 'Or speak your answer — AI writes it down (Hinglish works)'}
+              </p>
+            </div>
             <p className="text-xs text-ink-400">
               Hidden from {partner?.display_name?.split(' ')[0] || 'your partner'} until they answer too.
             </p>

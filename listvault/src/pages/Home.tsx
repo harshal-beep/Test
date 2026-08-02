@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { CalendarHeart, ListTodo, Plus, Wallet } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { computeBalance, inr } from '../lib/money'
-import { Expense, List, Profile, Settlement } from '../lib/types'
+import { Expense, List, Milestone, Profile, Settlement } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
 import Avatar from '../components/Avatar'
 import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
@@ -75,12 +75,15 @@ export default function Home() {
   const [planned, setPlanned] = useState<PlannedRow[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [settlements, setSettlements] = useState<Settlement[]>([])
+  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [onThisDay, setOnThisDay] = useState<{ id: string; list_id: string; text: string; checked_at: string }[]>([])
 
   useEffect(() => {
     void loadLists()
     void loadFeed()
     void loadPlanned()
     void loadMoney()
+    void loadReminders()
     const channel = supabase
       .channel('home-lists')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_lists' }, () => void loadLists())
@@ -95,6 +98,28 @@ export default function Home() {
       .subscribe()
     return () => void supabase.removeChannel(channel)
   }, [])
+
+  /** Milestone reminders + "on this day" memory anniversaries. */
+  async function loadReminders() {
+    const [ms, mem] = await Promise.all([
+      supabase.from('lv_milestones').select('*'),
+      supabase
+        .from('lv_items')
+        .select('id, list_id, text, checked_at')
+        .eq('checked', true)
+        .not('checked_at', 'is', null)
+        .not('memory_note', 'is', null)
+    ])
+    setMilestones((ms.data as Milestone[]) ?? [])
+    const t = new Date()
+    const mmdd = `${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+    const todayIso = isoToday()
+    setOnThisDay(
+      (((mem.data as { id: string; list_id: string; text: string; checked_at: string }[]) ?? []) || []).filter(
+        (r) => r.checked_at.slice(5, 10) === mmdd && r.checked_at.slice(0, 10) !== todayIso
+      )
+    )
+  }
 
   /** Just enough of the ledger to show the balance up top. */
   async function loadMoney() {
@@ -175,6 +200,22 @@ export default function Home() {
   const partnerFirst =
     feedProfiles.find((p) => p.id !== profile?.id)?.display_name?.split(' ')[0] || 'Partner'
 
+  /** Nearest milestone occurrence within 45 days (yearly ones roll forward). */
+  const nextMilestone = (() => {
+    const t = new Date(isoToday())
+    let best: { ms: Milestone; days: number; years: number } | null = null
+    for (const ms of milestones) {
+      const [y, m, d] = ms.date.split('-').map(Number)
+      let occ = new Date(t.getFullYear(), m - 1, d)
+      if (!ms.yearly) occ = new Date(y, m - 1, d)
+      else if (occ < t) occ = new Date(t.getFullYear() + 1, m - 1, d)
+      const days = Math.round((occ.getTime() - t.getTime()) / 86400000)
+      if (days < 0 || days > 45) continue
+      if (!best || days < best.days) best = { ms, days, years: occ.getFullYear() - y }
+    }
+    return best
+  })()
+
   return (
     <Page className="space-y-6">
       <div>
@@ -235,6 +276,41 @@ export default function Home() {
         </Link>
       </motion.div>
 
+      {/* Reminders: upcoming milestone + on-this-day memories */}
+      {nextMilestone && (
+        <Link
+          to="/calendar"
+          className="flex items-center gap-3 rounded-[20px] bg-amber-50 p-4 ring-1 ring-amber-200/60 dark:bg-amber-900/20 dark:ring-amber-800/50"
+        >
+          <span className="text-2xl">{nextMilestone.ms.emoji ?? '⭐'}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-bold">
+              {nextMilestone.ms.title}
+              {nextMilestone.ms.yearly && nextMilestone.years > 0 && ` · ${nextMilestone.years} year${nextMilestone.years === 1 ? '' : 's'}`}
+            </span>
+            <span className="block text-xs text-amber-700 dark:text-amber-300">
+              {nextMilestone.days === 0 ? '🎉 Today!' : nextMilestone.days === 1 ? 'Tomorrow' : `In ${nextMilestone.days} days`}
+            </span>
+          </span>
+        </Link>
+      )}
+      {onThisDay.map((m) => (
+        <Link
+          key={m.id}
+          to="/us"
+          className="flex items-center gap-3 rounded-[20px] bg-brand-50 p-4 ring-1 ring-brand-200/60 dark:bg-brand-800/20 dark:ring-brand-800/50"
+        >
+          <span className="text-2xl">💭</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-bold uppercase tracking-wider text-brand-600">On this day</span>
+            <span className="block truncate font-bold">{m.text}</span>
+            <span className="block text-xs text-ink-500 dark:text-ink-400">
+              {new Date(m.checked_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })} — remember?
+            </span>
+          </span>
+        </Link>
+      ))}
+
       {/* Next together */}
       {planned.length > 0 && (
         <motion.section
@@ -243,7 +319,7 @@ export default function Home() {
           transition={{ duration: 0.3, delay: 0.05 }}
           className="space-y-2"
         >
-          <Link to={`/list/${planned[0].list_id}`} className="surface flex items-center gap-4 p-4">
+          <Link to="/calendar" className="surface flex items-center gap-4 p-4">
             <span className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-800/30">
               <span className="text-xl font-extrabold leading-none">
                 {daysUntil(planned[0].planned_for) === 0 ? '★' : daysUntil(planned[0].planned_for)}

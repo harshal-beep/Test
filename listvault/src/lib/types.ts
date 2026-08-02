@@ -45,6 +45,18 @@ export interface QuestionAnswer {
   user_id: string
   body: string | null
   choice: string | null
+  voice_url: string | null
+  created_at: string
+}
+
+export interface Milestone {
+  id: string
+  title: string
+  emoji: string | null
+  date: string
+  /** true → repeats every year (anniversaries, birthdays). */
+  yearly: boolean
+  created_by: string
   created_at: string
 }
 

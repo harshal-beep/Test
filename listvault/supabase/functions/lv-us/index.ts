@@ -102,6 +102,41 @@ async function openrouterVision(apiKey: string, model: string, prompt: string, i
 // DeepSeek has no vision; these do, tried in order (override: RECEIPT_MODEL secret).
 const RECEIPT_MODELS = ['qwen/qwen3.7-flash', 'google/gemma-4-31b-it:free']
 
+// Speech-to-text: Voxtral is Mistral's Whisper-class speech model.
+// Tried in order (override: VOICE_MODEL secret).
+const VOICE_MODELS = ['mistralai/voxtral-small-24b-2507', 'google/gemini-3.1-flash-lite', 'google/gemini-2.5-flash']
+
+/** Audio call: prompt + base64 WAV. Used by voice-note transcription. */
+async function openrouterAudio(apiKey: string, model: string, prompt: string, base64Wav: string): Promise<string> {
+  const resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://hamaara.vercel.app',
+      'X-Title': 'HaMaara'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'input_audio', input_audio: { data: base64Wav, format: 'wav' } }
+          ]
+        }
+      ]
+    })
+  })
+  const data = await resp.json()
+  if (!resp.ok || data.error) throw new Error(data?.error?.message ?? `AI provider error (${resp.status})`)
+  const out = (data.choices?.[0]?.message?.content ?? '').trim()
+  if (!out) throw new Error('empty AI response')
+  return out
+}
+
 /** AllEvents.in — used when the admin has stored an ALLEVENTS_API_KEY secret. */
 async function fetchAllEvents(apiKey: string): Promise<EventRow[]> {
   const resp = await fetch('https://api.allevents.in/events/list/', {
@@ -397,7 +432,7 @@ Deno.serve(async (req) => {
     const { data: secretRows } = await admin
       .from('lv_secrets')
       .select('key, value')
-      .in('key', ['OPENROUTER_API_KEY', 'OPENROUTER_MODEL', 'ALLEVENTS_API_KEY', 'RECEIPT_MODEL'])
+      .in('key', ['OPENROUTER_API_KEY', 'OPENROUTER_MODEL', 'ALLEVENTS_API_KEY', 'RECEIPT_MODEL', 'VOICE_MODEL'])
     const secrets = Object.fromEntries((secretRows ?? []).map((r: { key: string; value: string }) => [r.key, r.value]))
     const apiKey = Deno.env.get('OPENROUTER_API_KEY') ?? secrets.OPENROUTER_API_KEY
     const model = Deno.env.get('OPENROUTER_MODEL') ?? secrets.OPENROUTER_MODEL ?? DEFAULT_MODEL
@@ -449,6 +484,27 @@ Reply with ONLY that JSON object. If it is not a readable bill, reply {"error": 
         }
       }
       return json({ error: `Scan failed: ${lastErr}` }, 502)
+    }
+
+    // Voice note → text (Hinglish-aware). Audio arrives as base64 16k mono WAV.
+    if (action === 'transcribe') {
+      const audio = body.audio
+      if (typeof audio !== 'string' || audio.length < 100) return json({ error: 'audio required' }, 400)
+      if (audio.length > 4_000_000) return json({ error: 'voice note too long' }, 400)
+      const prompt =
+        'Transcribe this voice note exactly as spoken. It may be English, Hindi or Hinglish — keep the original language mix. Reply with ONLY the transcription text, no preamble. If there is no intelligible speech, reply with exactly: [no speech]'
+      const models = [secrets.VOICE_MODEL, ...VOICE_MODELS].filter(Boolean) as string[]
+      let lastErr = 'no audio model available'
+      for (const m of models) {
+        try {
+          const out = await openrouterAudio(apiKey, m, prompt, audio)
+          if (/\[no speech\]/i.test(out)) return json({ error: "Couldn't hear any speech in that" }, 422)
+          return json({ result: out.slice(0, 2000) })
+        } catch (e) {
+          lastErr = (e as Error).message
+        }
+      }
+      return json({ error: `Transcription failed: ${lastErr}` }, 502)
     }
 
     if (action === 'refresh_events') {
