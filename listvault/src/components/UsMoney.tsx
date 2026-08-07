@@ -5,7 +5,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
-import { Camera, ExternalLink, Plus, Search, Trash2 } from '../lib/icons'
+import { Camera, ExternalLink, Pencil, Plus, Search, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { processPhoto } from '../lib/images'
 import { computeNets, equalShares, inr, myExpenseDelta, simplifyDebts } from '../lib/money'
@@ -42,6 +42,8 @@ export default function UsMoney() {
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
+  /** Set while the sheet is editing an existing expense rather than adding one. */
+  const [editing, setEditing] = useState<Expense | null>(null)
   const [settle, setSettle] = useState<{ from: string; to: string; amount: number } | null>(null)
 
   // add-expense form
@@ -116,10 +118,35 @@ export default function UsMoney() {
   }, [expenses, query])
 
   function openAdd() {
+    setEditing(null)
+    setDesc('')
+    setAmount('')
+    setCategory('food')
+    setItems([])
+    setReceiptUrl(null)
     setPaidBy(myId ?? null)
     setInSplit(new Set(members.map((m) => m.id)))
     setMode('equal')
     setCustomAmts({})
+    setAddOpen(true)
+  }
+
+  /** Reopen an expense in the same sheet, prefilled from its saved shares. */
+  function openEdit(ex: Expense) {
+    setEditing(ex)
+    setDesc(ex.description)
+    setAmount(String(ex.amount))
+    setCategory(ex.category ?? 'other')
+    setItems(ex.items ?? [])
+    setReceiptUrl(ex.receipt_url)
+    setPaidBy(ex.paid_by)
+    const saved = ex.shares ?? []
+    setInSplit(new Set(saved.map((s) => s.user_id)))
+    // An even split (to the paisa) reopens as "equally"; anything else as custom.
+    const even = equalShares(Number(ex.amount), saved.map((s) => s.user_id))
+    const isEven = saved.every((s) => Math.abs(Number(s.amount) - (even.get(s.user_id) ?? -1)) < 0.005)
+    setMode(isEven ? 'equal' : 'custom')
+    setCustomAmts(Object.fromEntries(saved.map((s) => [s.user_id, String(Number(s.amount))])))
     setAddOpen(true)
   }
 
@@ -164,7 +191,7 @@ export default function UsMoney() {
   const remaining = Math.round((amt - customTotal) * 100) / 100
   const splitOk = mode === 'equal' ? splitIds.length > 0 : splitIds.length > 0 && Math.abs(remaining) < 0.01
 
-  async function addExpense(e: FormEvent) {
+  async function saveExpense(e: FormEvent) {
     e.preventDefault()
     if (!myId || !paidBy) return
     if (!desc.trim() || !isFinite(amt) || amt <= 0 || !splitOk) return
@@ -172,43 +199,60 @@ export default function UsMoney() {
       mode === 'equal'
         ? equalShares(amt, splitIds)
         : new Map(splitIds.map((id) => [id, parseFloat(customAmts[id] ?? '') || 0]))
-    setBusy(true)
-    const { data: created, error } = await supabase
-      .from('lv_expenses')
-      .insert({
-        space_id: sid,
-        description: desc.trim().slice(0, 200),
-        amount: amt,
-        paid_by: paidBy,
-        category,
-        receipt_url: receiptUrl,
-        items: items.length ? items : null,
-        created_by: myId
-      })
-      .select()
-      .single()
-    if (error || !created) {
-      setBusy(false)
-      toast(error?.message ?? 'Could not save')
-      return
+    const row = {
+      description: desc.trim().slice(0, 200),
+      amount: amt,
+      paid_by: paidBy,
+      category,
+      receipt_url: receiptUrl,
+      items: items.length ? items : null
     }
+    setBusy(true)
+
+    let expenseId = editing?.id
+    if (editing) {
+      const { error } = await supabase.from('lv_expenses').update(row).eq('id', editing.id)
+      if (error) {
+        setBusy(false)
+        toast(error.message)
+        return
+      }
+      // Shares are replaced wholesale — simpler and safer than diffing rows.
+      await supabase.from('lv_expense_shares').delete().eq('expense_id', editing.id)
+    } else {
+      const { data: created, error } = await supabase
+        .from('lv_expenses')
+        .insert({ ...row, space_id: sid, created_by: myId })
+        .select()
+        .single()
+      if (error || !created) {
+        setBusy(false)
+        toast(error?.message ?? 'Could not save')
+        return
+      }
+      expenseId = (created as Expense).id
+    }
+
     const shareRows = [...shareMap.entries()]
       .filter(([, v]) => v > 0)
-      .map(([user_id, v]) => ({ expense_id: (created as Expense).id, user_id, amount: v }))
+      .map(([user_id, v]) => ({ expense_id: expenseId!, user_id, amount: v }))
     const { error: shareErr } = await supabase.from('lv_expense_shares').insert(shareRows)
     setBusy(false)
     if (shareErr) {
-      await supabase.from('lv_expenses').delete().eq('id', (created as Expense).id)
+      // A new expense with no shares would skew every balance — roll it back.
+      if (!editing) await supabase.from('lv_expenses').delete().eq('id', expenseId!)
       toast(shareErr.message)
       return
     }
     setAddOpen(false)
+    setEditing(null)
     setDesc('')
     setAmount('')
     setCategory('food')
     setItems([])
     setReceiptUrl(null)
-    toast('Expense added 💸')
+    toast(editing ? 'Expense updated ✏️' : 'Expense added 💸')
+    await load()
   }
 
   async function recordSettlement() {
@@ -404,8 +448,17 @@ export default function UsMoney() {
             const payer = profileOf(ex.paid_by)
             const delta = myExpenseDelta(ex, myId)
             const ways = ex.shares?.length ?? 0
+            const mine = ex.created_by === myId
             return (
-              <motion.li key={ex.id} variants={stagger.item} className="surface flex items-center gap-3 p-3.5">
+              <motion.li
+                key={ex.id}
+                variants={stagger.item}
+                onClick={mine ? () => openEdit(ex) : undefined}
+                role={mine ? 'button' : undefined}
+                tabIndex={mine ? 0 : undefined}
+                onKeyDown={mine ? (e) => e.key === 'Enter' && openEdit(ex) : undefined}
+                className={`surface flex items-center gap-3 p-3.5 ${mine ? 'cursor-pointer transition-shadow hover:shadow-float' : ''}`}
+              >
                 <span className="text-xl leading-none">{catMeta(ex.category)?.emoji ?? '📦'}</span>
                 <Avatar profile={payer} size={7} />
                 <div className="min-w-0 flex-1">
@@ -433,10 +486,29 @@ export default function UsMoney() {
                     <p className="text-[10px] text-ink-400">{delta > 0 ? "you're owed" : 'you owe'}</p>
                   </div>
                 )}
-                {ex.created_by === myId && (
-                  <button onClick={() => void removeExpense(ex)} aria-label="Delete" className="icon-btn h-8 w-8 text-ink-300">
-                    <Trash2 size={14} />
-                  </button>
+                {mine && (
+                  <span className="flex shrink-0 items-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openEdit(ex)
+                      }}
+                      aria-label="Edit expense"
+                      className="icon-btn h-8 w-8 text-ink-300"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        void removeExpense(ex)
+                      }}
+                      aria-label="Delete expense"
+                      className="icon-btn h-8 w-8 text-ink-300"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </span>
                 )}
               </motion.li>
             )
@@ -454,8 +526,15 @@ export default function UsMoney() {
       )}
 
       {/* Add expense */}
-      <BottomSheet open={addOpen} onClose={() => setAddOpen(false)} title="Add an expense">
-        <form onSubmit={(e) => void addExpense(e)} className="max-h-[70dvh] space-y-4 overflow-y-auto pb-1">
+      <BottomSheet
+        open={addOpen}
+        onClose={() => {
+          setAddOpen(false)
+          setEditing(null)
+        }}
+        title={editing ? 'Edit expense' : 'Add an expense'}
+      >
+        <form onSubmit={(e) => void saveExpense(e)} className="max-h-[70dvh] space-y-4 overflow-y-auto pb-1">
           <input ref={scanRef} type="file" accept="image/*" hidden onChange={(e) => void scanReceipt(e)} />
           <button
             type="button"
@@ -603,8 +682,22 @@ export default function UsMoney() {
             )}
           </div>
           <button disabled={busy || !desc.trim() || !amount || !splitOk || !paidBy} className="btn-primary w-full py-3.5">
-            {busy ? 'Saving…' : 'Add expense'}
+            {busy ? 'Saving…' : editing ? 'Save changes' : 'Add expense'}
           </button>
+          {editing && (
+            <button
+              type="button"
+              onClick={() => {
+                const ex = editing
+                setAddOpen(false)
+                setEditing(null)
+                void removeExpense(ex)
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-sm font-semibold text-rose-500 dark:bg-rose-900/20"
+            >
+              <Trash2 size={15} /> Delete this expense
+            </button>
+          )}
         </form>
       </BottomSheet>
 
