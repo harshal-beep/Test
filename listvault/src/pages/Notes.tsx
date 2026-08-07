@@ -15,6 +15,7 @@ import { Lock, NotebookPen, Pin, Search } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
 import { NOTE_COLORS, noteColorKey } from '../lib/noteColors'
+import { useSpace } from '../context/SpaceContext'
 import { EmptyState, Page, Skeleton, useToast } from '../components/ui'
 
 function NoteCard({
@@ -63,6 +64,8 @@ function NoteCard({
 export default function Notes() {
   const navigate = useNavigate()
   const toast = useToast()
+  const { space } = useSpace()
+  const sid = space!.id
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('')
@@ -72,16 +75,17 @@ export default function Notes() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { delay: 200, tolerance: 8 } }))
 
   useEffect(() => {
+    setLoading(true)
     void load()
     const channel = supabase
-      .channel('notes')
+      .channel(`notes-${sid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_notes' }, () => void load())
       .subscribe()
     return () => void supabase.removeChannel(channel)
-  }, [])
+  }, [sid])
 
   async function load() {
-    const { data } = await supabase.from('lv_notes').select('*').order('position', { ascending: false })
+    const { data } = await supabase.from('lv_notes').select('*').eq('space_id', sid).order('position', { ascending: false })
     setNotes((data as Note[]) ?? [])
     setLoading(false)
   }

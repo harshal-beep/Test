@@ -5,6 +5,7 @@ import {
   Archive,
   CalendarDays,
   CheckSquare,
+  ChevronDown,
   Flame,
   Heart,
   ListTodo,
@@ -16,8 +17,10 @@ import {
   Wallet
 } from '../lib/icons'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import Avatar from './Avatar'
 import InstallPrompt from './InstallPrompt'
+import SpaceSwitcher from './SpaceSwitcher'
 import ThemeToggle from './ThemeToggle'
 import { ListComposer, TaskComposer } from './Composers'
 import { HabitComposer } from '../pages/Habits'
@@ -25,10 +28,6 @@ import { HabitComposer } from '../pages/Habits'
 const leftTabs = [
   { to: '/', label: 'Lists', Icon: ListTodo },
   { to: '/notes', label: 'Notes', Icon: StickyNote }
-]
-const rightTabs = [
-  { to: '/habits', label: 'Habits', Icon: Flame },
-  { to: '/us', label: 'Us', Icon: Heart }
 ]
 
 function Tab({ to, label, Icon }: { to: string; label: string; Icon: typeof ListTodo }) {
@@ -80,10 +79,32 @@ function SideLink({ to, label, Icon }: { to: string; label: string; Icon: typeof
   )
 }
 
+/** The wordmark doubles as the space switcher trigger. */
+function SpaceTrigger({ onOpen, className }: { onOpen: () => void; className?: string }) {
+  const { space, isCouple } = useSpace()
+  return (
+    <button onClick={onOpen} className={`flex min-w-0 items-center gap-1.5 ${className ?? ''}`}>
+      {isCouple ? (
+        <span className="truncate text-lg font-extrabold tracking-tight md:text-xl">
+          Ha<span className="text-brand-600">Maara</span>
+        </span>
+      ) : (
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="text-lg leading-none">{space?.emoji ?? '👥'}</span>
+          <span className="truncate text-lg font-extrabold tracking-tight md:text-xl">{space?.name}</span>
+        </span>
+      )}
+      <ChevronDown size={16} className="shrink-0 text-ink-400" />
+    </button>
+  )
+}
+
 export default function Layout({ children }: { children: ReactNode }) {
   const { profile } = useAuth()
+  const { isCouple } = useSpace()
   const navigate = useNavigate()
   const [fabOpen, setFabOpen] = useState(false)
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   const [composer, setComposer] = useState<'task' | 'list' | 'habit' | null>(null)
 
   const fabActions = [
@@ -93,11 +114,23 @@ export default function Layout({ children }: { children: ReactNode }) {
     { label: 'Habit', Icon: Flame, run: () => setComposer('habit') }
   ]
 
+  const rightTabs = isCouple
+    ? [
+        { to: '/habits', label: 'Habits', Icon: Flame },
+        { to: '/us', label: 'Us', Icon: Heart }
+      ]
+    : [
+        { to: '/money', label: 'Money', Icon: Wallet },
+        { to: '/habits', label: 'Habits', Icon: Flame }
+      ]
+
   const sideLinks = [
     ...leftTabs,
     { to: '/money', label: 'Money', Icon: Wallet },
     { to: '/calendar', label: 'Calendar', Icon: CalendarDays },
-    ...rightTabs,
+    { to: '/habits', label: 'Habits', Icon: Flame },
+    ...(isCouple ? [{ to: '/us', label: 'Us', Icon: Heart }] : []),
+    { to: '/space', label: 'Members', Icon: Users },
     { to: '/search', label: 'Search', Icon: Search },
     { to: '/archive', label: 'Archive', Icon: Archive }
   ]
@@ -106,9 +139,7 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-[100dvh] max-w-6xl">
       {/* Desktop sidebar — the "website version" navigation */}
       <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-ink-100/70 px-4 py-6 md:flex dark:border-ink-800/70">
-        <NavLink to="/" className="px-3.5 text-xl font-extrabold tracking-tight">
-          Ha<span className="text-brand-600">Maara</span>
-        </NavLink>
+        <SpaceTrigger onOpen={() => setSwitcherOpen(true)} className="px-3.5" />
 
         <nav className="mt-7 flex flex-col gap-1">
           {sideLinks.map((l) => (
@@ -150,9 +181,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <div className="flex min-h-[100dvh] min-w-0 flex-1 flex-col">
         {/* Mobile header */}
         <header className="sticky top-0 z-10 flex items-center justify-between bg-ink-50/80 px-5 pb-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] backdrop-blur-xl md:hidden dark:bg-ink-950/80">
-          <NavLink to="/" className="text-lg font-extrabold tracking-tight">
-            Ha<span className="text-brand-600">Maara</span>
-          </NavLink>
+          <SpaceTrigger onOpen={() => setSwitcherOpen(true)} />
           <span className="flex items-center gap-1.5">
             <button onClick={() => navigate('/search')} aria-label="Search" className="icon-btn">
               <Search size={19} />
@@ -232,6 +261,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         </nav>
       </div>
 
+      <SpaceSwitcher open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
       <TaskComposer open={composer === 'task'} onClose={() => setComposer(null)} />
       <ListComposer open={composer === 'list'} onClose={() => setComposer(null)} />
       <HabitComposer open={composer === 'habit'} onClose={() => setComposer(null)} />

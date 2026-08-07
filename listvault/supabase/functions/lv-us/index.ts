@@ -208,7 +208,7 @@ async function gatherAiEvents(apiKey: string, model: string): Promise<EventRow[]
 
 /** Merge new finds into the pool and drop what's past — never a full wipe,
  * so per-person hides survive refreshes. */
-async function mergeEvents(admin: SupabaseClient, rows: EventRow[], source: string): Promise<string | null> {
+async function mergeEvents(admin: SupabaseClient, rows: EventRow[], source: string, spaceId: string): Promise<string | null> {
   await admin.from('lv_events').delete().lt('starts_on', istToday())
   await admin
     .from('lv_events')
@@ -217,7 +217,7 @@ async function mergeEvents(admin: SupabaseClient, rows: EventRow[], source: stri
     .lt('fetched_at', new Date(Date.now() - 7 * 86400000).toISOString())
   const { error } = await admin
     .from('lv_events')
-    .upsert(rows.map((r) => ({ ...r, source, fetched_at: new Date().toISOString() })), {
+    .upsert(rows.map((r) => ({ ...r, source, space_id: spaceId, fetched_at: new Date().toISOString() })), {
       onConflict: 'title,starts_on',
       ignoreDuplicates: true
     })
@@ -355,11 +355,13 @@ function reasonFor(a: UserModel, b: UserModel, ev: { category: string | null; pr
 async function historySignals(
   admin: SupabaseClient,
   apiKey: string,
-  model: string
+  model: string,
+  spaceId: string
 ): Promise<{ user_id: string; category: string; created_at: string }[]> {
   const { data: items } = await admin
     .from('lv_items')
-    .select('text, checked_by, checked_at')
+    .select('text, checked_by, checked_at, list:lv_lists!inner(space_id)')
+    .eq('list.space_id', spaceId)
     .eq('checked', true)
     .not('checked_at', 'is', null)
     .not('checked_by', 'is', null)
@@ -379,17 +381,23 @@ async function historySignals(
 }
 
 /** Score cached events for the couple; writes score + explainable reason. */
-async function rankEvents(admin: SupabaseClient, apiKey: string, model: string) {
-  const [{ data: events }, { data: profiles }, { data: signals }, history] = await Promise.all([
-    admin.from('lv_events').select('id, category, price_text').limit(100),
-    admin.from('lv_profiles').select('id, display_name, tastes'),
+async function rankEvents(admin: SupabaseClient, apiKey: string, model: string, spaceId: string) {
+  const [{ data: events }, { data: memberRows }, { data: signals }, history] = await Promise.all([
+    admin.from('lv_events').select('id, category, price_text').eq('space_id', spaceId).limit(100),
+    admin
+      .from('lv_space_members')
+      .select('profile:lv_profiles(id, display_name, tastes)')
+      .eq('space_id', spaceId),
     admin
       .from('lv_taste_signals')
       .select('user_id, category, weight, created_at')
       .gte('created_at', new Date(Date.now() - 180 * 86400000).toISOString()),
-    historySignals(admin, apiKey, model)
+    historySignals(admin, apiKey, model, spaceId)
   ])
-  if (!events || events.length === 0 || !profiles || profiles.length === 0) return
+  const profiles = (memberRows ?? [])
+    .map((m) => m.profile as unknown as { id: string; display_name: string; tastes: unknown } | null)
+    .filter(Boolean) as { id: string; display_name: string; tastes: unknown }[]
+  if (!events || events.length === 0 || profiles.length === 0) return
 
   const users: UserModel[] = profiles.slice(0, 2).map((p) => {
     const own = (signals ?? []).filter((s) => s.user_id === p.id)
@@ -429,6 +437,17 @@ Deno.serve(async (req) => {
     if (userErr || !userData.user) return json({ error: 'not signed in' }, 401)
 
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+    // Space gating: every action needs some membership; the Us features
+    // (events, questions) are exclusive to the couple space.
+    const { data: myMemberships } = await admin
+      .from('lv_space_members')
+      .select('space_id, space:lv_spaces(kind)')
+      .eq('user_id', userData.user.id)
+    if (!myMemberships?.length) return json({ error: 'join a space first' }, 403)
+    const coupleSpaceId =
+      (myMemberships as { space_id: string; space: { kind: string } | null }[]).find((m) => m.space?.kind === 'couple')
+        ?.space_id ?? null
     const { data: secretRows } = await admin
       .from('lv_secrets')
       .select('key, value')
@@ -507,6 +526,10 @@ Reply with ONLY that JSON object. If it is not a readable bill, reply {"error": 
       return json({ error: `Transcription failed: ${lastErr}` }, 502)
     }
 
+    if (action === 'refresh_events' || action === 'more_events' || action === 'rerank_events' || action === 'more_questions') {
+      if (!coupleSpaceId) return json({ error: 'couple space only' }, 403)
+    }
+
     if (action === 'refresh_events') {
       // Staleness gate lives server-side so many clients can't stampede it.
       const { data: newest } = await admin
@@ -533,10 +556,10 @@ Reply with ONLY that JSON object. If it is not a readable bill, reply {"error": 
       }
       if (rows.length === 0) return json({ error: 'no events found this time' }, 502)
 
-      const mergeErr = await mergeEvents(admin, rows, source)
+      const mergeErr = await mergeEvents(admin, rows, source, coupleSpaceId!)
       if (mergeErr) return json({ error: mergeErr }, 500)
 
-      await rankEvents(admin, apiKey, model)
+      await rankEvents(admin, apiKey, model, coupleSpaceId!)
       return json({ result: 'refreshed', count: rows.length, source })
     }
 
@@ -553,14 +576,14 @@ Reply with ONLY that JSON object. If it is not a readable bill, reply {"error": 
       }
       const rows = await gatherAiEvents(apiKey, model)
       if (rows.length === 0) return json({ error: 'no events found this time' }, 502)
-      const mergeErr = await mergeEvents(admin, rows, 'ai')
+      const mergeErr = await mergeEvents(admin, rows, 'ai', coupleSpaceId!)
       if (mergeErr) return json({ error: mergeErr }, 500)
-      await rankEvents(admin, apiKey, model)
+      await rankEvents(admin, apiKey, model, coupleSpaceId!)
       return json({ result: 'refreshed', count: rows.length })
     }
 
     if (action === 'rerank_events') {
-      await rankEvents(admin, apiKey, model)
+      await rankEvents(admin, apiKey, model, coupleSpaceId!)
       return json({ result: 'reranked' })
     }
 

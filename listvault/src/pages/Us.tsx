@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { supabase } from '../lib/supabase'
-import { Profile } from '../lib/types'
+import { useSpace } from '../context/SpaceContext'
 import MemoriesSection from './Memories'
 import UsQuestions from '../components/UsQuestions'
 import UsDiscover from '../components/UsDiscover'
@@ -17,19 +16,12 @@ const SEGMENTS: { key: Segment; label: string }[] = [
   { key: 'memories', label: 'Memories' }
 ]
 
-/** The emotional center of the app: know each other, plan, remember. */
+/** The emotional center of the app: know each other, plan, remember. Couple space only. */
 export default function Us() {
   const [segment, setSegment] = useState<Segment>(
     () => (sessionStorage.getItem('lv-us-segment') as Segment) || 'questions'
   )
-  const [household, setHousehold] = useState<Profile[]>([])
-
-  useEffect(() => {
-    supabase
-      .from('lv_profiles')
-      .select('*')
-      .then(({ data }) => setHousehold((data as Profile[]) ?? []))
-  }, [])
+  const { members } = useSpace()
 
   function switchTo(s: Segment) {
     setSegment(s)
@@ -62,9 +54,9 @@ export default function Us() {
         ))}
       </div>
 
-      {segment === 'questions' && <UsQuestions household={household} />}
-      {segment === 'discover' && <UsDiscover household={household} />}
-      {segment === 'money' && <UsMoney household={household} />}
+      {segment === 'questions' && <UsQuestions household={members} />}
+      {segment === 'discover' && <UsDiscover household={members} />}
+      {segment === 'money' && <UsMoney />}
       {segment === 'memories' && <MemoriesSection />}
     </Page>
   )

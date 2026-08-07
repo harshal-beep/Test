@@ -1,16 +1,19 @@
+/**
+ * The shared ledger — Splitwise-style for any space size. The couple space is
+ * just a two-member group: same shares engine, same UI, friendlier copy.
+ */
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import confetti from 'canvas-confetti'
 import { Camera, ExternalLink, Plus, Search, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { processPhoto } from '../lib/images'
-import { computeBalance, inr } from '../lib/money'
-import { EXPENSE_CATEGORIES, Expense, Profile, Settlement } from '../lib/types'
+import { computeNets, equalShares, inr, myExpenseDelta, simplifyDebts } from '../lib/money'
+import { EXPENSE_CATEGORIES, Expense, Settlement } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import Avatar from './Avatar'
 import { BottomSheet, EmptyState, Skeleton, stagger, useConfirm, useToast } from './ui'
-
-type Split = 'half' | 'full' | 'custom'
 
 const catMeta = (key: string | null) => EXPENSE_CATEGORIES.find((c) => c.key === key)
 
@@ -22,27 +25,32 @@ const blobToDataUrl = (blob: Blob) =>
     r.readAsDataURL(blob)
   })
 
-/** Splitwise for two: who paid, what's owed, one balance, settle up. */
-export default function UsMoney({ household }: { household: Profile[] }) {
+export default function UsMoney() {
   const { session } = useAuth()
+  const { space, members, isCouple } = useSpace()
+  const sid = space!.id
   const toast = useToast()
   const confirm = useConfirm()
   const myId = session?.user.id
-  const partner = household.find((p) => p.id !== myId)
+  const two = members.length === 2
+  const partner = two ? members.find((p) => p.id !== myId) : undefined
   const partnerName = partner?.display_name?.split(' ')[0] || 'Partner'
+  const firstNameOf = (id: string | null | undefined) =>
+    id === myId ? 'You' : members.find((p) => p.id === id)?.display_name?.split(' ')[0] || 'Someone'
 
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [settlements, setSettlements] = useState<Settlement[]>([])
   const [loading, setLoading] = useState(true)
   const [addOpen, setAddOpen] = useState(false)
-  const [settleOpen, setSettleOpen] = useState(false)
+  const [settle, setSettle] = useState<{ from: string; to: string; amount: number } | null>(null)
 
   // add-expense form
   const [desc, setDesc] = useState('')
   const [amount, setAmount] = useState('')
-  const [paidBy, setPaidBy] = useState<'me' | 'partner'>('me')
-  const [split, setSplit] = useState<Split>('half')
-  const [customOwed, setCustomOwed] = useState('')
+  const [paidBy, setPaidBy] = useState<string | null>(null)
+  const [inSplit, setInSplit] = useState<Set<string>>(new Set())
+  const [mode, setMode] = useState<'equal' | 'custom'>('equal')
+  const [customAmts, setCustomAmts] = useState<Record<string, string>>({})
   const [category, setCategory] = useState<string>('food')
   const [items, setItems] = useState<{ name: string; price: number }[]>([])
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
@@ -52,26 +60,36 @@ export default function UsMoney({ household }: { household: Profile[] }) {
   const scanRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    setLoading(true)
     void load()
     const channel = supabase
-      .channel('us-money')
+      .channel(`money-${sid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_expenses' }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_expense_shares' }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_settlements' }, () => void load())
       .subscribe()
     return () => void supabase.removeChannel(channel)
-  }, [])
+  }, [sid])
 
   async function load() {
     const [e, st] = await Promise.all([
-      supabase.from('lv_expenses').select('*').order('spent_on', { ascending: false }).order('created_at', { ascending: false }).limit(100),
-      supabase.from('lv_settlements').select('*').order('created_at', { ascending: false }).limit(100)
+      supabase
+        .from('lv_expenses')
+        .select('*, shares:lv_expense_shares(*)')
+        .eq('space_id', sid)
+        .order('spent_on', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(150),
+      supabase.from('lv_settlements').select('*').eq('space_id', sid).order('created_at', { ascending: false }).limit(100)
     ])
-    setExpenses(((e.data as Expense[]) ?? []).map((x) => ({ ...x, amount: Number(x.amount), owed_amount: Number(x.owed_amount) })))
+    setExpenses(((e.data as Expense[]) ?? []).map((x) => ({ ...x, amount: Number(x.amount) })))
     setSettlements(((st.data as Settlement[]) ?? []).map((x) => ({ ...x, amount: Number(x.amount) })))
     setLoading(false)
   }
 
-  const balance = useMemo(() => computeBalance(expenses, settlements, myId), [expenses, settlements, myId])
+  const nets = useMemo(() => computeNets(expenses, settlements), [expenses, settlements])
+  const myNet = myId ? (nets.get(myId) ?? 0) : 0
+  const transfers = useMemo(() => simplifyDebts(nets), [nets])
 
   /** Splitwise-Pro-style "charts": this month's totals and category split. */
   const insights = useMemo(() => {
@@ -96,6 +114,14 @@ export default function UsMoney({ household }: { household: Profile[] }) {
       (e) => e.description.toLowerCase().includes(q) || (e.category ?? '').includes(q)
     )
   }, [expenses, query])
+
+  function openAdd() {
+    setPaidBy(myId ?? null)
+    setInSplit(new Set(members.map((m) => m.id)))
+    setMode('equal')
+    setCustomAmts({})
+    setAddOpen(true)
+  }
 
   /** Photo of the bill → AI fills the form; original stored as the receipt. */
   async function scanReceipt(e: ChangeEvent<HTMLInputElement>) {
@@ -132,61 +158,75 @@ export default function UsMoney({ household }: { household: Profile[] }) {
     setScanning(false)
   }
 
+  const amt = parseFloat(amount) || 0
+  const splitIds = members.filter((m) => inSplit.has(m.id)).map((m) => m.id)
+  const customTotal = splitIds.reduce((s, id) => s + (parseFloat(customAmts[id] ?? '') || 0), 0)
+  const remaining = Math.round((amt - customTotal) * 100) / 100
+  const splitOk = mode === 'equal' ? splitIds.length > 0 : splitIds.length > 0 && Math.abs(remaining) < 0.01
+
   async function addExpense(e: FormEvent) {
     e.preventDefault()
-    if (!myId || !partner) return
-    const amt = parseFloat(amount)
-    if (!desc.trim() || !isFinite(amt) || amt <= 0) return
-    const owed =
-      split === 'half' ? Math.round((amt / 2) * 100) / 100 : split === 'full' ? amt : Math.min(amt, parseFloat(customOwed) || 0)
-    if (split === 'custom' && !(owed > 0)) {
-      toast('Enter what the other person owes')
+    if (!myId || !paidBy) return
+    if (!desc.trim() || !isFinite(amt) || amt <= 0 || !splitOk) return
+    const shareMap =
+      mode === 'equal'
+        ? equalShares(amt, splitIds)
+        : new Map(splitIds.map((id) => [id, parseFloat(customAmts[id] ?? '') || 0]))
+    setBusy(true)
+    const { data: created, error } = await supabase
+      .from('lv_expenses')
+      .insert({
+        space_id: sid,
+        description: desc.trim().slice(0, 200),
+        amount: amt,
+        paid_by: paidBy,
+        category,
+        receipt_url: receiptUrl,
+        items: items.length ? items : null,
+        created_by: myId
+      })
+      .select()
+      .single()
+    if (error || !created) {
+      setBusy(false)
+      toast(error?.message ?? 'Could not save')
       return
     }
-    setBusy(true)
-    const { error } = await supabase.from('lv_expenses').insert({
-      description: desc.trim().slice(0, 200),
-      amount: amt,
-      paid_by: paidBy === 'me' ? myId : partner.id,
-      owed_amount: owed,
-      category,
-      receipt_url: receiptUrl,
-      items: items.length ? items : null,
-      created_by: myId
-    })
+    const shareRows = [...shareMap.entries()]
+      .filter(([, v]) => v > 0)
+      .map(([user_id, v]) => ({ expense_id: (created as Expense).id, user_id, amount: v }))
+    const { error: shareErr } = await supabase.from('lv_expense_shares').insert(shareRows)
     setBusy(false)
-    if (error) toast(error.message)
-    else {
-      setAddOpen(false)
-      setDesc('')
-      setAmount('')
-      setCustomOwed('')
-      setSplit('half')
-      setPaidBy('me')
-      setCategory('food')
-      setItems([])
-      setReceiptUrl(null)
-      toast('Expense added 💸')
+    if (shareErr) {
+      await supabase.from('lv_expenses').delete().eq('id', (created as Expense).id)
+      toast(shareErr.message)
+      return
     }
+    setAddOpen(false)
+    setDesc('')
+    setAmount('')
+    setCategory('food')
+    setItems([])
+    setReceiptUrl(null)
+    toast('Expense added 💸')
   }
 
-  async function settleUp() {
-    if (!myId || !partner || balance === 0) return
-    const debtor = balance > 0 ? partner.id : myId
-    const creditor = balance > 0 ? myId : partner.id
+  async function recordSettlement() {
+    if (!myId || !settle) return
     setBusy(true)
     const { error } = await supabase.from('lv_settlements').insert({
-      from_user: debtor,
-      to_user: creditor,
-      amount: Math.abs(balance),
+      space_id: sid,
+      from_user: settle.from,
+      to_user: settle.to,
+      amount: settle.amount,
       created_by: myId
     })
     setBusy(false)
     if (error) toast(error.message)
     else {
-      setSettleOpen(false)
+      setSettle(null)
       confetti({ particleCount: 90, spread: 70, origin: { y: 0.7 }, colors: ['#aba3f0', '#a8e6c9', '#ffe0a3'] })
-      toast('All settled ✅')
+      toast('Settled ✅')
     }
   }
 
@@ -195,7 +235,7 @@ export default function UsMoney({ household }: { household: Profile[] }) {
     await supabase.from('lv_expenses').delete().eq('id', ex.id)
   }
 
-  const profileOf = (id: string) => household.find((p) => p.id === id)
+  const profileOf = (id: string) => members.find((p) => p.id === id)
 
   if (loading)
     return (
@@ -206,33 +246,98 @@ export default function UsMoney({ household }: { household: Profile[] }) {
       </div>
     )
 
+  const settled = Math.abs(myNet) < 0.01 && transfers.length === 0
+
   return (
     <div className="space-y-5">
       {/* Balance card */}
       <div className="surface space-y-3 p-5 text-center">
-        {balance === 0 ? (
+        {settled ? (
           <>
             <p className="text-[22px] font-extrabold">All settled ✅</p>
-            <p className="text-sm text-ink-500 dark:text-ink-400">No one owes anyone. Peak romance.</p>
+            <p className="text-sm text-ink-500 dark:text-ink-400">
+              {isCouple ? 'No one owes anyone. Peak romance.' : 'No one owes anyone. Group goals.'}
+            </p>
+          </>
+        ) : two ? (
+          <>
+            <p className="text-sm font-medium text-ink-500 dark:text-ink-400">
+              {myNet > 0 ? `${partnerName} owes you` : `You owe ${partnerName}`}
+            </p>
+            <p className={`text-[34px] font-extrabold leading-none ${myNet > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+              {inr(myNet)}
+            </p>
+            <button
+              onClick={() =>
+                setSettle(
+                  myNet > 0
+                    ? { from: partner!.id, to: myId!, amount: Math.abs(myNet) }
+                    : { from: myId!, to: partner!.id, amount: Math.abs(myNet) }
+                )
+              }
+              className="btn-ghost mx-auto border border-brand-200 px-5 py-2 text-sm dark:border-brand-800"
+            >
+              Settle up
+            </button>
           </>
         ) : (
           <>
             <p className="text-sm font-medium text-ink-500 dark:text-ink-400">
-              {balance > 0 ? `${partnerName} owes you` : `You owe ${partnerName}`}
+              {Math.abs(myNet) < 0.01 ? "You're square" : myNet > 0 ? "You're owed" : 'You owe'}
             </p>
-            <p className={`text-[34px] font-extrabold leading-none ${balance > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              {inr(balance)}
+            <p
+              className={`text-[34px] font-extrabold leading-none ${
+                Math.abs(myNet) < 0.01 ? '' : myNet > 0 ? 'text-emerald-600' : 'text-rose-500'
+              }`}
+            >
+              {inr(myNet)}
             </p>
-            <button onClick={() => setSettleOpen(true)} className="btn-ghost mx-auto border border-brand-200 px-5 py-2 text-sm dark:border-brand-800">
-              Settle up
-            </button>
+            <div className="space-y-1 pt-1 text-left">
+              {members
+                .filter((m) => m.id !== myId && Math.abs(nets.get(m.id) ?? 0) >= 0.01)
+                .map((m) => {
+                  const n = nets.get(m.id) ?? 0
+                  return (
+                    <p key={m.id} className="flex items-center gap-2 text-xs text-ink-500 dark:text-ink-400">
+                      <Avatar profile={m} size={5} />
+                      <span className="flex-1 truncate">{m.display_name?.split(' ')[0]}</span>
+                      <span className={n > 0 ? 'font-semibold text-emerald-600' : 'font-semibold text-rose-500'}>
+                        {n > 0 ? 'is owed' : 'owes'} {inr(n)}
+                      </span>
+                    </p>
+                  )
+                })}
+            </div>
           </>
         )}
       </div>
 
+      {/* Simplify debts — the minimum payments that clear the group */}
+      {!two && transfers.length > 0 && (
+        <div className="surface space-y-2 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Settle with fewest payments</p>
+          {transfers.map((t, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <span className="min-w-0 flex-1 truncate">
+                <strong>{firstNameOf(t.from)}</strong> pays <strong>{firstNameOf(t.to)}</strong>
+              </span>
+              <span className="font-bold">{inr(t.amount)}</span>
+              {(t.from === myId || t.to === myId) && (
+                <button
+                  onClick={() => setSettle({ from: t.from, to: t.to, amount: t.amount })}
+                  className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-800/30 dark:text-brand-200"
+                >
+                  Mark paid
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <motion.button
         whileTap={{ scale: 0.97 }}
-        onClick={() => setAddOpen(true)}
+        onClick={openAdd}
         className="btn-primary flex w-full items-center justify-center gap-2 py-3.5"
       >
         <Plus size={18} /> Add an expense
@@ -248,7 +353,7 @@ export default function UsMoney({ household }: { household: Profile[] }) {
             <p className="text-lg font-extrabold">{inr(insights.total)}</p>
           </div>
           <p className="text-xs text-ink-500 dark:text-ink-400">
-            You paid {inr(insights.mine)} · {partnerName} paid {inr(insights.theirs)}
+            You paid {inr(insights.mine)} · {two ? partnerName : 'others'} paid {inr(insights.theirs)}
           </p>
           <div className="space-y-1.5">
             {insights.cats.map(([k, v]) => {
@@ -297,7 +402,8 @@ export default function UsMoney({ household }: { household: Profile[] }) {
         <motion.ul variants={stagger.container} initial="initial" animate="animate" className="space-y-2.5">
           {visibleExpenses.map((ex) => {
             const payer = profileOf(ex.paid_by)
-            const paidByMe = ex.paid_by === myId
+            const delta = myExpenseDelta(ex, myId)
+            const ways = ex.shares?.length ?? 0
             return (
               <motion.li key={ex.id} variants={stagger.item} className="surface flex items-center gap-3 p-3.5">
                 <span className="text-xl leading-none">{catMeta(ex.category)?.emoji ?? '📦'}</span>
@@ -305,7 +411,8 @@ export default function UsMoney({ household }: { household: Profile[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{ex.description}</p>
                   <p className="text-xs text-ink-500 dark:text-ink-400">
-                    {paidByMe ? 'You' : partnerName} paid {inr(ex.amount)} ·{' '}
+                    {firstNameOf(ex.paid_by)} paid {inr(ex.amount)}
+                    {ways > 1 && !two ? ` · split ${ways} ways` : ''} ·{' '}
                     {new Date(ex.spent_on).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
                     {ex.receipt_url && (
                       <>
@@ -317,13 +424,15 @@ export default function UsMoney({ household }: { household: Profile[] }) {
                     )}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className={`text-sm font-bold ${paidByMe ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {paidByMe ? '+' : '−'}
-                    {inr(ex.owed_amount)}
-                  </p>
-                  <p className="text-[10px] text-ink-400">{paidByMe ? `${partnerName} owes` : 'you owe'}</p>
-                </div>
+                {Math.abs(delta) >= 0.01 && (
+                  <div className="text-right">
+                    <p className={`text-sm font-bold ${delta > 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      {delta > 0 ? '+' : '−'}
+                      {inr(delta)}
+                    </p>
+                    <p className="text-[10px] text-ink-400">{delta > 0 ? "you're owed" : 'you owe'}</p>
+                  </div>
+                )}
                 {ex.created_by === myId && (
                   <button onClick={() => void removeExpense(ex)} aria-label="Delete" className="icon-btn h-8 w-8 text-ink-300">
                     <Trash2 size={14} />
@@ -335,7 +444,8 @@ export default function UsMoney({ household }: { household: Profile[] }) {
           {settlements.map((s) => (
             <li key={s.id} className="flex items-center gap-2 px-3 py-1 text-xs text-ink-400">
               <span className="flex-1">
-                {s.from_user === myId ? 'You' : partnerName} paid {s.to_user === myId ? 'you' : partnerName} {inr(s.amount)} · settled
+                {firstNameOf(s.from_user)} paid {firstNameOf(s.to_user) === 'You' ? 'you' : firstNameOf(s.to_user)}{' '}
+                {inr(s.amount)} · settled
               </span>
               <span>{new Date(s.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}</span>
             </li>
@@ -404,84 +514,120 @@ export default function UsMoney({ household }: { household: Profile[] }) {
           </div>
           <div className="space-y-2">
             <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Paid by</p>
-            <div className="flex gap-2">
-              {(
-                [
-                  { key: 'me', label: 'You' },
-                  { key: 'partner', label: partnerName }
-                ] as const
-              ).map((o) => (
+            <div className="flex flex-wrap gap-2">
+              {members.map((m) => (
                 <button
-                  key={o.key}
+                  key={m.id}
                   type="button"
-                  onClick={() => setPaidBy(o.key)}
-                  className={`flex-1 rounded-full py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
-                    paidBy === o.key
+                  onClick={() => setPaidBy(m.id)}
+                  className={`rounded-full px-3.5 py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
+                    paidBy === m.id
                       ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                       : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'
                   }`}
                 >
-                  {o.label}
+                  {m.id === myId ? 'You' : m.display_name?.split(' ')[0]}
                 </button>
               ))}
             </div>
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Split</p>
-            <div className="flex gap-2">
-              {(
-                [
-                  { key: 'half', label: '50 / 50' },
-                  { key: 'full', label: `${paidBy === 'me' ? partnerName : 'You'} owe${paidBy === 'me' ? 's' : ''} all` },
-                  { key: 'custom', label: 'Custom' }
-                ] as const
-              ).map((o) => (
-                <button
-                  key={o.key}
-                  type="button"
-                  onClick={() => setSplit(o.key)}
-                  className={`flex-1 rounded-full py-2.5 text-[13px] font-semibold transition-all active:scale-95 ${
-                    split === o.key
-                      ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
-                      : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'
-                  }`}
-                >
-                  {o.label}
-                </button>
-              ))}
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Split between</p>
+              <div className="flex rounded-full bg-ink-100 p-0.5 dark:bg-ink-800">
+                {(['equal', 'custom'] as const).map((k) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setMode(k)}
+                    className={`rounded-full px-3 py-1 text-[11px] font-bold capitalize ${
+                      mode === k ? 'bg-white shadow-card dark:bg-ink-600' : 'text-ink-400'
+                    }`}
+                  >
+                    {k === 'equal' ? 'Equally' : 'Unequal'}
+                  </button>
+                ))}
+              </div>
             </div>
-            {split === 'custom' && (
-              <input
-                value={customOwed}
-                onChange={(e) => setCustomOwed(e.target.value.replace(/[^\d.]/g, ''))}
-                placeholder={`${paidBy === 'me' ? partnerName : 'You'} owe${paidBy === 'me' ? 's' : ''} ₹…`}
-                inputMode="decimal"
-                className="field"
-              />
+            <div className="space-y-1.5">
+              {members.map((m) => {
+                const on = inSplit.has(m.id)
+                const equal = mode === 'equal' && on && splitIds.length > 0 ? equalShares(amt, splitIds).get(m.id) : undefined
+                return (
+                  <div key={m.id} className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInSplit((prev) => {
+                          const next = new Set(prev)
+                          if (next.has(m.id)) next.delete(m.id)
+                          else next.add(m.id)
+                          return next
+                        })
+                      }
+                      className={`flex flex-1 items-center gap-2.5 rounded-2xl px-3 py-2 text-left text-sm transition-colors ${
+                        on ? 'bg-brand-50 dark:bg-brand-800/25' : 'bg-ink-50 opacity-60 dark:bg-ink-800/40'
+                      }`}
+                    >
+                      <Avatar profile={m} size={6} />
+                      <span className="flex-1 truncate font-semibold">
+                        {m.id === myId ? 'You' : m.display_name?.split(' ')[0]}
+                      </span>
+                      {mode === 'equal' && on && amt > 0 && (
+                        <span className="text-xs font-bold text-brand-600">{inr(equal ?? 0)}</span>
+                      )}
+                    </button>
+                    {mode === 'custom' && on && (
+                      <input
+                        value={customAmts[m.id] ?? ''}
+                        onChange={(e) =>
+                          setCustomAmts((prev) => ({ ...prev, [m.id]: e.target.value.replace(/[^\d.]/g, '') }))
+                        }
+                        placeholder="₹"
+                        inputMode="decimal"
+                        className="field w-24 py-2 text-right text-sm"
+                      />
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {mode === 'custom' && amt > 0 && (
+              <p className={`text-right text-xs font-semibold ${Math.abs(remaining) < 0.01 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {Math.abs(remaining) < 0.01
+                  ? 'Adds up ✓'
+                  : remaining > 0
+                    ? `${inr(remaining)} left to assign`
+                    : `${inr(remaining)} over the total`}
+              </p>
             )}
           </div>
-          <button disabled={busy || !desc.trim() || !amount} className="btn-primary w-full py-3.5">
+          <button disabled={busy || !desc.trim() || !amount || !splitOk || !paidBy} className="btn-primary w-full py-3.5">
             {busy ? 'Saving…' : 'Add expense'}
           </button>
         </form>
       </BottomSheet>
 
       {/* Settle up */}
-      <BottomSheet open={settleOpen} onClose={() => setSettleOpen(false)} title="Settle up">
-        <div className="space-y-4 pb-1 text-center">
-          <p className="text-sm text-ink-500 dark:text-ink-400">
-            Record that {balance > 0 ? partnerName : 'you'} paid {balance > 0 ? 'you' : partnerName}{' '}
-            <strong className="text-ink-900 dark:text-ink-100">{inr(balance)}</strong> (outside the app — UPI, cash, love).
-          </p>
-          <div className="flex gap-3">
-            <button onClick={() => setSettleOpen(false)} className="flex-1 rounded-full bg-ink-100 py-3 font-semibold dark:bg-ink-800">
-              Cancel
-            </button>
-            <button onClick={() => void settleUp()} disabled={busy} className="btn-primary flex-1 py-3">
-              {busy ? 'Saving…' : 'Mark settled'}
-            </button>
+      <BottomSheet open={!!settle} onClose={() => setSettle(null)} title="Settle up">
+        {settle && (
+          <div className="space-y-4 pb-1 text-center">
+            <p className="text-sm text-ink-500 dark:text-ink-400">
+              Record that {firstNameOf(settle.from) === 'You' ? 'you' : firstNameOf(settle.from)} paid{' '}
+              {firstNameOf(settle.to) === 'You' ? 'you' : firstNameOf(settle.to)}{' '}
+              <strong className="text-ink-900 dark:text-ink-100">{inr(settle.amount)}</strong> (outside the app — UPI, cash,
+              love).
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setSettle(null)} className="flex-1 rounded-full bg-ink-100 py-3 font-semibold dark:bg-ink-800">
+                Cancel
+              </button>
+              <button onClick={() => void recordSettlement()} disabled={busy} className="btn-primary flex-1 py-3">
+                {busy ? 'Saving…' : 'Mark settled'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </BottomSheet>
     </div>
   )

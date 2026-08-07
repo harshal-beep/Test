@@ -5,6 +5,7 @@ import { Flame, Pencil, Plus, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Habit, HabitCheck, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import Avatar from '../components/Avatar'
 import {
   AnimatedCheck,
@@ -74,35 +75,39 @@ function weekStreakOf(days: Set<string>, target: number): number {
 
 export default function Habits() {
   const { session } = useAuth()
+  const { space, members } = useSpace()
+  const sid = space!.id
   const confirm = useConfirm()
   const toast = useToast()
   const [habits, setHabits] = useState<Habit[]>([])
   const [checks, setChecks] = useState<HabitCheck[]>([])
-  const [profiles, setProfiles] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
   const [editing, setEditing] = useState<Habit | null>(null)
   const [manage, setManage] = useState<Habit | null>(null)
 
   useEffect(() => {
+    setLoading(true)
     void load()
     const channel = supabase
-      .channel('habits')
+      .channel(`habits-${sid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_habits' }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_habit_checks' }, () => void load())
       .subscribe()
     return () => void supabase.removeChannel(channel)
-  }, [])
+  }, [sid])
 
   async function load() {
-    const [h, c, p] = await Promise.all([
-      supabase.from('lv_habits').select('*').order('created_at'),
-      supabase.from('lv_habit_checks').select('habit_id, day, user_id').gte('day', isoDay(60)),
-      supabase.from('lv_profiles').select('*')
+    const [h, c] = await Promise.all([
+      supabase.from('lv_habits').select('*').eq('space_id', sid).order('created_at'),
+      supabase
+        .from('lv_habit_checks')
+        .select('habit_id, day, user_id, habit:lv_habits!inner(space_id)')
+        .eq('habit.space_id', sid)
+        .gte('day', isoDay(60))
     ])
     setHabits((h.data as Habit[]) ?? [])
-    setChecks((c.data as HabitCheck[]) ?? [])
-    setProfiles((p.data as Profile[]) ?? [])
+    setChecks((c.data as unknown as HabitCheck[]) ?? [])
     setLoading(false)
   }
 
@@ -127,11 +132,11 @@ export default function Habits() {
     for (const h of habits) {
       const users = allByHabit.get(h.id) ?? new Map<string, Set<string>>()
       const mine = users.get(myId ?? '') ?? new Set<string>()
-      const todayOthers = profiles.filter((p) => p.id !== myId && users.get(p.id)?.has(today))
+      const todayOthers = members.filter((p) => p.id !== myId && users.get(p.id)?.has(today))
       map.set(h.id, { mine, todayOthers })
     }
     return map
-  }, [habits, allByHabit, profiles, myId, today])
+  }, [habits, allByHabit, members, myId, today])
 
   /** Toggle any day in the visible week — today or a forgotten past day. */
   async function toggleDay(habit: Habit, day: string) {
@@ -309,7 +314,7 @@ export default function Habits() {
               Hamaara habit — everyone tracks their own streak on the same habit.
             </p>
             <ul className="space-y-3.5">
-              {profiles.map((p) => {
+              {members.map((p) => {
                 const days = allByHabit.get(manage.id)?.get(p.id) ?? new Set<string>()
                 const s = streakOf(days)
                 return (
@@ -382,6 +387,7 @@ export function HabitComposer({
   habit?: Habit | null
 }) {
   const { session } = useAuth()
+  const { space } = useSpace()
   const toast = useToast()
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState(HABIT_EMOJIS[0])
@@ -405,7 +411,7 @@ export function HabitComposer({
     const row = { name: name.trim(), emoji, color, target_per_week: target }
     const { error } = habit
       ? await supabase.from('lv_habits').update(row).eq('id', habit.id)
-      : await supabase.from('lv_habits').insert({ ...row, owner_id: session.user.id })
+      : await supabase.from('lv_habits').insert({ ...row, owner_id: session.user.id, space_id: space!.id })
     setBusy(false)
     if (error) toast(error.message)
     else {

@@ -2,12 +2,14 @@ import { FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { SearchResult } from '../lib/types'
+import { useSpace } from '../context/SpaceContext'
 import { Page } from '../components/ui'
 
 const YEARS = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i)
 
 /** Full-text search over list names + item text (PRD 5.3). */
 export default function Search() {
+  const { space } = useSpace()
   const [query, setQuery] = useState('')
   const [status, setStatus] = useState<'all' | 'active' | 'archived'>('all')
   const [year, setYear] = useState<number | ''>('')
@@ -21,7 +23,8 @@ export default function Search() {
     const { data, error: err } = await supabase.rpc('lv_search_lists', {
       p_query: query.trim(),
       p_status: status,
-      p_year: year === '' ? null : year
+      p_year: year === '' ? null : year,
+      p_space: space?.id ?? null
     })
     if (err) setError(err.message)
     else setResults((data as SearchResult[]) ?? [])

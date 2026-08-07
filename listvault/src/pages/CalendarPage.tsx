@@ -5,6 +5,7 @@ import { ArrowLeft, CalendarHeart, Plus, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { Milestone } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import { BottomSheet, Page, Skeleton, useConfirm, useToast } from './../components/ui'
 
 interface CalItem {
@@ -33,6 +34,8 @@ const iso = (d: Date) =>
 /** Plans, memories and milestones on one shared month grid. */
 export default function CalendarPage() {
   const { session } = useAuth()
+  const { space } = useSpace()
+  const sid = space!.id
   const toast = useToast()
   const confirm = useConfirm()
   const myId = session?.user.id
@@ -52,24 +55,26 @@ export default function CalendarPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
+    setLoading(true)
     void load()
     const channel = supabase
-      .channel('calendar')
+      .channel(`calendar-${sid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_items' }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_milestones' }, () => void load())
       .subscribe()
     return () => void supabase.removeChannel(channel)
-  }, [])
+  }, [sid])
 
   async function load() {
     const [it, ms] = await Promise.all([
       supabase
         .from('lv_items')
-        .select('id, list_id, text, planned_for, checked, checked_at')
+        .select('id, list_id, text, planned_for, checked, checked_at, list:lv_lists!inner(space_id)')
+        .eq('list.space_id', sid)
         .or('planned_for.not.is.null,checked_at.not.is.null'),
-      supabase.from('lv_milestones').select('*').order('date')
+      supabase.from('lv_milestones').select('*').eq('space_id', sid).order('date')
     ])
-    setItems((it.data as CalItem[]) ?? [])
+    setItems((it.data as unknown as CalItem[]) ?? [])
     setMilestones((ms.data as Milestone[]) ?? [])
     setLoading(false)
   }
@@ -131,7 +136,7 @@ export default function CalendarPage() {
     setBusy(true)
     const { error } = await supabase
       .from('lv_milestones')
-      .insert({ title: title.trim().slice(0, 120), emoji, date, yearly, created_by: myId })
+      .insert({ title: title.trim().slice(0, 120), emoji, date, yearly, created_by: myId, space_id: sid })
     setBusy(false)
     if (error) toast(error.message)
     else {

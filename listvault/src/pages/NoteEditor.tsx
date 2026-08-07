@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { Note } from '../lib/types'
 import { NOTE_COLOR_KEYS, NOTE_COLORS } from '../lib/noteColors'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import { Page, Skeleton, useConfirm, useToast } from '../components/ui'
 
 function timeAgo(iso: string): string {
@@ -37,6 +38,7 @@ export default function NoteEditor() {
   const [color, setColor] = useState<string | null>(null)
   const [editedBy, setEditedBy] = useState<string | null>(null)
   const [ownerId, setOwnerId] = useState<string | null>(null)
+  const { space } = useSpace()
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [aiBusy, setAiBusy] = useState<string | null>(null)
@@ -96,7 +98,7 @@ export default function NoteEditor() {
     if (isNew) {
       const { data, error } = await supabase
         .from('lv_notes')
-        .insert({ title: title.trim(), body, owner_id: session.user.id, is_private: isPrivate, pinned, color, updated_by: session.user.id, position: Date.now() })
+        .insert({ title: title.trim(), body, owner_id: session.user.id, is_private: isPrivate, pinned, color, updated_by: session.user.id, position: Date.now(), space_id: space!.id })
         .select()
         .single()
       setSaving(false)
@@ -143,7 +145,7 @@ export default function NoteEditor() {
     }
     const { data: list, error: le } = await supabase
       .from('lv_lists')
-      .insert({ name: (title.trim() || lines[0]).slice(0, 60), emoji: '📝', color: '#948ce9', owner_id: session.user.id })
+      .insert({ name: (title.trim() || lines[0]).slice(0, 60), emoji: '📝', color: '#948ce9', owner_id: session.user.id, space_id: space!.id })
       .select()
       .single()
     if (le) {

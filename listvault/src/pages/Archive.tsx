@@ -2,17 +2,22 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { List } from '../lib/types'
+import { useSpace } from '../context/SpaceContext'
 import { Page } from '../components/ui'
 
 /** Archive view: reverse-chronological, grouped by month (PRD 5.4). */
 export default function Archive() {
+  const { space } = useSpace()
   const [lists, setLists] = useState<(List & { item_count: number })[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!space) return
+    setLoading(true)
     supabase
       .from('lv_lists')
       .select('*, items(count)')
+      .eq('space_id', space.id)
       .eq('status', 'archived')
       .order('closed_at', { ascending: false })
       .then(({ data }) => {
@@ -23,7 +28,7 @@ export default function Archive() {
         setLists(rows)
         setLoading(false)
       })
-  }, [])
+  }, [space?.id])
 
   const groups = useMemo(() => {
     const byMonth = new Map<string, typeof lists>()

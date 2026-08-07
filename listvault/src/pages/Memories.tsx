@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Sparkles } from '../lib/icons'
 import { supabase } from '../lib/supabase'
-import { Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import Avatar from '../components/Avatar'
 import { EmptyState, Skeleton, stagger } from '../components/ui'
 
@@ -27,8 +27,8 @@ function monthLabel(iso: string): string {
  * section inside the Us tab. */
 export default function MemoriesSection() {
   const { profile } = useAuth()
+  const { space, members: people } = useSpace()
   const [rows, setRows] = useState<MemoryRow[]>([])
-  const [people, setPeople] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,18 +41,15 @@ export default function MemoriesSection() {
   }, [])
 
   async function load() {
-    const [items, profs] = await Promise.all([
-      supabase
-        .from('lv_items')
-        .select('id, list_id, text, checked_at, checked_by, memory_note, memory_photo, list:lv_lists(name, emoji)')
-        .eq('checked', true)
-        .not('checked_at', 'is', null)
-        .order('checked_at', { ascending: false })
-        .limit(200),
-      supabase.from('lv_profiles').select('*')
-    ])
-    setRows((items.data as unknown as MemoryRow[]) ?? [])
-    setPeople((profs.data as Profile[]) ?? [])
+    const { data } = await supabase
+      .from('lv_items')
+      .select('id, list_id, text, checked_at, checked_by, memory_note, memory_photo, list:lv_lists!inner(name, emoji, space_id)')
+      .eq('list.space_id', space!.id)
+      .eq('checked', true)
+      .not('checked_at', 'is', null)
+      .order('checked_at', { ascending: false })
+      .limit(200)
+    setRows((data as unknown as MemoryRow[]) ?? [])
     setLoading(false)
   }
 

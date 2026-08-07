@@ -6,6 +6,7 @@ import { blobToBase64, recordAudio, Recorder } from '../lib/audio'
 import { supabase } from '../lib/supabase'
 import { Profile, Question, QuestionAnswer, QuestionMood, QuestionRound } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import Avatar from './Avatar'
 import { BottomSheet, EmptyState, Skeleton, stagger, useConfirm, useToast } from './ui'
 
@@ -20,6 +21,7 @@ const MAX_OPEN = 3
 
 export default function UsQuestions({ household }: { household: Profile[] }) {
   const { session } = useAuth()
+  const { space } = useSpace()
   const toast = useToast()
   const confirm = useConfirm()
   const myId = session?.user.id
@@ -84,7 +86,7 @@ export default function UsQuestions({ household }: { household: Profile[] }) {
       return
     }
     const pick = pool[Math.floor(Math.random() * pool.length)]
-    const { error } = await supabase.from('lv_question_rounds').insert({ question_id: pick.id, opened_by: myId })
+    const { error } = await supabase.from('lv_question_rounds').insert({ question_id: pick.id, opened_by: myId, space_id: space!.id })
     if (error) toast(error.message)
     // top up quietly when the deck runs low
     if (unused.length <= 5) void supabase.functions.invoke('lv-us', { body: { action: 'more_questions' } })

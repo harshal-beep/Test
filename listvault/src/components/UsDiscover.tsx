@@ -4,6 +4,7 @@ import { CalendarDays, Compass, ExternalLink, ListPlus, MapPin, Sparkles, X } fr
 import { supabase } from '../lib/supabase'
 import { List, Profile, UsEvent } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import TasteQuiz from './TasteQuiz'
 import { BottomSheet, EmptyState, Skeleton, stagger, useToast } from './ui'
 
@@ -21,6 +22,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 
 export default function UsDiscover({ household }: { household: Profile[] }) {
   const { session, profile } = useAuth()
+  const { space } = useSpace()
   const toast = useToast()
   const myId = session?.user.id
   const [events, setEvents] = useState<UsEvent[]>([])
@@ -46,7 +48,7 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
 
   async function load() {
     const [e, h] = await Promise.all([
-      supabase.from('lv_events').select('*').order('score', { ascending: false, nullsFirst: false }),
+      supabase.from('lv_events').select('*').eq('space_id', space!.id).order('score', { ascending: false, nullsFirst: false }),
       supabase.from('lv_event_hides').select('event_id').eq('user_id', myId ?? '')
     ])
     setEvents((e.data as UsEvent[]) ?? [])
@@ -82,7 +84,7 @@ export default function UsDiscover({ household }: { household: Profile[] }) {
   }
 
   async function openAdd(ev: UsEvent) {
-    const { data } = await supabase.from('lv_lists').select('*').eq('status', 'active').order('created_at', { ascending: false })
+    const { data } = await supabase.from('lv_lists').select('*').eq('space_id', space!.id).eq('status', 'active').order('created_at', { ascending: false })
     setLists((data as List[]) ?? [])
     setAddFor(ev)
   }

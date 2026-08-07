@@ -60,12 +60,38 @@ export interface Milestone {
   created_at: string
 }
 
+/** A world of its own: the couple space or a friend group. */
+export interface Space {
+  id: string
+  name: string
+  emoji: string | null
+  kind: 'couple' | 'group'
+  invite_code: string
+  created_by: string | null
+  created_at: string
+}
+
+export interface SpaceMember {
+  space_id: string
+  user_id: string
+  role: 'owner' | 'member'
+  joined_at: string
+  profile?: Profile
+}
+
+export interface ExpenseShare {
+  expense_id: string
+  user_id: string
+  amount: number
+}
+
 export interface Expense {
   id: string
+  space_id: string
   description: string
   amount: number
   paid_by: string
-  /** What the other person owes the payer for this expense. */
+  /** Legacy pairwise column; `shares` is the source of truth now. */
   owed_amount: number
   spent_on: string
   category: string | null
@@ -73,6 +99,7 @@ export interface Expense {
   items: { name: string; price: number }[] | null
   created_by: string
   created_at: string
+  shares?: ExpenseShare[]
 }
 
 export const EXPENSE_CATEGORIES = [
@@ -85,6 +112,7 @@ export const EXPENSE_CATEGORIES = [
 
 export interface Settlement {
   id: string
+  space_id: string
   from_user: string
   to_user: string
   amount: number

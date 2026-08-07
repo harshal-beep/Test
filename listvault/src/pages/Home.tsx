@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CalendarHeart, ListTodo, Plus, Wallet } from '../lib/icons'
 import { supabase } from '../lib/supabase'
-import { computeBalance, inr } from '../lib/money'
-import { Expense, List, Milestone, Profile, Settlement } from '../lib/types'
+import { computeNets, inr } from '../lib/money'
+import { Expense, List, Milestone, Settlement } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import Avatar from '../components/Avatar'
 import { EmptyState, Page, Skeleton, stagger } from '../components/ui'
 import { ListComposer } from '../components/Composers'
@@ -67,11 +68,12 @@ function heroGradient(): string {
 
 export default function Home() {
   const { profile } = useAuth()
+  const { space, members, isCouple } = useSpace()
+  const sid = space!.id
   const [lists, setLists] = useState<ListRow[]>([])
   const [loading, setLoading] = useState(true)
   const [composerOpen, setComposerOpen] = useState(false)
   const [feed, setFeed] = useState<FeedEntry[]>([])
-  const [feedProfiles, setFeedProfiles] = useState<Profile[]>([])
   const [planned, setPlanned] = useState<PlannedRow[]>([])
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [settlements, setSettlements] = useState<Settlement[]>([])
@@ -79,33 +81,34 @@ export default function Home() {
   const [onThisDay, setOnThisDay] = useState<{ id: string; list_id: string; text: string; checked_at: string }[]>([])
 
   useEffect(() => {
+    setLoading(true)
     void loadLists()
     void loadFeed()
     void loadPlanned()
     void loadMoney()
     void loadReminders()
     const channel = supabase
-      .channel('home-lists')
+      .channel(`home-${sid}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_lists' }, () => void loadLists())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_items' }, () => {
         void loadLists()
         void loadFeed()
         void loadPlanned()
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_list_members' }, () => void loadLists())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_expenses' }, () => void loadMoney())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'lv_settlements' }, () => void loadMoney())
       .subscribe()
     return () => void supabase.removeChannel(channel)
-  }, [])
+  }, [sid])
 
   /** Milestone reminders + "on this day" memory anniversaries. */
   async function loadReminders() {
     const [ms, mem] = await Promise.all([
-      supabase.from('lv_milestones').select('*'),
+      supabase.from('lv_milestones').select('*').eq('space_id', sid),
       supabase
         .from('lv_items')
-        .select('id, list_id, text, checked_at')
+        .select('id, list_id, text, checked_at, list:lv_lists!inner(space_id)')
+        .eq('list.space_id', sid)
         .eq('checked', true)
         .not('checked_at', 'is', null)
         .not('memory_note', 'is', null)
@@ -124,8 +127,8 @@ export default function Home() {
   /** Just enough of the ledger to show the balance up top. */
   async function loadMoney() {
     const [e, st] = await Promise.all([
-      supabase.from('lv_expenses').select('*'),
-      supabase.from('lv_settlements').select('*')
+      supabase.from('lv_expenses').select('*, shares:lv_expense_shares(*)').eq('space_id', sid),
+      supabase.from('lv_settlements').select('*').eq('space_id', sid)
     ])
     setExpenses((e.data as Expense[]) ?? [])
     setSettlements((st.data as Settlement[]) ?? [])
@@ -135,30 +138,36 @@ export default function Home() {
   async function loadPlanned() {
     const { data } = await supabase
       .from('lv_items')
-      .select('id, list_id, text, planned_for')
+      .select('id, list_id, text, planned_for, list:lv_lists!inner(space_id)')
+      .eq('list.space_id', sid)
       .eq('checked', false)
       .gte('planned_for', isoToday())
       .order('planned_for')
       .limit(3)
-    setPlanned((data as PlannedRow[]) ?? [])
+    setPlanned((data as unknown as PlannedRow[]) ?? [])
   }
 
   async function loadFeed() {
-    const [items, notes, habitChecks, profs] = await Promise.all([
+    const [items, notes, habitChecks] = await Promise.all([
       supabase
         .from('lv_items')
-        .select('id, text, created_at, checked, checked_at, added_by, checked_by, list:lv_lists(name, emoji)')
+        .select('id, text, created_at, checked, checked_at, added_by, checked_by, list:lv_lists!inner(name, emoji, space_id)')
+        .eq('list.space_id', sid)
         .order('created_at', { ascending: false })
         .limit(12),
-      supabase.from('lv_notes').select('id, title, body, updated_at, updated_by').order('updated_at', { ascending: false }).limit(5),
+      supabase
+        .from('lv_notes')
+        .select('id, title, body, updated_at, updated_by')
+        .eq('space_id', sid)
+        .order('updated_at', { ascending: false })
+        .limit(5),
       supabase
         .from('lv_habit_checks')
-        .select('habit_id, day, user_id, created_at, habit:lv_habits(name, emoji)')
+        .select('habit_id, day, user_id, created_at, habit:lv_habits!inner(name, emoji, space_id)')
+        .eq('habit.space_id', sid)
         .order('created_at', { ascending: false })
-        .limit(8),
-      supabase.from('lv_profiles').select('*')
+        .limit(8)
     ])
-    setFeedProfiles((profs.data as Profile[]) ?? [])
     const entries: FeedEntry[] = []
     type ItemRow = { id: string; text: string; created_at: string; checked: boolean; checked_at: string | null; added_by: string | null; checked_by: string | null; list: { name: string; emoji: string | null } | null }
     for (const it of (items.data as ItemRow[] | null) ?? []) {
@@ -183,6 +192,7 @@ export default function Home() {
     const { data } = await supabase
       .from('lv_lists')
       .select('*, lv_items(checked)')
+      .eq('space_id', sid)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
     const rows = ((data as (List & { lv_items: { checked: boolean }[] })[]) ?? []).map((l) => ({
@@ -196,9 +206,10 @@ export default function Home() {
 
   const pending = lists.reduce((sum, l) => sum + (l.total - l.done), 0)
   const firstName = (profile?.display_name ?? '').split(' ')[0]
-  const balance = computeBalance(expenses, settlements, profile?.id)
-  const partnerFirst =
-    feedProfiles.find((p) => p.id !== profile?.id)?.display_name?.split(' ')[0] || 'Partner'
+  const balance = computeNets(expenses, settlements).get(profile?.id ?? '') ?? 0
+  const partnerFirst = isCouple
+    ? members.find((p) => p.id !== profile?.id)?.display_name?.split(' ')[0] || 'Partner'
+    : 'the group'
 
   /** Nearest milestone occurrence within 45 days (yearly ones roll forward). */
   const nextMilestone = (() => {
@@ -241,7 +252,7 @@ export default function Home() {
             : `${pending} task${pending === 1 ? '' : 's'} to go`}
         </p>
         <p className="mt-0.5 text-sm opacity-80">
-          {lists.length} active list{lists.length === 1 ? '' : 's'} — hamaara, together
+          {lists.length} active list{lists.length === 1 ? '' : 's'} — {isCouple ? 'hamaara, together' : `${space?.name}, together`}
         </p>
       </motion.div>
 
@@ -265,7 +276,11 @@ export default function Home() {
               <span className="block text-[17px] font-bold">All settled ✅</span>
             ) : (
               <span className="block text-[17px] font-bold">
-                {balance > 0 ? `${partnerFirst} owes you ` : `You owe ${partnerFirst} `}
+                {balance > 0
+                  ? isCouple
+                    ? `${partnerFirst} owes you `
+                    : "You're owed "
+                  : `You owe ${isCouple ? partnerFirst : 'the group'} `}
                 <span className={balance > 0 ? 'text-emerald-600' : 'text-rose-500'}>{inr(balance)}</span>
               </span>
             )}
@@ -297,7 +312,7 @@ export default function Home() {
       {onThisDay.map((m) => (
         <Link
           key={m.id}
-          to="/us"
+          to={isCouple ? '/us' : `/list/${m.list_id}`}
           className="flex items-center gap-3 rounded-[20px] bg-brand-50 p-4 ring-1 ring-brand-200/60 dark:bg-brand-800/20 dark:ring-brand-800/50"
         >
           <span className="text-2xl">💭</span>
@@ -423,7 +438,7 @@ export default function Home() {
           <h2 className="font-bold">Recent activity</h2>
           <div className="surface divide-y divide-ink-100 dark:divide-ink-800">
             {feed.map((e) => {
-              const actor = feedProfiles.find((p) => p.id === e.actor)
+              const actor = members.find((p) => p.id === e.actor)
               const isMe = e.actor === profile?.id
               return (
                 <div key={e.key} className="flex items-center gap-3 px-4 py-2.5">

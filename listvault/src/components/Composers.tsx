@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { List } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import { BottomSheet, useToast } from './ui'
 
 export const LIST_EMOJIS = ['🛒', '🏠', '🎉', '🧺', '💊', '📦', '🍱', '✅']
@@ -23,6 +24,7 @@ export function ListComposer({
   onCreated?: (list: List) => void
 }) {
   const { session } = useAuth()
+  const { space } = useSpace()
   const toast = useToast()
   const navigate = useNavigate()
   const [name, setName] = useState('')
@@ -33,12 +35,12 @@ export function ListComposer({
 
   async function create(e: FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !session) return
+    if (!name.trim() || !session || !space) return
     setBusy(true)
     setError('')
     const { data, error: err } = await supabase
       .from('lv_lists')
-      .insert({ name: name.trim(), emoji, color, owner_id: session.user.id })
+      .insert({ name: name.trim(), emoji, color, owner_id: session.user.id, space_id: space.id })
       .select()
       .single()
     setBusy(false)
@@ -103,6 +105,7 @@ export function ListComposer({
 
 export function TaskComposer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { session } = useAuth()
+  const { space } = useSpace()
   const toast = useToast()
   const [lists, setLists] = useState<List[]>([])
   const [target, setTarget] = useState<string | null>(null)
@@ -112,10 +115,11 @@ export function TaskComposer({ open, onClose }: { open: boolean; onClose: () => 
   const [showNewList, setShowNewList] = useState(false)
 
   useEffect(() => {
-    if (!open) return
+    if (!open || !space) return
     supabase
       .from('lv_lists')
       .select('*')
+      .eq('space_id', space.id)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
@@ -123,7 +127,7 @@ export function TaskComposer({ open, onClose }: { open: boolean; onClose: () => 
         setLists(rows)
         setTarget((t) => t ?? rows[0]?.id ?? null)
       })
-  }, [open])
+  }, [open, space?.id])
 
   async function add(e: FormEvent) {
     e.preventDefault()

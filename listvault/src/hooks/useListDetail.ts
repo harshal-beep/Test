@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { Item, ItemComment, ItemReaction, List, Profile } from '../lib/types'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 
 /**
  * Server-authoritative list state with optimistic UI and last-write-wins per
@@ -10,9 +11,9 @@ import { useAuth } from '../context/AuthContext'
  */
 export function useListDetail(listId: string) {
   const { session } = useAuth()
+  const { members: household } = useSpace()
   const [list, setList] = useState<List | null>(null)
   const [items, setItems] = useState<Item[]>([])
-  const [household, setHousehold] = useState<Profile[]>([])
   const [reactions, setReactions] = useState<ItemReaction[]>([])
   const [comments, setComments] = useState<ItemComment[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,10 +22,9 @@ export function useListDetail(listId: string) {
   const pendingIds = useRef(new Set<string>())
 
   const load = useCallback(async () => {
-    const [listRes, itemsRes, membersRes] = await Promise.all([
+    const [listRes, itemsRes] = await Promise.all([
       supabase.from('lv_lists').select('*').eq('id', listId).maybeSingle(),
-      supabase.from('lv_items').select('*').eq('list_id', listId).order('position'),
-      supabase.from('lv_profiles').select('*')
+      supabase.from('lv_items').select('*').eq('list_id', listId).order('position')
     ])
     if (!listRes.data) {
       setNotFound(true)
@@ -34,7 +34,6 @@ export function useListDetail(listId: string) {
     const rows = (itemsRes.data as Item[]) ?? []
     setList(listRes.data as List)
     setItems(rows)
-    setHousehold((membersRes.data as Profile[]) ?? [])
     setLoading(false)
     void loadSocial(rows.map((i) => i.id))
   }, [listId])
