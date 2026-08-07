@@ -12,6 +12,7 @@ import {
   NotebookPen,
   Plus,
   Search,
+  ShieldCheck,
   StickyNote,
   Users,
   Wallet
@@ -145,7 +146,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           {sideLinks.map((l) => (
             <SideLink key={l.to} {...l} />
           ))}
-          {profile?.is_admin && <SideLink to="/admin" label="Our home" Icon={Users} />}
+          {profile?.is_admin && <SideLink to="/admin" label="Accounts" Icon={ShieldCheck} />}
         </nav>
 
         <div className="mt-7">
@@ -188,8 +189,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             </button>
             <ThemeToggle />
             {profile?.is_admin && (
-              <NavLink to="/admin" aria-label="Manage people" className="icon-btn">
-                <Users size={19} />
+              <NavLink to="/admin" aria-label="Accounts" className="icon-btn">
+                <ShieldCheck size={19} />
               </NavLink>
             )}
             <NavLink to="/settings" aria-label="Settings" className="transition-transform active:scale-95">
