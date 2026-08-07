@@ -58,12 +58,18 @@ function greeting(): string {
   return 'Good evening'
 }
 
-/** The hero follows the sky: sunrise tones, daytime indigo, evening violet. */
-function heroGradient(): string {
+/** The hero follows the sky. Couple space keeps HaMaara's warm rose-lavender
+ * identity; group spaces get their own cooler teal look so the two never mix. */
+function heroGradient(isCouple: boolean): string {
   const h = new Date().getHours()
-  if (h < 12) return 'from-amber-200 via-rose-200 to-brand-400'
-  if (h < 17) return 'from-brand-200 via-brand-400 to-brand-500'
-  return 'from-brand-400 via-brand-500 to-brand-700'
+  if (isCouple) {
+    if (h < 12) return 'from-amber-200 via-rose-200 to-brand-400'
+    if (h < 17) return 'from-brand-200 via-brand-400 to-brand-500'
+    return 'from-brand-400 via-brand-500 to-brand-700'
+  }
+  if (h < 12) return 'from-amber-100 via-sky-200 to-teal-300'
+  if (h < 17) return 'from-sky-200 via-teal-300 to-emerald-400'
+  return 'from-teal-300 via-sky-400 to-indigo-400'
 }
 
 export default function Home() {
@@ -239,7 +245,9 @@ export default function Home() {
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br p-5 text-ink-900 shadow-float shadow-brand-600/25 ${heroGradient()}`}
+        className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br p-5 text-ink-900 shadow-float ${
+          isCouple ? 'shadow-brand-600/25' : 'shadow-teal-600/25'
+        } ${heroGradient(isCouple)}`}
       >
         <div className="absolute -right-8 -top-10 h-36 w-36 rounded-full bg-white/10" />
         <div className="absolute -right-2 top-16 h-16 w-16 rounded-full bg-white/10" />
@@ -252,7 +260,7 @@ export default function Home() {
             : `${pending} task${pending === 1 ? '' : 's'} to go`}
         </p>
         <p className="mt-0.5 text-sm opacity-80">
-          {lists.length} active list{lists.length === 1 ? '' : 's'} — {isCouple ? 'hamaara, together' : `${space?.name}, together`}
+          {lists.length} active list{lists.length === 1 ? '' : 's'}{isCouple ? ' — hamaara, together' : ` in ${space?.name}`}
         </p>
       </motion.div>
 
@@ -347,7 +355,7 @@ export default function Home() {
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-600">
-                <CalendarHeart size={12} /> Next together
+                <CalendarHeart size={12} /> {isCouple ? 'Next together' : 'Coming up'}
               </span>
               <span className="mt-0.5 block truncate text-[17px] font-bold">{planned[0].text}</span>
               <span className="block text-xs text-ink-500 dark:text-ink-400">

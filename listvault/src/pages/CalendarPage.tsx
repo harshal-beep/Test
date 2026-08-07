@@ -26,7 +26,9 @@ interface DayEntry {
   years?: number
 }
 
-const MILESTONE_EMOJIS = ['💍', '🎂', '❤️', '🏠', '✈️', '⭐']
+// Couple space keeps the romantic set; groups get a neutral one.
+const COUPLE_EMOJIS = ['💍', '🎂', '❤️', '🏠', '✈️', '⭐']
+const GROUP_EMOJIS = ['🎉', '🎂', '✈️', '🏆', '🍻', '⭐']
 
 const iso = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -34,8 +36,9 @@ const iso = (d: Date) =>
 /** Plans, memories and milestones on one shared month grid. */
 export default function CalendarPage() {
   const { session } = useAuth()
-  const { space } = useSpace()
+  const { space, isCouple } = useSpace()
   const sid = space!.id
+  const milestoneEmojis = isCouple ? COUPLE_EMOJIS : GROUP_EMOJIS
   const toast = useToast()
   const confirm = useConfirm()
   const myId = session?.user.id
@@ -49,7 +52,7 @@ export default function CalendarPage() {
   const [selected, setSelected] = useState<string>(iso(new Date()))
   const [addOpen, setAddOpen] = useState(false)
   const [title, setTitle] = useState('')
-  const [emoji, setEmoji] = useState(MILESTONE_EMOJIS[0])
+  const [emoji, setEmoji] = useState(isCouple ? COUPLE_EMOJIS[0] : GROUP_EMOJIS[0])
   const [date, setDate] = useState(iso(new Date()))
   const [yearly, setYearly] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -93,7 +96,7 @@ export default function CalendarPage() {
         push(it.planned_for, { kind: 'plan', label: it.text, emoji: '📌', link: `/list/${it.list_id}` })
       }
       if (it.checked && it.checked_at) {
-        push(it.checked_at.slice(0, 10), { kind: 'memory', label: it.text, emoji: '💜', link: `/list/${it.list_id}` })
+        push(it.checked_at.slice(0, 10), { kind: 'memory', label: it.text, emoji: isCouple ? '💜' : '✅', link: `/list/${it.list_id}` })
       }
     }
     for (const ms of milestones) {
@@ -242,7 +245,7 @@ export default function CalendarPage() {
           {new Date(selected).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}
         </h2>
         {dayEntries.length === 0 ? (
-          <p className="py-4 text-center text-sm text-ink-400">Nothing here — plan something? 💜</p>
+          <p className="py-4 text-center text-sm text-ink-400">Nothing here — plan something? {isCouple ? '💜' : '📌'}</p>
         ) : (
           dayEntries.map((e, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="surface flex items-center gap-3 p-3.5">
@@ -273,12 +276,12 @@ export default function CalendarPage() {
             autoFocus
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Our anniversary, Amaara's birthday"
+            placeholder={isCouple ? "e.g. Our anniversary, Amaara's birthday" : "e.g. Trip kickoff, Priya's birthday"}
             maxLength={120}
             className="field"
           />
           <div className="flex flex-wrap gap-2">
-            {MILESTONE_EMOJIS.map((em) => (
+            {milestoneEmojis.map((em) => (
               <button
                 key={em}
                 type="button"
