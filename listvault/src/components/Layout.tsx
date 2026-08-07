@@ -80,22 +80,17 @@ function SideLink({ to, label, Icon }: { to: string; label: string; Icon: typeof
   )
 }
 
-/** The wordmark doubles as the space switcher trigger. */
-function SpaceTrigger({ onOpen, className }: { onOpen: () => void; className?: string }) {
+/** HaMaara is the app; the space you're in is its own separate pill. */
+function SpacePill({ onOpen, className }: { onOpen: () => void; className?: string }) {
   const { space, isCouple } = useSpace()
   return (
-    <button onClick={onOpen} className={`flex min-w-0 items-center gap-1.5 ${className ?? ''}`}>
-      {isCouple ? (
-        <span className="truncate text-lg font-extrabold tracking-tight md:text-xl">
-          Ha<span className="text-brand-600">Maara</span>
-        </span>
-      ) : (
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="text-lg leading-none">{space?.emoji ?? '👥'}</span>
-          <span className="truncate text-lg font-extrabold tracking-tight md:text-xl">{space?.name}</span>
-        </span>
-      )}
-      <ChevronDown size={16} className="shrink-0 text-ink-400" />
+    <button
+      onClick={onOpen}
+      className={`flex min-w-0 items-center gap-1.5 rounded-full bg-ink-100 py-1.5 pl-2.5 pr-2 transition-colors hover:bg-ink-200 dark:bg-ink-800 dark:hover:bg-ink-700 ${className ?? ''}`}
+    >
+      <span className="text-sm leading-none">{space?.emoji ?? (isCouple ? '💜' : '👥')}</span>
+      <span className="truncate text-[13px] font-bold">{space?.name}</span>
+      <ChevronDown size={14} className="shrink-0 text-ink-400" />
     </button>
   )
 }
@@ -140,7 +135,12 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-[100dvh] max-w-6xl">
       {/* Desktop sidebar — the "website version" navigation */}
       <aside className="sticky top-0 hidden h-[100dvh] w-60 shrink-0 flex-col border-r border-ink-100/70 px-4 py-6 md:flex dark:border-ink-800/70">
-        <SpaceTrigger onOpen={() => setSwitcherOpen(true)} className="px-3.5" />
+        <NavLink to="/" className="px-3.5 text-xl font-extrabold tracking-tight">
+          Ha<span className="text-brand-600">Maara</span>
+        </NavLink>
+        <div className="mt-3 px-2">
+          <SpacePill onOpen={() => setSwitcherOpen(true)} className="w-full" />
+        </div>
 
         <nav className="mt-7 flex flex-col gap-1">
           {sideLinks.map((l) => (
@@ -181,9 +181,14 @@ export default function Layout({ children }: { children: ReactNode }) {
 
       <div className="flex min-h-[100dvh] min-w-0 flex-1 flex-col">
         {/* Mobile header */}
-        <header className="sticky top-0 z-10 flex items-center justify-between bg-ink-50/80 px-5 pb-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] backdrop-blur-xl md:hidden dark:bg-ink-950/80">
-          <SpaceTrigger onOpen={() => setSwitcherOpen(true)} />
-          <span className="flex items-center gap-1.5">
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-2.5 bg-ink-50/80 px-5 pb-3.5 pt-[max(0.875rem,env(safe-area-inset-top))] backdrop-blur-xl md:hidden dark:bg-ink-950/80">
+          <span className="flex min-w-0 flex-1 items-center gap-2.5">
+            <NavLink to="/" className="shrink-0 text-lg font-extrabold tracking-tight">
+              Ha<span className="text-brand-600">Maara</span>
+            </NavLink>
+            <SpacePill onOpen={() => setSwitcherOpen(true)} />
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
             <button onClick={() => navigate('/search')} aria-label="Search" className="icon-btn">
               <Search size={19} />
             </button>
