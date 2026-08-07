@@ -12,8 +12,10 @@ interface SpaceState {
   memberRows: SpaceMember[]
   isCouple: boolean
   loading: boolean
+  /** True when the user already belongs to a couple space (only one allowed). */
+  hasCouple: boolean
   setSpace: (id: string) => void
-  createSpace: (name: string, emoji: string | null) => Promise<string>
+  createSpace: (name: string, emoji: string | null, kind?: 'group' | 'couple') => Promise<string>
   joinSpace: (code: string) => Promise<string>
   refresh: () => Promise<void>
 }
@@ -80,13 +82,14 @@ export function SpaceProvider({ children }: { children: ReactNode }) {
     members,
     memberRows,
     isCouple: space?.kind === 'couple',
+    hasCouple: spaces.some((s) => s.kind === 'couple'),
     loading,
     setSpace: (id) => {
       localStorage.setItem(LS_KEY, id)
       setSpaceId(id)
     },
-    createSpace: async (name, emoji) => {
-      const { data, error } = await supabase.rpc('lv_create_space', { p_name: name, p_emoji: emoji })
+    createSpace: async (name, emoji, kind = 'group') => {
+      const { data, error } = await supabase.rpc('lv_create_space', { p_name: name, p_emoji: emoji, p_kind: kind })
       if (error) throw error
       await refresh()
       return data as string

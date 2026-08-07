@@ -12,12 +12,13 @@ import { useToast } from '../components/ui'
 
 export default function NoSpaces() {
   const { profile, signOut } = useAuth()
-  const { joinSpace, createSpace, setSpace } = useSpace()
+  const { joinSpace, createSpace, setSpace, hasCouple } = useSpace()
   const toast = useToast()
   const navigate = useNavigate()
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState(SPACE_EMOJIS[0])
+  const [kind, setKind] = useState<'group' | 'couple'>('group')
   const [busy, setBusy] = useState(false)
 
   async function join(e: FormEvent) {
@@ -40,7 +41,7 @@ export default function NoSpaces() {
     if (!name.trim()) return
     setBusy(true)
     try {
-      const id = await createSpace(name.trim(), emoji)
+      const id = await createSpace(name.trim(), kind === 'couple' ? '💜' : emoji, kind)
       setSpace(id)
       navigate('/space', { replace: true })
     } catch (err) {
@@ -78,14 +79,28 @@ export default function NoSpaces() {
       </form>
 
       <form onSubmit={(e) => void create(e)} className="surface space-y-3 p-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Or start a group</p>
+        <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Or start a space</p>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setKind('group')}
+            className={`flex-1 rounded-full py-2 text-[13px] font-semibold ${kind === 'group' ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'}`}>
+            👥 Group
+          </button>
+          <button type="button" onClick={() => !hasCouple && setKind('couple')} disabled={hasCouple}
+            className={`flex-1 rounded-full py-2 text-[13px] font-semibold disabled:opacity-40 ${kind === 'couple' ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-500 dark:bg-ink-800 dark:text-ink-300'}`}>
+            💜 Couple
+          </button>
+        </div>
+        {kind === 'couple' && (
+          <p className="text-[11px] text-ink-400">Just you two — private questions, memories and date ideas. Locks at 2 people.</p>
+        )}
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Group name — e.g. Goa Trip"
+          placeholder={kind === 'couple' ? 'Name it — e.g. Us' : 'Group name — e.g. Goa Trip'}
           maxLength={60}
           className="field"
         />
+        {kind === 'group' && (
         <div className="flex flex-wrap gap-1.5">
           {SPACE_EMOJIS.map((em) => (
             <button
@@ -100,6 +115,7 @@ export default function NoSpaces() {
             </button>
           ))}
         </div>
+        )}
         <button disabled={busy || !name.trim()} className="btn-ghost w-full border border-brand-200 py-3 dark:border-brand-800">
           Create it
         </button>

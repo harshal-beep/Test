@@ -14,6 +14,7 @@ interface Preview {
   space_id: string
   name: string
   emoji: string | null
+  kind: string
   member_count: number
 }
 
@@ -75,14 +76,17 @@ export default function JoinSpace() {
               {preview?.emoji ?? '👥'}
             </span>
             <div>
-              <p className="text-[22px] font-extrabold tracking-tight">Join {preview?.name}?</p>
+              <p className="text-[22px] font-extrabold tracking-tight">
+                {preview?.kind === 'couple' ? `Pair up in ${preview?.name}?` : `Join ${preview?.name}?`}
+              </p>
               <p className="mt-1 text-sm text-ink-500 dark:text-ink-400">
-                {preview?.member_count} {Number(preview?.member_count) === 1 ? 'person is' : 'people are'} already in — shared
-                lists, notes, plans and split expenses.
+                {preview?.kind === 'couple'
+                  ? 'A couple space for exactly two — questions, memories, plans and money, just for you both.'
+                  : `${preview?.member_count} ${Number(preview?.member_count) === 1 ? 'person is' : 'people are'} already in — shared lists, notes, plans and split expenses.`}
               </p>
             </div>
             <button onClick={() => void join()} disabled={state === 'joining'} className="btn-primary w-full py-3.5">
-              {state === 'joining' ? 'Joining…' : "I'm in 🎉"}
+              {state === 'joining' ? 'Joining…' : preview?.kind === 'couple' ? "It's us 💜" : "I'm in 🎉"}
             </button>
             <button onClick={() => navigate('/')} className="text-sm font-medium text-ink-400">
               Not now

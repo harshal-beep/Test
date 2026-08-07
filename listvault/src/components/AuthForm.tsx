@@ -1,4 +1,5 @@
 import { FormEvent, useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
 /**
@@ -14,6 +15,8 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  /** Signup succeeded but the project wants an email click first. */
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false)
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -25,17 +28,49 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
         if (!name.trim()) throw new Error('Please enter your name')
         const needsConfirmation = await signUpWithEmail(email.trim(), password, name.trim())
         if (needsConfirmation) {
-          setNotice('Almost there — check your email for a confirmation link, then log in.')
+          setAwaitingConfirm(true)
+          setNotice('Almost there — check your email (and spam) for a confirmation link, then log in.')
           setMode('signin')
         }
       } else {
         await signInWithEmail(email.trim(), password)
       }
     } catch (err) {
-      setError((err as Error).message)
+      const msg = (err as Error).message
+      // Supabase's phrasing for an unconfirmed account trying to log in
+      if (/email not confirmed/i.test(msg)) {
+        setAwaitingConfirm(true)
+        setError('Your email is not confirmed yet — check your inbox, or resend the link below.')
+      } else {
+        setError(msg)
+      }
     } finally {
       setBusy(false)
     }
+  }
+
+  async function resendConfirmation() {
+    if (!email.trim()) {
+      setError('Enter your email above first')
+      return
+    }
+    setError('')
+    const { error: err } = await supabase.auth.resend({ type: 'signup', email: email.trim() })
+    if (err) setError(err.message)
+    else setNotice('Confirmation email sent again — give it a minute and check spam too.')
+  }
+
+  async function forgotPassword() {
+    if (!email.trim()) {
+      setError('Enter your email above, then tap "Forgot password?" again')
+      return
+    }
+    setError('')
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/reset`
+    })
+    if (err) setError(err.message)
+    else setNotice('Password reset link sent — check your email (and spam). The link opens a page to set a new password.')
   }
 
   const inputClass = 'field'
@@ -87,6 +122,16 @@ export default function AuthForm({ initialMode = 'signin' }: { initialMode?: 'si
       >
         {busy ? 'Please wait…' : mode === 'signup' ? 'Sign up' : 'Log in'}
       </button>
+      {awaitingConfirm && (
+        <button type="button" onClick={() => void resendConfirmation()} className="w-full text-center text-sm font-semibold text-brand-600">
+          Resend confirmation email
+        </button>
+      )}
+      {mode === 'signin' && (
+        <button type="button" onClick={() => void forgotPassword()} className="w-full text-center text-sm text-ink-500 dark:text-ink-400">
+          Forgot password?
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {

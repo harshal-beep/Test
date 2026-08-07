@@ -59,6 +59,21 @@ Deno.serve(async (req) => {
       return json({ user_id: data.user.id })
     }
 
+    if (body.action === 'set_password') {
+      const { user_id, password } = body
+      if (!user_id || !password || password.length < 6) {
+        return json({ error: 'user_id and a password of 6+ characters are required' }, 400)
+      }
+      // Also confirms the email, so this doubles as the rescue for accounts
+      // stuck waiting on a confirmation mail that never arrived.
+      const { error } = await admin.auth.admin.updateUserById(user_id, {
+        password,
+        email_confirm: true
+      })
+      if (error) return json({ error: error.message }, 400)
+      return json({ ok: true })
+    }
+
     if (body.action === 'delete') {
       const { user_id } = body
       if (!user_id) return json({ error: 'user_id required' }, 400)

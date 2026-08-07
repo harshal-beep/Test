@@ -18,6 +18,7 @@ import NoteEditor from './pages/NoteEditor'
 import JoinSpace from './pages/JoinSpace'
 import NoSpaces from './pages/NoSpaces'
 import SpaceMembers from './pages/SpaceMembers'
+import ResetPassword from './pages/ResetPassword'
 
 /** Everything behind auth: join links first, then the space-gated app. */
 function AuthedApp() {
@@ -26,6 +27,7 @@ function AuthedApp() {
   return (
     <Routes>
       <Route path="/join/:code" element={<JoinSpace />} />
+      <Route path="/reset" element={<ResetPassword />} />
       <Route
         path="*"
         element={

@@ -98,13 +98,10 @@ export default function SpaceMembers() {
   }
 
   async function deleteSpace() {
-    if (
-      !(await confirm(`Delete ${space!.name} for everyone? Lists, notes and money in it are gone forever.`, {
-        confirmLabel: 'Delete space',
-        danger: true
-      }))
-    )
-      return
+    const msg = isCouple
+      ? `Dissolve ${space!.name}? Every list, memory, answer and expense in it is deleted for both of you, forever.`
+      : `Delete ${space!.name} for everyone? Lists, notes and money in it are gone forever.`
+    if (!(await confirm(msg, { confirmLabel: isCouple ? 'Dissolve' : 'Delete space', danger: true }))) return
     const { error } = await supabase.from('lv_spaces').delete().eq('id', space!.id)
     if (error) toast(error.message)
     else {
@@ -159,13 +156,21 @@ export default function SpaceMembers() {
         </div>
       )}
 
-      {/* Invite — group spaces only; the couple space stays just you two */}
-      {!isCouple && (
+      {/* Invite — groups always; couple spaces only while waiting for the partner */}
+      {(!isCouple || memberRows.length < 2) && (
         <div className="surface space-y-3 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Invite friends</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-ink-400">
+            {isCouple ? 'Invite your partner' : 'Invite friends'}
+          </p>
           <p className="text-sm text-ink-500 dark:text-ink-400">
-            Anyone with this link can join <strong className="text-ink-800 dark:text-ink-100">{space.name}</strong>. Share it
-            on WhatsApp — they sign up and land right here.
+            {isCouple ? (
+              <>Send this to your person — the space locks at two once they join. 💜</>
+            ) : (
+              <>
+                Anyone with this link can join <strong className="text-ink-800 dark:text-ink-100">{space.name}</strong>. Share
+                it on WhatsApp — they sign up and land right here.
+              </>
+            )}
           </p>
           <div className="flex items-center gap-2 rounded-2xl bg-ink-50 px-3.5 py-3 dark:bg-ink-800/60">
             <code className="min-w-0 flex-1 truncate text-sm font-bold tracking-widest">{space.invite_code}</code>
@@ -213,27 +218,25 @@ export default function SpaceMembers() {
         ))}
       </div>
 
-      {/* Danger zone — never on the couple space */}
-      {!isCouple && (
-        <div className="space-y-2 pt-2">
-          {!owner && (
-            <button
-              onClick={() => void leave()}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-ink-100 py-3 text-sm font-semibold text-ink-600 dark:bg-ink-800 dark:text-ink-300"
-            >
-              <LogOut size={15} /> Leave this space
-            </button>
-          )}
-          {owner && (
-            <button
-              onClick={() => void deleteSpace()}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-sm font-semibold text-rose-500 dark:bg-rose-900/20"
-            >
-              <Trash2 size={15} /> Delete this space
-            </button>
-          )}
-        </div>
-      )}
+      {/* Danger zone. Couples aren't left one by one — the owner dissolves the space. */}
+      <div className="space-y-2 pt-2">
+        {!owner && !isCouple && (
+          <button
+            onClick={() => void leave()}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-ink-100 py-3 text-sm font-semibold text-ink-600 dark:bg-ink-800 dark:text-ink-300"
+          >
+            <LogOut size={15} /> Leave this space
+          </button>
+        )}
+        {owner && (
+          <button
+            onClick={() => void deleteSpace()}
+            className="flex w-full items-center justify-center gap-2 rounded-full bg-rose-50 py-3 text-sm font-semibold text-rose-500 dark:bg-rose-900/20"
+          >
+            <Trash2 size={15} /> {isCouple ? 'Dissolve this space' : 'Delete this space'}
+          </button>
+        )}
+      </div>
     </Page>
   )
 }

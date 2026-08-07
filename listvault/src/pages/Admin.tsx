@@ -12,20 +12,32 @@ interface Invite {
   name: string
   email: string
   password: string
+  kind: 'new' | 'reset'
+  spaceName?: string
 }
 
 function inviteMessage(inv: Invite): string {
   const hi = inv.name ? `Hi ${inv.name}! ` : ''
+  const intro =
+    inv.kind === 'reset'
+      ? `${hi}Here's your new HaMaara password — the old one no longer works.`
+      : `${hi}Your account is ready${inv.spaceName ? ` — you're in *${inv.spaceName}* with us` : ''}.`
   return (
-    `🏠 *Welcome to HaMaara!*\n` +
-    `_Hamaara ghar, hamaari lists_ ✨\n\n` +
-    `${hi}Your account is ready — shared lists, notes & habits for all of us.\n\n` +
+    `🏠 *${inv.kind === 'reset' ? 'HaMaara password reset' : 'Welcome to HaMaara!'}*\n` +
+    `_Hamaara space, hamaari plans_ ✨\n\n` +
+    `${intro}\n\n` +
     `👉 https://hamaara.vercel.app\n\n` +
     `📧 *Email:* ${inv.email}\n` +
     `🔑 *Password:* ${inv.password}\n\n` +
     `Log in straight away (no verification email). ` +
     `💡 Change your password anytime from Settings → Change password.`
   )
+}
+
+/** Readable temp password like Mango-4821 — easy to WhatsApp, easy to type. */
+function tempPassword(): string {
+  const words = ['Mango', 'Chai', 'Laddu', 'Monsoon', 'Bandra', 'Vada', 'Kulfi', 'Marine', 'Juhu', 'Masala']
+  return `${words[Math.floor(Math.random() * words.length)]}-${Math.floor(1000 + Math.random() * 9000)}`
 }
 
 /**
@@ -84,7 +96,7 @@ export default function Admin() {
     }
     setBusy(false)
     toast(`Account created — added to ${space?.name ?? 'your space'}`)
-    setInvite({ name: name.trim(), email: email.trim(), password })
+    setInvite({ name: name.trim(), email: email.trim(), password, kind: 'new', spaceName: space?.name })
     setName('')
     setEmail('')
     setPassword('')
@@ -118,6 +130,30 @@ export default function Admin() {
       else toast(`Added to ${space.name}`)
     }
     await refreshSpaces()
+  }
+
+  /** Sets a fresh temp password (and force-confirms the email) — the rescue
+   * for "I forgot my password" and for signups stuck on the confirm mail. */
+  async function resetPassword(member: Profile) {
+    const label = member.display_name || member.email
+    const pw = tempPassword()
+    if (
+      !(await confirmSheet(`Reset ${label}'s password?`, {
+        body: `Their old password stops working immediately. New temporary password: ${pw} — share it with them after this.`,
+        confirmLabel: 'Reset password'
+      }))
+    )
+      return
+    setError('')
+    setInvite(null)
+    const { data, error: err } = await supabase.functions.invoke('lv-admin-users', {
+      body: { action: 'set_password', user_id: member.id, password: pw }
+    })
+    if (err || data?.error) setError(err?.message || data.error)
+    else {
+      toast('Password reset ✓ — now share it')
+      setInvite({ name: member.display_name ?? '', email: member.email ?? '', password: pw, kind: 'reset' })
+    }
   }
 
   /** Irreversible: kills the login itself, everywhere. */
@@ -286,6 +322,9 @@ export default function Admin() {
                     <span className="flex w-full items-center gap-3 pl-12 sm:w-auto sm:pl-0">
                       <button className="text-xs font-medium text-ink-500 dark:text-ink-400" onClick={() => void toggleAdmin(m)}>
                         {m.is_admin ? 'Revoke admin' : 'Make admin'}
+                      </button>
+                      <button className="text-xs font-medium text-brand-600" onClick={() => void resetPassword(m)}>
+                        Reset password
                       </button>
                       <button className="text-xs font-medium text-red-500" onClick={() => void deleteAccount(m)}>
                         Delete account

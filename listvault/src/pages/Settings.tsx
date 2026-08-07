@@ -1,17 +1,18 @@
-import { ChangeEvent, useEffect, useRef, useState } from 'react'
+import { ChangeEvent, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, Camera, Monitor, Moon, Smartphone, Sparkles, Sun, UserPlus, Users } from '../lib/icons'
+import { Archive, Camera, Monitor, Moon, ShieldCheck, Smartphone, Sparkles, Sun, UserPlus, Users } from '../lib/icons'
 import TasteQuiz from '../components/TasteQuiz'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useSpace } from '../context/SpaceContext'
 import { processAvatar } from '../lib/images'
 import { applyThemeMode, getThemeMode, ThemeMode } from '../lib/theme'
-import { Profile } from '../lib/types'
 import Avatar from '../components/Avatar'
 import { Page, useConfirm, useToast } from '../components/ui'
 
 export default function Settings() {
   const { profile, signOut, refreshProfile } = useAuth()
+  const { space, members, isCouple } = useSpace()
   const confirmSheet = useConfirm()
   const toast = useToast()
   const [newPw, setNewPw] = useState('')
@@ -19,7 +20,6 @@ export default function Settings() {
   const [name, setName] = useState(profile?.display_name ?? '')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [household, setHousehold] = useState<Profile[]>([])
   const [photoBusy, setPhotoBusy] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getThemeMode)
@@ -27,14 +27,6 @@ export default function Settings() {
   const standalone =
     window.matchMedia('(display-mode: standalone)').matches ||
     (navigator as unknown as { standalone?: boolean }).standalone === true
-
-  useEffect(() => {
-    supabase
-      .from('lv_profiles')
-      .select('*')
-      .order('created_at')
-      .then(({ data }) => setHousehold((data as Profile[]) ?? []))
-  }, [])
 
   async function saveName() {
     if (!profile || !name.trim()) return
@@ -173,36 +165,38 @@ export default function Settings() {
         </div>
       </section>
 
-      {/* Our home — the household everyone shares */}
+      {/* This space — who's here, managed on the space page */}
       <section className="surface space-y-3 p-4">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-bold">
-            <Users size={18} className="text-brand-600" /> Our home
+            <Users size={18} className="text-brand-600" /> {space?.emoji} {space?.name}
           </h2>
-          <span className="text-xs text-ink-400">{household.length} people</span>
+          <span className="text-xs text-ink-400">
+            {members.length} {members.length === 1 ? 'person' : 'people'}
+          </span>
         </div>
         <p className="text-sm text-ink-500 dark:text-ink-400">
-          Everyone here shares all lists, notes and habits automatically.
+          {isCouple
+            ? 'Your couple space — lists, notes, money and Us, shared by exactly you two.'
+            : 'Everyone in this space shares its lists, notes, habits and money.'}
         </p>
         <ul className="space-y-2.5">
-          {household.map((m) => (
+          {members.map((m) => (
             <li key={m.id} className="flex items-center gap-3">
               <Avatar profile={m} size={8} />
               <span className="min-w-0 flex-1 truncate text-sm font-medium">
                 {m.display_name || m.email}
                 {m.id === profile?.id && ' (you)'}
               </span>
-              {m.is_admin && (
-                <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand-800 dark:bg-brand-800 dark:text-brand-100">
-                  admin
-                </span>
-              )}
             </li>
           ))}
         </ul>
+        <Link to="/space" className="btn-ghost flex w-full items-center justify-center gap-2 border border-brand-200 py-3 text-sm dark:border-brand-800">
+          <UserPlus size={16} /> Members, invites & space settings
+        </Link>
         {profile?.is_admin && (
-          <Link to="/admin" className="btn-primary flex w-full items-center justify-center gap-2 py-3 text-sm">
-            <UserPlus size={16} /> Add or remove people
+          <Link to="/admin" className="flex w-full items-center justify-center gap-2 rounded-full bg-ink-100 py-3 text-sm font-semibold text-ink-600 dark:bg-ink-800 dark:text-ink-300">
+            <ShieldCheck size={16} /> Accounts (admin)
           </Link>
         )}
       </section>

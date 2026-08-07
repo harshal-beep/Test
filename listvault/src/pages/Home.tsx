@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CalendarHeart, ListTodo, Plus, Wallet } from '../lib/icons'
+import { CalendarDays, CalendarHeart, ListTodo, Plus, Wallet } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { computeNets, inr } from '../lib/money'
 import { Expense, List, Milestone, Settlement } from '../lib/types'
@@ -387,10 +387,15 @@ export default function Home() {
       {/* Lists */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold">My lists</h2>
-          <button onClick={() => setComposerOpen(true)} className="btn-ghost flex items-center gap-1 px-3 py-1.5 text-sm">
-            <Plus size={16} /> New
-          </button>
+          <h2 className="font-bold">Lists</h2>
+          <span className="flex items-center gap-1">
+            <Link to="/calendar" aria-label="Calendar" className="btn-ghost flex items-center gap-1 px-3 py-1.5 text-sm">
+              <CalendarDays size={16} />
+            </Link>
+            <button onClick={() => setComposerOpen(true)} className="btn-ghost flex items-center gap-1 px-3 py-1.5 text-sm">
+              <Plus size={16} /> New
+            </button>
+          </span>
         </div>
 
         {loading ? (

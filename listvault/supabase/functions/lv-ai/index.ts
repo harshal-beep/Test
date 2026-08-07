@@ -31,7 +31,8 @@ Deno.serve(async (req) => {
     })
 
   try {
-    // Any signed-in HaMaara user may use AI assist
+    // Signed-in AND a member of at least one space — signup alone is not
+    // enough to spend AI credits.
     const callerClient = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
@@ -39,6 +40,13 @@ Deno.serve(async (req) => {
     )
     const { data: userData, error: userErr } = await callerClient.auth.getUser()
     if (userErr || !userData.user) return json({ error: 'not signed in' }, 401)
+    const gate = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+    const { data: membership } = await gate
+      .from('lv_space_members')
+      .select('space_id')
+      .eq('user_id', userData.user.id)
+      .limit(1)
+    if (!membership?.length) return json({ error: 'join a space first' }, 403)
 
     // Config: env vars win; otherwise the service-role-only lv_secrets table
     let apiKey = Deno.env.get('OPENROUTER_API_KEY')

@@ -70,3 +70,18 @@ share = owed). Couple balance must match before/after to the paisa.
   settlements.
 - E2E: signup + invite redemption with throwaway accounts; switcher and
   group flows screenshotted on mobile + desktop widths.
+
+## Addendum: UX audit round (same day)
+
+Audit of all five journeys found and fixed: no password recovery
+(admin `set_password` + self-serve reset link + /reset page), signup
+stuck on unreliable confirmation mail (resend button; admin reset also
+force-confirms), invite links losing context at sign-in (invite banner,
+walkthrough skipped), Calendar unreachable on mobile (Home entry),
+Settings still describing the pre-spaces household (now shows the
+current space), stale household copy, and ungated notes-AI.
+
+Decision reversal: couple spaces are no longer unique to the original
+pair. Anyone may form one (0030): max 2 members, one couple per person,
+enforced by DB triggers; invites lock at two; couples dissolve as a
+whole instead of losing members one by one.

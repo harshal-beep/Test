@@ -11,12 +11,13 @@ import { BottomSheet, useToast } from './ui'
 export const SPACE_EMOJIS = ['🎉', '🏖️', '🏠', '⚽', '🎬', '🍜', '🎮', '✨']
 
 export default function SpaceSwitcher({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { spaces, space, setSpace, createSpace } = useSpace()
+  const { spaces, space, setSpace, createSpace, hasCouple } = useSpace()
   const toast = useToast()
   const navigate = useNavigate()
   const [creating, setCreating] = useState(false)
   const [name, setName] = useState('')
   const [emoji, setEmoji] = useState(SPACE_EMOJIS[0])
+  const [kind, setKind] = useState<'group' | 'couple'>('group')
   const [busy, setBusy] = useState(false)
 
   async function create(e: FormEvent) {
@@ -24,12 +25,12 @@ export default function SpaceSwitcher({ open, onClose }: { open: boolean; onClos
     if (!name.trim()) return
     setBusy(true)
     try {
-      const id = await createSpace(name.trim(), emoji)
+      const id = await createSpace(name.trim(), kind === 'couple' ? '💜' : emoji, kind)
       setSpace(id)
       setName('')
       setCreating(false)
       onClose()
-      toast('Space created 🎉 — invite your people from Members')
+      toast(kind === 'couple' ? 'Couple space created 💜 — now invite your partner' : 'Space created 🎉 — invite your people from Members')
       navigate('/space')
     } catch (err) {
       toast((err as Error).message)
@@ -95,14 +96,40 @@ export default function SpaceSwitcher({ open, onClose }: { open: boolean; onClos
 
         {creating ? (
           <form onSubmit={(e) => void create(e)} className="space-y-3 rounded-2xl bg-ink-50 p-3.5 dark:bg-ink-800/60">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setKind('group')}
+                className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition-all active:scale-95 ${
+                  kind === 'group' ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30' : 'bg-white text-ink-500 dark:bg-ink-800 dark:text-ink-300'
+                }`}
+              >
+                👥 Group
+              </button>
+              <button
+                type="button"
+                onClick={() => !hasCouple && setKind('couple')}
+                disabled={hasCouple}
+                className={`flex-1 rounded-full py-2 text-[13px] font-semibold transition-all active:scale-95 disabled:opacity-40 ${
+                  kind === 'couple' ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30' : 'bg-white text-ink-500 dark:bg-ink-800 dark:text-ink-300'
+                }`}
+              >
+                💜 Couple
+              </button>
+            </div>
+            {hasCouple && <p className="text-[11px] text-ink-400">You already have a couple space — it's one per person 😉</p>}
+            {kind === 'couple' && !hasCouple && (
+              <p className="text-[11px] text-ink-400">Just you two: private questions, memories and date ideas. Locks at 2 people.</p>
+            )}
             <input
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Space name — e.g. Goa Trip"
+              placeholder={kind === 'couple' ? 'Name it — e.g. Us' : 'Space name — e.g. Goa Trip'}
               maxLength={60}
               className="field"
             />
+            {kind === 'group' && (
             <div className="flex flex-wrap gap-1.5">
               {SPACE_EMOJIS.map((em) => (
                 <button
@@ -117,8 +144,9 @@ export default function SpaceSwitcher({ open, onClose }: { open: boolean; onClos
                 </button>
               ))}
             </div>
+            )}
             <button disabled={busy || !name.trim()} className="btn-primary w-full py-3">
-              {busy ? 'Creating…' : 'Create space'}
+              {busy ? 'Creating…' : kind === 'couple' ? 'Create couple space' : 'Create space'}
             </button>
           </form>
         ) : (

@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowLeft } from '../lib/icons'
+import { supabase } from '../lib/supabase'
 import AuthForm from '../components/AuthForm'
 
 const SLIDES = [
   {
     title: 'Lists you make together',
-    hint: 'Groceries, chores, plans — everyone sees changes live, with who-added-what.',
+    hint: 'Plans, notes, habits and split money — with your partner or any group, live on every phone.',
     art: (
       <g>
         <rect x="52" y="42" width="96" height="122" rx="14" fill="#948ce9" />
@@ -50,12 +52,30 @@ const SLIDES = [
   }
 ]
 
-/** Onboarding walkthrough → auth. */
+interface InvitePreview {
+  name: string
+  emoji: string | null
+  kind: string
+  member_count: number
+}
+
+/** Onboarding walkthrough → auth. Invite links skip the tour and say who's inviting. */
 export default function SignIn() {
-  const [screen, setScreen] = useState<'walkthrough' | 'auth'>('walkthrough')
+  const location = useLocation()
+  const joinCode = location.pathname.match(/^\/join\/([A-Za-z0-9]+)/)?.[1] ?? null
+  const [screen, setScreen] = useState<'walkthrough' | 'auth'>(joinCode ? 'auth' : 'walkthrough')
   const [slide, setSlide] = useState(0)
   const [mode, setMode] = useState<'signin' | 'signup'>('signup')
+  const [invite, setInvite] = useState<InvitePreview | null>(null)
   const last = slide === SLIDES.length - 1
+
+  useEffect(() => {
+    if (!joinCode) return
+    supabase.rpc('lv_invite_preview', { p_code: joinCode }).then(({ data }) => {
+      const row = (data as InvitePreview[] | null)?.[0]
+      if (row) setInvite(row)
+    })
+  }, [joinCode])
 
   if (screen === 'walkthrough') {
     return (
@@ -155,6 +175,19 @@ export default function SignIn() {
       <button onClick={() => setScreen('walkthrough')} className="icon-btn -ml-2 mb-6" aria-label="Back">
         <ArrowLeft size={20} />
       </button>
+      {invite && (
+        <div className="mb-6 flex items-center gap-3 rounded-[20px] bg-brand-50 p-4 dark:bg-brand-800/20">
+          <span className="text-3xl">{invite.emoji ?? (invite.kind === 'couple' ? '💜' : '👥')}</span>
+          <p className="text-sm leading-snug">
+            <strong>You're invited to {invite.name}!</strong>
+            <span className="block text-ink-500 dark:text-ink-400">
+              {invite.kind === 'couple'
+                ? 'Someone wants to pair up with you. Create an account and you two are in.'
+                : `${invite.member_count} ${Number(invite.member_count) === 1 ? 'person is' : 'people are'} in — create an account to join them.`}
+            </span>
+          </p>
+        </div>
+      )}
       <h1 className="mb-8 text-center text-2xl font-extrabold tracking-tight">
         {mode === 'signup' ? 'Create your account' : 'Welcome back'}
       </h1>
