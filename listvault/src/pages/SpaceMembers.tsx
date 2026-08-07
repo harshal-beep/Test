@@ -2,14 +2,17 @@
  * Per-space membership: who's in, invite link, owner controls
  * (rename, new code, remove members, delete group), member leave.
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Check, Copy, LogOut, Pencil, Share2, Trash2 } from '../lib/icons'
+import { ArrowLeft, Check, Copy, LogOut, Share2, Trash2 } from '../lib/icons'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { useSpace } from '../context/SpaceContext'
 import Avatar from '../components/Avatar'
+import { SPACE_EMOJIS } from '../components/SpaceSwitcher'
 import { Page, useConfirm, useToast } from '../components/ui'
+
+const COUPLE_SPACE_EMOJIS = ['💜', '❤️', '🏡', '✨', '🌙', '🦋']
 
 export default function SpaceMembers() {
   const { session } = useAuth()
@@ -20,12 +23,21 @@ export default function SpaceMembers() {
   const myId = session?.user.id
   const myRole = memberRows.find((m) => m.user_id === myId)?.role
   const owner = myRole === 'owner'
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState('')
+  const [name, setName] = useState(space?.name ?? '')
+  const [emoji, setEmoji] = useState<string | null>(space?.emoji ?? null)
+  const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Re-seed the form when the user switches spaces while on this page.
+  useEffect(() => {
+    setName(space?.name ?? '')
+    setEmoji(space?.emoji ?? null)
+  }, [space?.id])
 
   if (!space) return null
   const inviteLink = `${window.location.origin}/join/${space.invite_code}`
+  const dirty = name.trim() !== space.name || (emoji ?? null) !== (space.emoji ?? null)
+  const emojiChoices = isCouple ? COUPLE_SPACE_EMOJIS : SPACE_EMOJIS
 
   async function copyLink() {
     await navigator.clipboard.writeText(inviteLink)
@@ -49,14 +61,19 @@ export default function SpaceMembers() {
     }
   }
 
-  async function rename() {
+  async function saveSpace() {
     const trimmed = name.trim()
     if (!trimmed) return
-    const { error } = await supabase.from('lv_spaces').update({ name: trimmed.slice(0, 60) }).eq('id', space!.id)
+    setSaving(true)
+    const { error } = await supabase
+      .from('lv_spaces')
+      .update({ name: trimmed.slice(0, 60), emoji })
+      .eq('id', space!.id)
+    setSaving(false)
     if (error) toast(error.message)
     else {
-      setEditing(false)
       await refresh()
+      toast('Space updated ✓')
     }
   }
 
@@ -104,38 +121,43 @@ export default function SpaceMembers() {
         <Link to="/" className="icon-btn -ml-2" aria-label="Back">
           <ArrowLeft size={20} />
         </Link>
-        {editing ? (
-          <span className="flex flex-1 items-center gap-2">
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && void rename()}
-              maxLength={60}
-              className="field flex-1 py-2"
-            />
-            <button onClick={() => void rename()} className="icon-btn" aria-label="Save name">
-              <Check size={18} />
-            </button>
-          </span>
-        ) : (
-          <h1 className="flex-1 truncate text-[26px] font-extrabold tracking-tight">
-            {space.emoji ?? (isCouple ? '💜' : '👥')} {space.name}
-          </h1>
-        )}
-        {owner && !editing && (
-          <button
-            onClick={() => {
-              setName(space.name)
-              setEditing(true)
-            }}
-            className="icon-btn"
-            aria-label="Rename space"
-          >
-            <Pencil size={17} />
-          </button>
-        )}
+        <h1 className="flex-1 truncate text-[26px] font-extrabold tracking-tight">
+          {space.emoji ?? (isCouple ? '💜' : '👥')} {space.name}
+        </h1>
       </div>
+
+      {/* Space settings — name and emoji, owner only */}
+      {owner && (
+        <div className="surface space-y-3 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-ink-400">Space settings</p>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+            placeholder="Space name"
+            className="field"
+          />
+          <div className="flex flex-wrap gap-2">
+            {[...new Set([...(space.emoji ? [space.emoji] : []), ...emojiChoices])].map((em) => (
+              <button
+                key={em}
+                type="button"
+                onClick={() => setEmoji(em)}
+                className={`rounded-2xl p-2 text-xl transition-all active:scale-90 ${
+                  emoji === em ? 'bg-brand-100 ring-2 ring-brand-500 dark:bg-brand-800/40' : 'bg-ink-100 dark:bg-ink-800'
+                }`}
+              >
+                {em}
+              </button>
+            ))}
+          </div>
+          {dirty && (
+            <button onClick={() => void saveSpace()} disabled={saving || !name.trim()} className="btn-primary flex w-full items-center justify-center gap-2 py-2.5 text-sm">
+              <Check size={15} /> {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Invite — group spaces only; the couple space stays just you two */}
       {!isCouple && (

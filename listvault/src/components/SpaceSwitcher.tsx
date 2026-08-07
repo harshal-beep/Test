@@ -4,7 +4,7 @@
  */
 import { FormEvent, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, Plus, UserPlus } from '../lib/icons'
+import { Check, Plus, Settings, UserPlus } from '../lib/icons'
 import { useSpace } from '../context/SpaceContext'
 import { BottomSheet, useToast } from './ui'
 
@@ -42,29 +42,44 @@ export default function SpaceSwitcher({ open, onClose }: { open: boolean; onClos
       <div className="space-y-4 pb-1">
         <div className="space-y-1.5">
           {spaces.map((s) => (
-            <button
+            <div
               key={s.id}
-              onClick={() => {
-                setSpace(s.id)
-                onClose()
-              }}
-              className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-2xl pl-3.5 pr-1.5 transition-colors ${
                 s.id === space?.id
                   ? 'bg-brand-50 dark:bg-brand-800/25'
                   : 'hover:bg-ink-100 dark:hover:bg-ink-800'
               }`}
             >
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink-100 text-xl dark:bg-ink-800">
-                {s.emoji ?? (s.kind === 'couple' ? '💜' : '👥')}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-bold">{s.name}</span>
-                <span className="block text-xs text-ink-400">
-                  {s.kind === 'couple' ? 'Just us two' : 'Group space'}
+              <button
+                onClick={() => {
+                  setSpace(s.id)
+                  onClose()
+                }}
+                className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-ink-100 text-xl dark:bg-ink-800">
+                  {s.emoji ?? (s.kind === 'couple' ? '💜' : '👥')}
                 </span>
-              </span>
-              {s.id === space?.id && <Check size={18} className="text-brand-600" />}
-            </button>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold">{s.name}</span>
+                  <span className="block text-xs text-ink-400">
+                    {s.kind === 'couple' ? 'Just us two' : 'Group space'}
+                  </span>
+                </span>
+                {s.id === space?.id && <Check size={18} className="shrink-0 text-brand-600" />}
+              </button>
+              <button
+                onClick={() => {
+                  setSpace(s.id)
+                  onClose()
+                  navigate('/space')
+                }}
+                aria-label={`${s.name} settings`}
+                className="icon-btn h-9 w-9 shrink-0 text-ink-400"
+              >
+                <Settings size={17} />
+              </button>
+            </div>
           ))}
         </div>
 
