@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pucho Pulse — Analytics Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anek+Latin:wght@600;700;800&family=Lato:wght@300;400;500;700&family=Chivo+Mono:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --surface-0: #f7f6fa;      /* page */
+    --surface-1: #ffffff;      /* cards / chart surface */
+    --surface-2: #f0edf7;      /* hover wash, meter tracks */
+    --border:    #e6e2ef;
+    --text-primary:   #17131f;
+    --text-secondary: #5b566b;
+    --text-muted:     #8b8699;
+    --brand:     #5922c6;      /* Pucho Violet */
+    --brand-soft:#efe9fb;
+    --series-1:  #5922c6;      /* violet  — Chat / primary */
+    --series-2:  #1baf7a;      /* aqua    — Workflow */
+    --series-3:  #eb6834;      /* orange  — Agent */
+    --series-4:  #af3db8;      /* magenta — Voice (Violet Blossom) */
+    --series-5:  #eda100;      /* yellow  — Other */
+    --good:      #0e8345;
+    --warn:      #b25e00;
+    --danger:    #c62828;
+    --grid:      #eceaf2;
+    --tooltip-bg:#17131f;
+    --tooltip-fg:#ffffff;
+    /* sequential violet ramp (light) for heatmap */
+    --seq-1:#ece4fa; --seq-2:#d5c5f4; --seq-3:#b89aec; --seq-4:#9a6fe2; --seq-5:#7b46d6; --seq-6:#5922c6; --seq-7:#43199a;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-0: #121016;
+    --surface-1: #1a1a19;
+    --surface-2: #26232e;
+    --border:    #322e3d;
+    --text-primary:   #f5f3f9;
+    --text-secondary: #b6b1c4;
+    --text-muted:     #7d7890;
+    --brand:     #9d7bea;
+    --brand-soft:#2a2140;
+    --series-1:  #7b4ce0;
+    --series-2:  #199e70;
+    --series-3:  #d95926;
+    --series-4:  #c94fd1;
+    --series-5:  #c98500;
+    --good:      #34a866;
+    --warn:      #d98a2b;
+    --danger:    #e66767;
+    --grid:      #2a2733;
+    --tooltip-bg:#f5f3f9;
+    --tooltip-fg:#17131f;
+    --seq-1:#2a2140; --seq-2:#3a2c5c; --seq-3:#4c3880; --seq-4:#5f45a6; --seq-5:#7b4ce0; --seq-6:#9d7bea; --seq-7:#c0a9f2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Lato', system-ui, sans-serif;
+    background: var(--surface-0);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-x: hidden;
+  }
+  h1,h2,h3 { font-family: 'Anek Latin', Arial, sans-serif; }
+
+  /* ---------- header ---------- */
+  header {
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex; align-items: center; gap: 18px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .logo {
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .logo .mark {
+    font-family: 'Anek Latin', Arial, sans-serif; font-weight: 800; font-size: 22px;
+    color: var(--brand); letter-spacing: -0.5px;
+  }
+  .logo .sub {
+    font-family: 'Chivo Mono', monospace; font-weight: 600; font-size: 11px;
+    color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase;
+  }
+  nav { display: flex; gap: 4px; margin-left: 18px; flex-wrap: wrap; }
+  nav button {
+    font-family: 'Lato', sans-serif; font-size: 13.5px; font-weight: 500;
+    border: none; background: none; color: var(--text-secondary);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  }
+  nav button:hover { background: var(--surface-2); }
+  nav button.active { background: var(--brand-soft); color: var(--brand); font-weight: 700; }
+  .hdr-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .demo-chip {
+    font-family:'Chivo Mono',monospace; font-size: 10.5px; font-weight: 600; letter-spacing: .5px;
+    color: var(--warn); border: 1px solid var(--warn); border-radius: 99px; padding: 3px 10px;
+  }
+  #themeBtn {
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+    border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px;
+  }
+
+  /* ---------- filter row ---------- */
+  .filters {
+    display: flex; gap: 8px; align-items: center;
+    padding: 16px 28px 0;
+    max-width: 1280px; margin: 0 auto;
+  }
+  .filters .lbl { color: var(--text-muted); font-size: 12.5px; margin-right: 2px; }
+  .rangeBtn {
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-secondary);
+    padding: 6px 13px; border-radius: 8px; cursor: pointer; font-size: 13px; font-family:'Lato',sans-serif;
+  }
+  .rangeBtn.active { background: var(--brand); border-color: var(--brand); color: #fff; font-weight: 700; }
+
+  /* ---------- layout ---------- */
+  main { max-width: 1280px; margin: 0 auto; padding: 18px 28px 60px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .grid { display: grid; gap: 16px; }
+  .tiles { grid-template-columns: repeat(6, 1fr); }
+  .cols-2 { grid-template-columns: 1.4fr 1fr; }
+  .cols-2e { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  @media (max-width: 1000px) {
+    .tiles { grid-template-columns: repeat(3, 1fr); }
+    .cols-2, .cols-2e, .cols-3 { grid-template-columns: 1fr; }
+  }
+  section.card {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 14px; padding: 18px 20px; margin-top: 16px;
+    min-width: 0;
+  }
+
+  /* ---------- phone ---------- */
+  @media (max-width: 700px) {
+    header { padding: 10px 14px; gap: 8px; flex-wrap: wrap; }
+    nav {
+      order: 3; width: 100%; margin-left: 0; flex-wrap: nowrap;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; padding-bottom: 2px;
+    }
+    nav::-webkit-scrollbar { display: none; }
+    nav button { white-space: nowrap; padding: 7px 11px; font-size: 13px; }
+    .hdr-right { margin-left: auto; }
+    .logo .sub { display: none; }
+    .filters { padding: 12px 14px 0; }
+    main { padding: 12px 14px 44px; }
+    .grid { gap: 12px; }
+    section.card { padding: 14px 13px; margin-top: 12px; border-radius: 12px; }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .tile { padding: 12px 13px 10px; }
+    .tile .val { font-size: 21px; }
+    .tile .lbl { font-size: 11.5px; }
+    .card h3 { font-size: 15px; }
+    .card .sub { font-size: 12px; }
+    td, th { padding: 8px 8px; }
+  }
+  .grid > section.card { margin-top: 0; }
+  .card h3 { font-size: 15.5px; font-weight: 700; color: var(--text-primary); }
+  .card .sub { font-size: 12.5px; color: var(--text-muted); margin-top: 1px; margin-bottom: 12px; }
+
+  /* ---------- stat tiles ---------- */
+  .tile {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 16px 12px; min-width: 0;
+  }
+  .tile .lbl { font-size: 12px; color: var(--text-secondary); }
+  .tile .val {
+    font-family: 'Anek Latin', Arial, sans-serif; font-weight: 700; font-size: 26px;
+    color: var(--text-primary); line-height: 1.15; margin-top: 3px;
+  }
+  .tile .delta { font-size: 12px; margin-top: 2px; font-weight: 700; }
+  .delta.up   { color: var(--good); }
+  .delta.down { color: var(--danger); }
+  .delta.neut { color: var(--text-muted); font-weight: 400; }
+  .tile svg.spark { display: block; margin-top: 6px; }
+
+  /* hero */
+  .hero-num {
+    font-family: 'Anek Latin', Arial, sans-serif; font-weight: 800; font-size: 52px;
+    line-height: 1.05; color: var(--text-primary);
+  }
+  .hero-cap { font-size: 13px; color: var(--text-secondary); }
+
+  /* ---------- legend ---------- */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
+  .key-rect { width: 12px; height: 12px; border-radius: 3px; }
+  .key-line { width: 16px; height: 2px; border-radius: 1px; }
+
+  /* ---------- tables ---------- */
+  .tw { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -4px; padding: 0 4px; }
+  .tw::-webkit-scrollbar { height: 6px; }
+  .tw::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  @media (max-width: 700px) { .tw table { min-width: 440px; } }
+  th {
+    text-align: left; font-weight: 700; color: var(--text-muted); font-size: 11.5px;
+    text-transform: uppercase; letter-spacing: .5px;
+    padding: 8px 10px; border-bottom: 1px solid var(--border);
+  }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--grid); color: var(--text-primary); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface-2); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pill {
+    display: inline-block; padding: 2px 9px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
+  }
+  .pill.risk   { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+  .pill.warn   { background: color-mix(in srgb, var(--warn) 14%, transparent);   color: var(--warn); }
+  .pill.good   { background: color-mix(in srgb, var(--good) 12%, transparent);   color: var(--good); }
+  .pill.neut   { background: var(--surface-2); color: var(--text-secondary); }
+  .meter { background: var(--surface-2); border-radius: 99px; height: 8px; width: 110px; display:inline-block; vertical-align: middle; overflow:hidden; }
+  .meter > i { display:block; height:100%; border-radius: 99px; }
+
+  /* ---------- tooltip ---------- */
+  #tip {
+    position: fixed; z-index: 99; pointer-events: none; display: none;
+    background: var(--tooltip-bg); color: var(--tooltip-fg);
+    border-radius: 9px; padding: 9px 12px; font-size: 12.5px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.22); max-width: 260px;
+  }
+  #tip .t-title { font-weight: 700; margin-bottom: 5px; opacity: .85; font-size: 11.5px; }
+  #tip .t-row { display: flex; align-items: center; gap: 7px; margin-top: 3px; }
+  #tip .t-key { width: 12px; height: 2px; border-radius: 1px; flex: none; }
+  #tip .t-val { font-weight: 700; }
+  #tip .t-lbl { opacity: .75; }
+
+  .search-row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  #searchBox {
+    flex:1; min-width:220px; font:14px 'Lato',sans-serif; color:var(--text-primary);
+    background:var(--surface-0); border:1.5px solid var(--border); border-radius:10px;
+    padding:10px 14px; outline:none;
+  }
+  #searchBox:focus { border-color:var(--brand); }
+  .chips { display:flex; gap:6px; }
+  .chip {
+    font:12.5px 'Lato',sans-serif; border:1px solid var(--border); background:var(--surface-1);
+    color:var(--text-secondary); padding:6px 12px; border-radius:99px; cursor:pointer;
+  }
+  .chip.active { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:700; }
+  .sr-item {
+    display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer;
+  }
+  .sr-item:hover, .sr-item.sel { background:var(--surface-2); }
+  .sr-type {
+    font:700 10px 'Chivo Mono',monospace; letter-spacing:.5px; padding:3px 8px; border-radius:6px; flex:none;
+  }
+  .sr-type.partner { background:color-mix(in srgb,var(--series-4) 15%,transparent); color:var(--series-4); }
+  .sr-type.org     { background:var(--brand-soft); color:var(--brand); }
+  .sr-type.user    { background:color-mix(in srgb,var(--series-2) 15%,transparent); color:var(--series-2); }
+  .sr-name { font-weight:700; }
+  .sr-sub  { color:var(--text-muted); font-size:12px; margin-left:auto; text-align:right; }
+  .p360-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:12px; }
+  .p360-stat { background:var(--surface-0); border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .p360-stat .l { font-size:11.5px; color:var(--text-muted); }
+  .p360-stat .v { font:700 18px 'Anek Latin',Arial,sans-serif; margin-top:2px; }
+  .score-ring { display:flex; align-items:center; gap:16px; margin-top:8px; flex-wrap:wrap; }
+  .grade {
+    font:800 40px 'Anek Latin',Arial,sans-serif; width:76px; height:76px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; color:#fff; flex:none;
+  }
+  .note-strip {
+    margin-top: 12px; padding: 10px 13px; border-radius: 9px;
+    background: var(--brand-soft); color: var(--text-secondary); font-size: 12.5px;
+    border-left: 3px solid var(--brand);
+  }
+  .rs-big {
+    font-family:'Anek Latin',Arial,sans-serif; font-weight:800; font-size:46px; line-height:1;
+    color: var(--brand);
+  }
+  svg text { font-family: 'Lato', sans-serif; }
+  .axis-txt { font-size: 11px; fill: var(--text-muted); }
+  .dlabel   { font-size: 11.5px; font-weight: 700; fill: var(--text-primary); }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  footer {
+    text-align:center; color: var(--text-muted); font-size: 12px; padding: 24px;
+    font-family:'Chivo Mono',monospace;
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">
+    <span class="mark">pucho</span>
+    <span class="sub">Pulse · Analytics</span>
+  </div>
+  <nav id="nav">
+    <button data-view="v0" class="active">Command Center</button>
+    <button data-view="v1">Credits &amp; Revenue</button>
+    <button data-view="v2">Users &amp; Engagement</button>
+    <button data-view="v3">Feature Usage</button>
+    <button data-view="v4">Partners &amp; Funnel</button>
+    <button data-view="v5">Credit Grant</button>
+    <button data-view="v6">Search &amp; 360</button>
+  </nav>
+  <div class="hdr-right">
+    <span class="demo-chip">DEMO DATA</span>
+    <button id="themeBtn">◐ Theme</button>
+  </div>
+</header>
+
+<div class="filters">
+  <span class="lbl">Range</span>
+  <button class="rangeBtn" data-days="7">7 days</button>
+  <button class="rangeBtn active" data-days="30">30 days</button>
+  <button class="rangeBtn" data-days="90">90 days</button>
+</div>
+
+<main>
+  <!-- ============ VIEW 0: COMMAND CENTER ============ -->
+  <div class="view active" id="v0">
+    <div class="grid tiles" id="cc-tiles"></div>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Daily credit burn</h3>
+        <div class="sub">Credits consumed by real usage, with 7-day moving average — the product's pulse</div>
+        <div id="burnChart"></div>
+        <div class="legend">
+          <span class="item"><span class="key-line" style="background:var(--series-1)"></span>Daily burn</span>
+          <span class="item"><span class="key-line" style="background:var(--series-4)"></span>7-day average</span>
+        </div>
+      </section>
+      <section class="card">
+        <h3>Signups vs activated</h3>
+        <div class="sub">Weekly signups and how many asked their first question within 7 days</div>
+        <div id="signupChart"></div>
+        <div class="legend">
+          <span class="item"><span class="key-rect" style="background:var(--series-1)"></span>Activated (7d)</span>
+          <span class="item"><span class="key-rect" style="background:var(--seq-2)"></span>Signed up, not yet active</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Needs attention</h3>
+        <div class="sub">Churn-risk orgs and payment issues — every row gets a named owner</div>
+        <div id="attentionTable"></div>
+      </section>
+      <section class="card">
+        <h3>Credit burn by feature</h3>
+        <div class="sub">Where the credits go</div>
+        <div id="featureDonut" style="display:flex; align-items:center; gap:22px; flex-wrap:wrap;"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============ VIEW 1: CREDITS & REVENUE ============ -->
+  <div class="view" id="v1">
+    <div class="grid tiles" id="cr-tiles"></div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Weekly credit burn by feature</h3>
+        <div class="sub">Stacked weekly consumption — watch workflow share grow</div>
+        <div id="stackChart"></div>
+        <div class="legend" id="stackLegend"></div>
+      </section>
+      <section class="card">
+        <h3>MRR by plan</h3>
+        <div class="sub">Active subscriptions × normalized monthly price</div>
+        <div id="mrrChart"></div>
+      </section>
+    </div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Wallet utilization by organization</h3>
+        <div class="sub">&gt;85% = upsell trigger · &lt;20% mid-cycle = churn risk</div>
+        <div id="walletTable"></div>
+      </section>
+      <section class="card">
+        <h3>Collected revenue by month</h3>
+        <div class="sub">Payments with status COMPLETED / PAID</div>
+        <div id="revChart"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============ VIEW 2: USERS & ENGAGEMENT ============ -->
+  <div class="view" id="v2">
+    <div class="grid tiles" id="ue-tiles"></div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Monthly retention cohorts</h3>
+        <div class="sub">% of each signup cohort still asking questions N months later</div>
+        <div id="cohortGrid"></div>
+      </section>
+      <section class="card">
+        <h3>Top credit-consuming users</h3>
+        <div class="sub">Your case studies and referral engine</div>
+        <div id="powerTable"></div>
+      </section>
+    </div>
+    <div class="grid cols-2e" style="margin-top:16px">
+      <section class="card">
+        <h3>Logins by device</h3>
+        <div class="sub">Last 30 days</div>
+        <div id="deviceChart"></div>
+      </section>
+      <section class="card">
+        <h3>Dormant paying seats</h3>
+        <div class="sub">Active package, no login in 30 days — call before renewal</div>
+        <div id="dormantTable"></div>
+      </section>
+    </div>
+  </div>
+
+  <!-- ============ VIEW 3: FEATURE USAGE ============ -->
+  <div class="view" id="v3">
+    <div class="grid tiles" id="fu-tiles"></div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Questions by chat type</h3>
+        <div class="sub">Which product bets are working</div>
+        <div id="chatTypeChart"></div>
+      </section>
+      <section class="card">
+        <h3>Voice minutes by organization</h3>
+        <div class="sub">Billed at 10 credits/min — also a revenue line</div>
+        <div id="voiceChart"></div>
+      </section>
+    </div>
+    <section class="card">
+      <h3>Workflow leaderboard</h3>
+      <div class="sub">Which Studio flows burn the most credits</div>
+      <div id="flowTable"></div>
+    </section>
+  </div>
+
+  <!-- ============ VIEW 4: PARTNERS & FUNNEL ============ -->
+  <div class="view" id="v4">
+    <div class="grid tiles" id="pf-tiles"></div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>SDR / campaign funnel</h3>
+        <div class="sub">Stage-to-stage conversion — fix the biggest drop-off first</div>
+        <div id="funnelChart"></div>
+      </section>
+      <section class="card">
+        <h3>Contact-sales enquiries by month</h3>
+        <div class="sub">By company size</div>
+        <div id="salesChart"></div>
+        <div class="legend" id="salesLegend"></div>
+      </section>
+    </div>
+    <section class="card">
+      <h3>Channel partner scorecard</h3>
+      <div class="sub">Rank partners; the bottom half gets a different playbook</div>
+      <div id="partnerTable"></div>
+    </section>
+  </div>
+
+  <!-- ============ VIEW 5: 1,000-CREDIT GRANT BENCHMARK ============ -->
+  <div class="view" id="v5">
+    <div class="grid tiles" id="cg-tiles"></div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Conversion by credit usage — the money chart</h3>
+        <div class="sub">Does using the grant predict buying? Each band = accounts grouped by credits consumed</div>
+        <div id="bandChart"></div>
+        <div class="note-strip" id="bandNote"></div>
+      </section>
+      <section class="card">
+        <h3>How fast the grant gets consumed</h3>
+        <div class="sub">Median days for a grant account to cross each credit milestone</div>
+        <div id="burnMilestones"></div>
+        <div class="note-strip" id="burnNote"></div>
+      </section>
+    </div>
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>What the free credits buy — and what converts</h3>
+        <div class="sub">Accounts grouped by their dominant feature during the free period</div>
+        <div id="featConvTable"></div>
+      </section>
+      <section class="card">
+        <h3>Is 1,000 the right number?</h3>
+        <div class="sub">Credits consumed at the moment of conversion</div>
+        <div id="rightSize"></div>
+      </section>
+    </div>
+    <section class="card">
+      <h3>Partner benchmark — same grant, different outcomes</h3>
+      <div class="sub">Every partner hands out the same 1,000 credits. The spread below is partner quality, not product quality.</div>
+      <div id="grantPartnerTable"></div>
+    </section>
+  </div>
+
+  <!-- ============ VIEW 6: SEARCH & 360 ============ -->
+  <div class="view" id="v6">
+    <section class="card" style="margin-top:0">
+      <h3>Find anyone</h3>
+      <div class="sub">Search channel partners, organizations, and end users — click a result for the full 360</div>
+      <div class="search-row">
+        <input id="searchBox" type="search" placeholder="Search by name, company, or email…" autocomplete="off">
+        <div class="chips" id="searchChips">
+          <button class="chip active" data-t="all">All</button>
+          <button class="chip" data-t="partner">Partners</button>
+          <button class="chip" data-t="org">Organizations</button>
+          <button class="chip" data-t="user">End users</button>
+        </div>
+      </div>
+      <div id="searchResults"></div>
+    </section>
+
+    <section class="card" id="panel360" style="display:none"></section>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <section class="card">
+        <h3>Zero-utilization aging</h3>
+        <div class="sub">Signed up via partner, never used a single credit — by how long they've been sitting</div>
+        <div id="zeroAgingTable"></div>
+        <div class="note-strip">Rule: 0–7d is normal (workshop was last week). 7–14d gets the partner nudge. 14–30d gets a Pucho Sales call. 30d+ is written off in the partner's health score — and asked about in the monthly partner review.</div>
+      </section>
+      <section class="card">
+        <h3>Who converts — profile vs behavior</h3>
+        <div class="sub">End-user profile (industry × size) against usage and conversion</div>
+        <div id="profileTable"></div>
+      </section>
+    </div>
+
+    <section class="card">
+      <h3>Partner health score</h3>
+      <div class="sub">30 pts engagement (full marks at 50% engaged) · 30 pts conversion (at 5%) · 20 pts zero-use control (at ≤20%) · 20 pts velocity (at 40% starting within 48h)</div>
+      <div id="healthTable"></div>
+    </section>
+
+    <section class="card">
+      <h3>Purchase propensity (PPS) — Pucho Office edition</h3>
+      <div class="sub">The workshops sell Pucho Office, so Office behavior IS the score: office habit days 25 · depth 20 · app breadth (Excel/Word/PPT) 12 · office volume 10 · embedding 15 · momentum 10 · firmographic 8 · recency penalty. Band A = close within 72h.</div>
+      <div id="ppsTable"></div>
+      <div class="note-strip">Band W is the special case: busy in general chat, absent in Office — the workshop goal was missed. That account gets an Office re-demo, not a close attempt. Band A goes to the partner daily at 9 AM with the close kit; Band D gets automated drip only.</div>
+    </section>
+  </div>
+</main>
+
+<div id="tip"></div>
+<footer>Pucho Pulse · demo prototype · Pucho Toh Sahi!</footer>
+
+<script>
+"use strict";
+/* ============================================================
+   DEMO DATA — deterministic, shaped like the real Pucho schema
+   ============================================================ */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd = mulberry32(20260817);
+const DAYS = 90;
+const TODAY = new Date(2026, 7, 17);
+const FEATURES = [
+  { key:'Chat / Search',     color:'--series-1' },
+  { key:'Workflow (Studio)', color:'--series-2' },
+  { key:'Agent',             color:'--series-3' },
+  { key:'Voice',             color:'--series-4' },
+  { key:'Other',             color:'--series-5' },
+];
+// per-day per-feature credits, gently growing with weekly seasonality
+const daily = [];
+for (let i = DAYS-1; i >= 0; i--) {
+  const d = new Date(TODAY); d.setDate(d.getDate()-i);
+  const dow = d.getDay();
+  const wk = (dow===0||dow===6) ? 0.45 : 1;             // weekends dip (MSMEs!)
+  const growth = 1 + (DAYS-1-i)*0.011;                  // steady growth
+  const noise = ()=> 0.75 + rnd()*0.5;
+  daily.push({
+    date: d,
+    f: [
+      Math.round(5200*wk*growth*noise()),               // chat
+      Math.round(2600*wk*growth*(1+(DAYS-1-i)*0.006)*noise()), // workflows grow faster
+      Math.round(1400*wk*growth*noise()),
+      Math.round(1100*wk*growth*noise()),
+      Math.round(420*wk*growth*noise()),
+    ]
+  });
+}
+daily.forEach(d => d.total = d.f.reduce((a,b)=>a+b,0));
+
+const ORGS = [
+  ['Shree Ganesh Textiles','Textiles','Growth',45000,41200,'Bharat AI Partners',92],
+  ['Patel Agro Industries','Agri inputs','Business',90000,71800,'Gujarat Digital Co',80],
+  ['Mehta Polymers','Chemicals','Growth',45000,38900,'—',86],
+  ['Sunrise Ceramics','Ceramics','Team',20000,18400,'Bharat AI Partners',92],
+  ['Krishna Dairy Foods','FMCG','Team',20000,12300,'Rajasthan TechServe',62],
+  ['Apex Engineering Works','Engineering','Business',90000,44100,'—',49],
+  ['Balaji Logistics','Logistics','Team',20000,9800,'Gujarat Digital Co',49],
+  ['Om Shakti Pharma','Pharma','Growth',45000,21500,'Rajasthan TechServe',48],
+  ['Swastik Packaging','Packaging','Starter',5000,4700,'Bharat AI Partners',94],
+  ['Neelkanth Metals','Metals','Team',20000,3100,'Gujarat Digital Co',16],
+  ['Riddhi Auto Components','Auto parts','Starter',5000,900,'—',18],
+  ['Shubham Traders','Trading','Starter',5000,650,'Rajasthan TechServe',13],
+];
+const USERS = [
+  ['Ramesh Patel','Patel Agro Industries',9840],['Priya Shah','Shree Ganesh Textiles',8420],
+  ['Amit Desai','Mehta Polymers',7150],['Sneha Iyer','Apex Engineering Works',6480],
+  ['Vikram Singh','Om Shakti Pharma',5920],['Kavita Joshi','Sunrise Ceramics',5610],
+  ['Rahul Mehta','Mehta Polymers',4890],['Deepa Nair','Krishna Dairy Foods',4320],
+  ['Suresh Kumar','Balaji Logistics',3870],['Anita Rao','Shree Ganesh Textiles',3540],
+];
+const COHORTS = [  // cohort label, size, m1..m4 retention %
+  ['Mar 2026', 118, [46,38,33,30]],
+  ['Apr 2026', 142, [48,41,35,31]],
+  ['May 2026', 175, [52,44,38,null]],
+  ['Jun 2026', 214, [55,47,null,null]],
+  ['Jul 2026', 268, [58,null,null,null]],
+  ['Aug 2026', 187, [null,null,null,null]],
+];
+const CHAT_TYPES = [
+  ['CHAT',31240],['ORG_KNOWLEDGE',18960],['WHATSAPP',12480],
+  ['NOTEBOOK',6420],['PUCHO_OFFICE (Excel/Word/PPT)',4870],['PUCHO_CODE',2110],
+];
+const FLOWS = [
+  ['Invoice reminder → WhatsApp',1840,15200,34],['Lead follow-up sequencer',1620,13400,41],
+  ['Tally sync + daily sales digest',980,11800,22],['Support ticket triage',1210,9600,18],
+  ['Quotation generator',740,7900,26],['Payment reconciliation',530,6200,14],
+];
+const SDR = [
+  ['New',1240],['Qualified',680],['Contacted',540],['Responded',236],
+  ['Meeting done',118],['Converted',52],
+];
+const PARTNERS = [
+  ['Bharat AI Partners','Gold',14,11,86400,'₹2.6L'],
+  ['Gujarat Digital Co','Silver',9,7,41200,'₹1.4L'],
+  ['Rajasthan TechServe','Silver',7,4,18900,'₹0.8L'],
+  ['Mumbai ERP Solutions','Bronze',3,1,4100,'₹0.2L'],
+];
+const VOICE = [
+  ['Patel Agro Industries',412],['Balaji Logistics',287],['Krishna Dairy Foods',198],
+  ['Shree Ganesh Textiles',134],['Om Shakti Pharma',86],
+];
+const DEVICES = [ ['Desktop — Windows',5840],['Mobile — Android',3920],['Desktop — Mac',1140],['Mobile — iOS',760] ];
+const SALES_MONTHS = ['Mar','Apr','May','Jun','Jul','Aug'];
+const SALES = { '1-10':[4,6,5,8,9,7], '11-50':[7,9,12,14,17,13], '51-200':[3,4,6,7,9,8], '200+':[1,1,2,3,4,3] };
+
+/* ---- Search & 360 demo directory ---- */
+const DIR_PARTNERS = [
+  {id:'p1', name:'Bharat AI Partners', tier:'Gold', email:'hello@bharataip.in', region:'Gujarat',
+   accounts:168, medianUsed:634, engagedPct:58, zeroPct:14, exhaustedPct:31, convPct:6.1, fast48:44,
+   trend:[[('Jun')],['Jul'],['Aug']], monthly:{accounts:[38,62,68], engaged:[19,36,41], conv:[2,4,4]},
+   zeroAging:[6,5,7,6], score:{eng:34.8, conv:30, zero:21.5, vel:22, total:100}},
+  {id:'p2', name:'Gujarat Digital Co', tier:'Silver', email:'team@gujaratdigital.co', region:'Gujarat',
+   accounts:112, medianUsed:512, engagedPct:49, zeroPct:19, exhaustedPct:26, convPct:4.5, fast48:36,
+   monthly:{accounts:[24,41,47], engaged:[10,19,26], conv:[1,2,2]},
+   zeroAging:[5,5,6,5], score:{eng:29.4, conv:27, zero:20.3, vel:18, total:95}},
+  {id:'p3', name:'Rajasthan TechServe', tier:'Silver', email:'sales@rajtechserve.in', region:'Rajasthan',
+   accounts:86, medianUsed:318, engagedPct:34, zeroPct:29, exhaustedPct:14, convPct:2.3, fast48:22,
+   monthly:{accounts:[20,31,35], engaged:[6,10,13], conv:[0,1,1]},
+   zeroAging:[7,6,6,6], score:{eng:20.4, conv:13.8, zero:17.8, vel:11, total:63}},
+  {id:'p4', name:'Mumbai ERP Solutions', tier:'Bronze', email:'info@mumbaierp.com', region:'Maharashtra',
+   accounts:46, medianUsed:142, engagedPct:17, zeroPct:43, exhaustedPct:4, convPct:0, fast48:9,
+   monthly:{accounts:[12,16,18], engaged:[2,3,3], conv:[0,0,0]},
+   zeroAging:[4,5,5,6], score:{eng:10.2, conv:0, zero:14.3, vel:4.5, total:29}},
+];
+const DIR_USERS = [
+  {id:'u1', name:'Ramesh Patel', email:'ramesh@patelagro.in', org:'Patel Agro Industries', industry:'Agri inputs', size:'51-200', partner:'Gujarat Digital Co', lang:'Gujarati', device:'Mobile — Android', signed:'12 May 2026', logins:74, questions:412, freeUsed:1000, paidUsed:9840, status:'Converted', statusCls:'good'},
+  {id:'u2', name:'Priya Shah', email:'priya@sgtextiles.in', org:'Shree Ganesh Textiles', industry:'Textiles', size:'51-200', partner:'Bharat AI Partners', lang:'Gujarati', device:'Desktop — Windows', signed:'3 Jun 2026', logins:58, questions:356, freeUsed:1000, paidUsed:8420, status:'Converted', statusCls:'good'},
+  {id:'u3', name:'Amit Desai', email:'amit@mehtapolymers.com', org:'Mehta Polymers', industry:'Chemicals', size:'201-500', partner:'—', lang:'English', device:'Desktop — Windows', signed:'21 Apr 2026', logins:66, questions:298, freeUsed:820, paidUsed:7150, status:'Converted', statusCls:'good'},
+  {id:'u4', name:'Kavita Joshi', email:'kavita@sunriseceramics.in', org:'Sunrise Ceramics', industry:'Ceramics', size:'11-50', partner:'Bharat AI Partners', lang:'Hindi', device:'Mobile — Android', signed:'19 Jul 2026', logins:31, questions:187, freeUsed:812, paidUsed:0, status:'Hot — 81% of grant', statusCls:'warn'},
+  {id:'u5', name:'Suresh Kumar', email:'suresh@balajilogistics.in', org:'Balaji Logistics', industry:'Logistics', size:'11-50', partner:'Gujarat Digital Co', lang:'Hindi', device:'Mobile — Android', signed:'28 Jul 2026', logins:12, questions:64, freeUsed:389, paidUsed:0, status:'Engaged', statusCls:'neut'},
+  {id:'u6', name:'Meena Agarwal', email:'meena@shreejifoods.in', org:'Shreeji Foods', industry:'FMCG', size:'11-50', partner:'Rajasthan TechServe', lang:'Hindi', device:'Mobile — Android', signed:'2 Aug 2026', logins:3, questions:8, freeUsed:74, paidUsed:0, status:'Tried it — stalling', statusCls:'warn'},
+  {id:'u7', name:'Rakesh Jain', email:'rakesh@jainmetals.com', org:'Jain Metals', industry:'Metals', size:'11-50', partner:'Mumbai ERP Solutions', lang:'Hindi', device:'Never logged in', signed:'25 Jul 2026', logins:0, questions:0, freeUsed:0, paidUsed:0, status:'Zero use — 23 days', statusCls:'risk'},
+  {id:'u8', name:'Farhan Sheikh', email:'farhan@almadinatraders.in', org:'Al Madina Traders', industry:'Trading', size:'1-10', partner:'Mumbai ERP Solutions', lang:'English', device:'Never logged in', signed:'8 Aug 2026', logins:0, questions:0, freeUsed:0, paidUsed:0, status:'Zero use — 9 days', statusCls:'risk'},
+];
+const DIR_ORGS = ORGS.map((o,i)=>({id:'o'+i, name:o[0], industry:o[1], plan:o[2], used:o[4], alloc:o[3], partner:o[5]==='—'?null:o[5]}));
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = n => n >= 1e7 ? (n/1e7).toFixed(1)+' Cr' : n >= 1e5 ? (n/1e5).toFixed(1)+' L' : n >= 1000 ? (n/1000).toFixed(1)+'K' : String(Math.round(n));
+const fmtFull = n => Math.round(n).toLocaleString('en-IN');
+const dshort = d => d.toLocaleDateString('en-IN',{day:'numeric',month:'short'});
+const el = (tag, attrs={}, parent) => {
+  const ns = ['svg','g','path','rect','line','circle','text','polyline'].includes(tag);
+  const e = ns ? document.createElementNS('http://www.w3.org/2000/svg',tag) : document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'text') e.textContent = v; else e.setAttribute(k, v);
+  }
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const tip = document.getElementById('tip');
+function showTip(x, y, title, rows) {
+  tip.innerHTML = '';
+  const t = document.createElement('div'); t.className='t-title'; t.textContent = title; tip.appendChild(t);
+  rows.forEach(r => {
+    const row = document.createElement('div'); row.className = 't-row';
+    if (r.color) { const k = document.createElement('span'); k.className='t-key'; k.style.background = r.color; row.appendChild(k); }
+    const v = document.createElement('span'); v.className='t-val'; v.textContent = r.value; row.appendChild(v);
+    const l = document.createElement('span'); l.className='t-lbl'; l.textContent = r.label; row.appendChild(l);
+    tip.appendChild(row);
+  });
+  tip.style.display = 'block';
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(x + 14, innerWidth - w - 10) + 'px';
+  tip.style.top  = Math.max(8, y - h - 12) + 'px';
+}
+function hideTip(){ tip.style.display = 'none'; }
+
+/* ============================================================
+   CHART BUILDERS (plain SVG, spec-compliant)
+   ============================================================ */
+// Available width for a chart, robust when its view is hidden (clientWidth 0)
+function chartW(mount){
+  if (mount.clientWidth > 40) return mount.clientWidth;
+  const m = document.querySelector('main');
+  const pad = innerWidth <= 700 ? 56 : 84;
+  return Math.max(240, (m ? m.clientWidth : innerWidth) - pad);
+}
+const isNarrow = () => innerWidth <= 700;
+
+function lineChart(mount, series, opts={}) {
+  // series: [{name,color,values:[{x:Date,y}]}]  — shared x
+  mount.innerHTML = '';
+  const W = chartW(mount), H = opts.height || (isNarrow() ? 200 : 240);
+  const P = {t:14, r:12, b:26, l: isNarrow() ? 38 : 46};
+  const svg = el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`},mount);
+  const xs = series[0].values.map(v=>v.x);
+  const allY = series.flatMap(s=>s.values.map(v=>v.y).filter(v=>v!=null));
+  const maxY = Math.max(...allY)*1.12;
+  const x = i => P.l + (i/(xs.length-1))*(W-P.l-P.r);
+  const y = v => H-P.b - (v/maxY)*(H-P.t-P.b);
+  // grid + y ticks
+  const step = niceStep(maxY/4);
+  for (let v=0; v<=maxY; v+=step) {
+    el('line',{x1:P.l,x2:W-P.r,y1:y(v),y2:y(v),class:'gridline'},svg);
+    el('text',{x:P.l-8,y:y(v)+4,'text-anchor':'end',class:'axis-txt',text:fmt(v)},svg);
+  }
+  // x ticks (~5, fewer on phone)
+  const tickN = Math.min(isNarrow() ? 3 : 6, xs.length);
+  for (let i=0;i<tickN;i++){
+    const idx = Math.round(i*(xs.length-1)/(tickN-1));
+    const anchor = i===0 ? 'start' : i===tickN-1 ? 'end' : 'middle';
+    el('text',{x:x(idx),y:H-8,'text-anchor':anchor,class:'axis-txt',text:dshort(xs[idx])},svg);
+  }
+  series.forEach(s=>{
+    const pts = s.values.map((v,i)=> v.y==null?null:`${x(i)},${y(v.y)}`).filter(Boolean).join(' ');
+    el('polyline',{points:pts,fill:'none',stroke:css(s.color),'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round',...(s.dash?{'stroke-dasharray':'none'}:{})},svg);
+    if (s.area) {
+      const first = `${x(0)},${H-P.b}`, last = `${x(s.values.length-1)},${H-P.b}`;
+      el('path',{d:`M ${first} L ${pts.split(' ').join(' L ')} L ${last} Z`,fill:css(s.color),opacity:.09},svg);
+    }
+    // end marker + direct label
+    const lastIdx = s.values.length-1;
+    const ly = s.values[lastIdx].y;
+    if (ly != null) {
+      el('circle',{cx:x(lastIdx),cy:y(ly),r:4.5,fill:css(s.color),stroke:css('--surface-1'),'stroke-width':2},svg);
+    }
+  });
+  // crosshair + tooltip
+  const cross = el('line',{y1:P.t,y2:H-P.b,stroke:css('--text-muted'),'stroke-width':1,opacity:0},svg);
+  svg.style.touchAction='pan-y';
+  svg.addEventListener('pointermove', ev=>{
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX-r.left)*(W/r.width);
+    let idx = Math.round((px-P.l)/((W-P.l-P.r)/(xs.length-1)));
+    idx = Math.max(0,Math.min(xs.length-1,idx));
+    cross.setAttribute('x1',x(idx)); cross.setAttribute('x2',x(idx)); cross.setAttribute('opacity',.6);
+    showTip(ev.clientX, ev.clientY, dshort(xs[idx]),
+      series.map(s=>({color:css(s.color), value: s.values[idx].y==null?'—':fmtFull(s.values[idx].y), label:s.name})));
+  });
+  svg.addEventListener('pointerleave', ()=>{ cross.setAttribute('opacity',0); hideTip(); });
+}
+function niceStep(raw){
+  const mag = Math.pow(10,Math.floor(Math.log10(raw)));
+  const n = raw/mag;
+  return (n<1.5?1:n<3.5?2:n<7.5?5:10)*mag;
+}
+
+function barChart(mount, data, opts={}) {
+  // data: [{label, value, color?}] vertical columns; or stacked via segs
+  mount.innerHTML = '';
+  const W = chartW(mount), H = opts.height || (isNarrow() ? 200 : 240);
+  const P = {t:14,r:10,b:30,l: opts.left || (isNarrow() ? 38 : 46)};
+  const svg = el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`},mount);
+  const maxY = Math.max(...data.map(d=> d.segs ? d.segs.reduce((a,s)=>a+s.v,0) : d.value))*1.15;
+  const y = v => H-P.b - (v/maxY)*(H-P.t-P.b);
+  const slot = (W-P.l-P.r)/data.length;
+  const bw = Math.min(24, slot*0.6);
+  const step = niceStep(maxY/4);
+  for (let v=0; v<=maxY; v+=step){
+    el('line',{x1:P.l,x2:W-P.r,y1:y(v),y2:y(v),class:'gridline'},svg);
+    el('text',{x:P.l-8,y:y(v)+4,'text-anchor':'end',class:'axis-txt',text:fmt(v)},svg);
+  }
+  data.forEach((d,i)=>{
+    const cx = P.l + slot*i + slot/2;
+    const hit = el('rect',{x:P.l+slot*i,y:P.t,width:slot,height:H-P.t-P.b,fill:'transparent'},svg);
+    if (d.segs) {
+      let acc = 0;
+      d.segs.forEach((s,si)=>{
+        const y1 = y(acc + s.v), y0 = y(acc);
+        const hgt = Math.max(0, y0-y1 - (si < d.segs.length-1 ? 2 : 0)); // 2px surface gap
+        const isTop = si === d.segs.length-1;
+        el('path',{d:roundTop(cx-bw/2, y1, bw, hgt, isTop?4:0), fill:css(s.color)},svg);
+        acc += s.v;
+      });
+      hookBarTip(hit, svg, ()=>[d.label, d.segs.map(s=>({color:css(s.color),value:fmtFull(s.v),label:s.name}))]);
+    } else {
+      const hgt = (H-P.b) - y(d.value);
+      el('path',{d:roundTop(cx-bw/2, y(d.value), bw, hgt, 4), fill:css(d.color||'--series-1')},svg);
+      if (opts.labels) el('text',{x:cx,y:y(d.value)-6,'text-anchor':'middle',class:'dlabel',text:opts.labelFmt?opts.labelFmt(d.value):fmt(d.value)},svg);
+      hookBarTip(hit, svg, ()=>[d.label,[{color:css(d.color||'--series-1'),value:fmtFull(d.value),label:opts.unit||''}]]);
+    }
+    el('text',{x:cx,y:H-9,'text-anchor':'middle',class:'axis-txt',text:d.label},svg);
+  });
+}
+function roundTop(x,y,w,h,r){
+  if (h<=0) return `M ${x} ${y} h ${w} v 0 h ${-w} Z`;
+  r = Math.min(r, h, w/2);
+  return `M ${x} ${y+h} L ${x} ${y+r} Q ${x} ${y} ${x+r} ${y} L ${x+w-r} ${y} Q ${x+w} ${y} ${x+w} ${y+r} L ${x+w} ${y+h} Z`;
+}
+function hookBarTip(hit, svg, get){
+  hit.addEventListener('pointermove', ev=>{ const [t,rows]=get(); showTip(ev.clientX,ev.clientY,t,rows); hit.setAttribute('fill','color-mix(in srgb, currentColor 6%, transparent)'); });
+  hit.addEventListener('pointerleave', ()=>{ hideTip(); hit.setAttribute('fill','transparent'); });
+}
+
+function hBarChart(mount, data, opts={}) {
+  // horizontal bars: [{label, value, color?}]
+  // Wide: label in a left gutter. Narrow (phone): label sits ABOVE its bar, full width.
+  mount.innerHTML = '';
+  const W = chartW(mount);
+  const narrow = W < 520;
+  const rowH = narrow ? 46 : 34;
+  const valW = narrow ? 52 : 60;
+  // never let the label gutter eat more than 42% of the chart
+  const gutter = narrow ? 0 : Math.min(opts.left || 170, Math.round(W * 0.42));
+  const P = {t:6, r:valW, b:6, l:gutter};
+  const H = P.t + P.b + data.length*rowH;
+  const svg = el('svg',{width:W,height:H,viewBox:`0 0 ${W} ${H}`},mount);
+  const maxV = Math.max(...data.map(d=>d.value));
+  const track = Math.max(40, W - P.l - P.r);
+  data.forEach((d,i)=>{
+    const top = P.t + rowH*i;
+    const cy = narrow ? top + rowH - 13 : top + rowH/2;
+    const bw = Math.max(4,(d.value/maxV)*track);
+    const color = css(d.color||'--series-1');
+    if (narrow) {
+      el('text',{x:0,y:top+13,class:'axis-txt',text:d.label},svg);
+    } else {
+      el('text',{x:P.l-10,y:cy+4,'text-anchor':'end',class:'axis-txt',text:d.label},svg);
+    }
+    // square at baseline, 4px rounded data-end
+    el('rect',{x:P.l,y:cy-9,width:bw,height:18,fill:color},svg);
+    el('rect',{x:P.l+bw-4,y:cy-9,width:4,height:18,rx:3,fill:color},svg);
+    el('text',{x:P.l+bw+8,y:cy+4,class:'dlabel',text:opts.fmt?opts.fmt(d.value):fmt(d.value)},svg);
+    const hit = el('rect',{x:0,y:top,width:W,height:rowH,fill:'transparent'},svg);
+    hit.addEventListener('pointermove',ev=>showTip(ev.clientX,ev.clientY,d.label,[{color:color,value:fmtFull(d.value),label:opts.unit||''}]));
+    hit.addEventListener('pointerleave',hideTip);
+  });
+}
+
+function donut(mount, data) {
+  mount.innerHTML = '';
+  const avail = chartW(mount);
+  const size = Math.min(190, Math.max(140, avail - 20));
+  const R = size*0.41, r = size*0.263, cx = size/2, cy = size/2;
+  const svg = el('svg',{width:size,height:size,viewBox:`0 0 ${size} ${size}`},mount);
+  const total = data.reduce((a,d)=>a+d.value,0);
+  let a0 = -Math.PI/2;
+  data.forEach(d=>{
+    const frac = d.value/total;
+    const a1 = a0 + frac*2*Math.PI;
+    const gap = 0.018; // ~2px surface gap
+    const p = arcPath(cx,cy,R,r,a0+gap/2,a1-gap/2);
+    const seg = el('path',{d:p,fill:css(d.color)},svg);
+    seg.addEventListener('pointermove',ev=>showTip(ev.clientX,ev.clientY,d.label,[{color:css(d.color),value:fmtFull(d.value)+' cr',label:(frac*100).toFixed(1)+'%'}]));
+    seg.addEventListener('pointerleave',hideTip);
+    a0 = a1;
+  });
+  el('text',{x:cx,y:cy-4,'text-anchor':'middle',class:'dlabel',style:'font-size:18px',text:fmt(total)},svg);
+  el('text',{x:cx,y:cy+14,'text-anchor':'middle',class:'axis-txt',text:'credits'},svg);
+  // side legend with values (relief for low-contrast hues)
+  const leg = document.createElement('div');
+  data.forEach(d=>{
+    const item = document.createElement('div');
+    item.style.cssText='display:flex;align-items:center;gap:8px;margin:7px 0;font-size:13px;';
+    const k=document.createElement('span'); k.className='key-rect'; k.style.background=css(d.color); item.appendChild(k);
+    const name=document.createElement('span'); name.textContent=d.label; name.style.color='var(--text-secondary)'; item.appendChild(name);
+    const v=document.createElement('strong'); v.textContent=fmt(d.value); v.style.marginLeft='auto'; item.appendChild(v);
+    const pc=document.createElement('span'); pc.textContent=((d.value/total)*100).toFixed(0)+'%'; pc.style.cssText='color:var(--text-muted);width:36px;text-align:right'; item.appendChild(pc);
+    leg.appendChild(item);
+  });
+  leg.style.minWidth='0'; leg.style.flex='1 1 190px';
+  mount.appendChild(leg);
+}
+function arcPath(cx,cy,R,r,a0,a1){
+  const large = (a1-a0) > Math.PI ? 1 : 0;
+  const p = (rad,a)=>[cx+rad*Math.cos(a), cy+rad*Math.sin(a)];
+  const [x0,y0]=p(R,a0),[x1,y1]=p(R,a1),[x2,y2]=p(r,a1),[x3,y3]=p(r,a0);
+  return `M ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} L ${x2} ${y2} A ${r} ${r} 0 ${large} 0 ${x3} ${y3} Z`;
+}
+
+function spark(values, color, w=120, h=30) {
+  const svg = el('svg',{width:w,height:h,class:'spark',viewBox:`0 0 ${w} ${h}`});
+  const max = Math.max(...values), min = Math.min(...values);
+  const x = i => (i/(values.length-1))*(w-6)+3;
+  const y = v => h-4 - ((v-min)/((max-min)||1))*(h-8);
+  el('polyline',{points:values.map((v,i)=>`${x(i)},${y(v)}`).join(' '),fill:'none',stroke:css(color),'stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'},svg);
+  el('circle',{cx:x(values.length-1),cy:y(values[values.length-1]),r:3.5,fill:css(color),stroke:css('--surface-1'),'stroke-width':2},svg);
+  return svg;
+}
+
+function tile(parent, label, value, delta, dir, sparkVals, sparkColor) {
+  const t = document.createElement('div'); t.className='tile';
+  const l = document.createElement('div'); l.className='lbl'; l.textContent = label; t.appendChild(l);
+  const v = document.createElement('div'); v.className='val'; v.textContent = value; t.appendChild(v);
+  if (delta) { const d = document.createElement('div'); d.className='delta '+dir; d.textContent = delta; t.appendChild(d); }
+  if (sparkVals) t.appendChild(spark(sparkVals, sparkColor||'--series-1'));
+  parent.appendChild(t);
+}
+
+function makeTable(mount, headers, rows) {
+  mount.innerHTML='';
+  const wrap = document.createElement('div'); wrap.className = 'tw';
+  const tb = document.createElement('table');
+  const thr = document.createElement('tr');
+  headers.forEach(h=>{ const th=document.createElement('th'); th.textContent=h.label; if(h.num)th.className='num'; thr.appendChild(th); });
+  tb.appendChild(thr);
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    r.forEach((c,i)=>{
+      const td=document.createElement('td'); if(headers[i]&&headers[i].num)td.className='num';
+      if (c instanceof Node) td.appendChild(c); else td.textContent=c;
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  wrap.appendChild(tb);
+  mount.appendChild(wrap);
+}
+const pill = (txt, cls) => { const s=document.createElement('span'); s.className='pill '+cls; s.textContent=txt; return s; };
+const meterEl = (pct, color) => {
+  const wrap=document.createElement('span');
+  const m=document.createElement('span'); m.className='meter';
+  const i=document.createElement('i'); i.style.width=Math.min(100,pct)+'%'; i.style.background=color; m.appendChild(i);
+  const lbl=document.createElement('span'); lbl.textContent=' '+pct+'%'; lbl.style.cssText='font-variant-numeric:tabular-nums;margin-left:8px;font-weight:700;';
+  wrap.appendChild(m); wrap.appendChild(lbl); return wrap;
+};
+
+/* ============================================================
+   RENDER — everything scoped by the selected date range
+   ============================================================ */
+let rangeDays = 30;
+function slice(){ return daily.slice(-rangeDays); }
+
+function renderAll(){
+  const cur = slice();
+  const prev = daily.slice(-rangeDays*2, -rangeDays);
+  const sum = a => a.reduce((x,d)=>x+d.total,0);
+  const curBurn = sum(cur), prevBurn = prev.length?sum(prev):curBurn*0.85;
+  const growth = ((curBurn-prevBurn)/prevBurn*100).toFixed(1);
+
+  /* ---- V0 tiles ---- */
+  const cc = document.getElementById('cc-tiles'); cc.innerHTML='';
+  tile(cc,'MRR','₹4.2 L','+12.4% vs last month','up');
+  tile(cc,'Active paying orgs','12','+2 this month','up');
+  tile(cc,'MAU','486','+9.5% vs prior','up', daily.slice(-30).map(d=>d.total),'--series-1');
+  tile(cc,`Credits burned (${rangeDays}d)`, fmt(curBurn), `${growth>0?'+':''}${growth}% vs prior ${rangeDays}d`, growth>0?'up':'down', cur.map(d=>d.total),'--series-2');
+  tile(cc,'Activation (this month)','58%','+3 pts vs July','up');
+  tile(cc,'Failed payments','2','₹24,999 pending retry','down');
+
+  /* ---- V0 burn chart ---- */
+  const ma = cur.map((d,i)=>{
+    const from = Math.max(0, daily.length-rangeDays+i-6);
+    const win = daily.slice(from, daily.length-rangeDays+i+1);
+    return Math.round(win.reduce((a,x)=>a+x.total,0)/win.length);
+  });
+  lineChart(document.getElementById('burnChart'), [
+    {name:'Daily burn', color:'--series-1', area:true, values: cur.map(d=>({x:d.date,y:d.total}))},
+    {name:'7-day avg',  color:'--series-4', values: cur.map((d,i)=>({x:d.date,y:ma[i]}))},
+  ]);
+
+  /* ---- V0 signups ---- */
+  const weeks = Math.min(8, Math.max(4, Math.round(rangeDays/7)));
+  const su = []; let base = 32;
+  const r2 = mulberry32(7);
+  for(let i=0;i<weeks;i++){ const s = Math.round(base*(1+i*0.09)*(0.85+r2()*0.3)); const act=Math.round(s*(0.5+i*0.012)); su.push({label:'W'+(i+1), segs:[{name:'Activated (7d)',v:act,color:'--series-1'},{name:'Not yet active',v:s-act,color:'--seq-2'}]}); }
+  barChart(document.getElementById('signupChart'), su, {});
+
+  /* ---- V0 donut ---- */
+  const fTotals = FEATURES.map((f,i)=>({label:f.key, color:f.color, value: cur.reduce((a,d)=>a+d.f[i],0)}));
+  donut(document.getElementById('featureDonut'), fTotals);
+
+  /* ---- V0 attention table ---- */
+  makeTable(document.getElementById('attentionTable'),
+    [{label:'Organization'},{label:'Issue'},{label:'Detail',num:false},{label:'Owner'}],
+    [
+      ['Neelkanth Metals', pill('Churn risk','risk'), 'Usage down 84% vs prior 30d', 'Rakhee'],
+      ['Riddhi Auto Components', pill('Low activation','warn'), '18% wallet used, day 22 of cycle', 'Kapil'],
+      ['Apex Engineering Works', pill('Payment failed','risk'), '₹19,999 — retry 2 of 3', 'Devansh'],
+      ['Shubham Traders', pill('Dormant','warn'), 'No login in 19 days', 'Rakhee'],
+      ['Swastik Packaging', pill('Upsell','good'), '94% wallet used — suggest Team plan', 'Harshal'],
+    ]);
+
+  /* ---- V1 ---- */
+  const cr = document.getElementById('cr-tiles'); cr.innerHTML='';
+  tile(cr,'Credits burned', fmt(curBurn), `${growth>0?'+':''}${growth}%`, growth>0?'up':'down');
+  tile(cr,'Wallet utilization (avg)','61%','healthy band 40–85%','neut');
+  tile(cr,'Free credits spent', fmt(Math.round(curBurn*0.14)), '14% of paid burn','neut');
+  tile(cr,'Top-ups this period','₹38,996','4 addon packs','up');
+  tile(cr,'Payment failure rate','3.1%','2 of 64 payments','down');
+  tile(cr,'Credits expiring ≤30d', '12.4K','2 orgs — nudge them','neut');
+
+  const wkN = Math.max(4, Math.round(rangeDays/7));
+  const stacks = [];
+  for (let w=0; w<wkN; w++){
+    const from = daily.length - (wkN-w)*7, to = from+7;
+    const wd = daily.slice(Math.max(0,from), to);
+    stacks.push({label:'W'+(w+1), segs: FEATURES.map((f,i)=>({name:f.key, v: wd.reduce((a,d)=>a+d.f[i],0), color:f.color}))});
+  }
+  barChart(document.getElementById('stackChart'), stacks, {});
+  const sl = document.getElementById('stackLegend'); sl.innerHTML='';
+  FEATURES.forEach(f=>{ const s=document.createElement('span'); s.className='item'; s.innerHTML=`<span class="key-rect" style="background:${css(f.color)}"></span>`; s.appendChild(document.createTextNode(f.key)); sl.appendChild(s); });
+
+  barChart(document.getElementById('mrrChart'), [
+    {label:'Starter', value:14990, color:'--series-1'},
+    {label:'Team', value:99980, color:'--series-1'},
+    {label:'Growth', value:159984, color:'--series-1'},
+    {label:'Business', value:139993, color:'--series-1'},
+  ], {labels:true, labelFmt:v=>'₹'+fmt(v), unit:'₹ / month'});
+
+  makeTable(document.getElementById('walletTable'),
+    [{label:'Organization'},{label:'Plan'},{label:'Utilization'},{label:'Signal'}],
+    ORGS.slice(0,9).map(o=>{
+      const pct = Math.round(o[4]/o[3]*100);
+      const color = pct>85?css('--warn'):pct<20?css('--danger'):css('--series-2');
+      const sig = pct>85?pill('Upsell','good'):pct<20?pill('Churn risk','risk'):pill('Healthy','neut');
+      return [o[0], o[2], meterEl(pct,color), sig];
+    }));
+
+  barChart(document.getElementById('revChart'),
+    SALES_MONTHS.map((m,i)=>({label:m, value:[212000,248000,281000,334000,392000,415000][i], color:'--series-1'})),
+    {labels:true, labelFmt:v=>'₹'+fmt(v), unit:'₹ collected'});
+
+  /* ---- V2 ---- */
+  const ue = document.getElementById('ue-tiles'); ue.innerHTML='';
+  tile(ue,'DAU','92','', 'neut', daily.slice(-14).map(d=>Math.round(d.total/180)),'--series-1');
+  tile(ue,'WAU','241','+6.2%','up');
+  tile(ue,'MAU','486','+9.5%','up');
+  tile(ue,'Stickiness (DAU/MAU)','19%','target ≥15% ✓','up');
+  tile(ue,'M1 retention (Jul cohort)','58%','best cohort yet','up');
+  tile(ue,'Dormant paying seats','31','across 6 orgs','down');
+
+  // cohort heatmap
+  const cg = document.getElementById('cohortGrid'); cg.innerHTML='';
+  const ctab = document.createElement('table');
+  const hr = document.createElement('tr');
+  ['Cohort','Size','M1','M2','M3','M4'].forEach((h,i)=>{ const th=document.createElement('th'); th.textContent=h; if(i>0)th.className='num'; hr.appendChild(th); });
+  ctab.appendChild(hr);
+  COHORTS.forEach(([label,size,ms])=>{
+    const tr=document.createElement('tr');
+    const td0=document.createElement('td'); td0.textContent=label; tr.appendChild(td0);
+    const td1=document.createElement('td'); td1.className='num'; td1.textContent=size; tr.appendChild(td1);
+    ms.forEach(v=>{
+      const td=document.createElement('td'); td.className='num';
+      if (v==null){ td.textContent='—'; td.style.color='var(--text-muted)'; }
+      else {
+        const stepIdx = Math.min(7, Math.max(1, Math.ceil(v/9)));
+        td.textContent=v+'%';
+        td.style.background=css('--seq-'+stepIdx);
+        td.style.color = stepIdx>=4 ? '#fff' : 'var(--text-primary)';
+        td.style.fontWeight='700';
+      }
+      tr.appendChild(td);
+    });
+    ctab.appendChild(tr);
+  });
+  const cwrap = document.createElement('div'); cwrap.className='tw';
+  cwrap.appendChild(ctab); cg.appendChild(cwrap);
+
+  makeTable(document.getElementById('powerTable'),
+    [{label:'User'},{label:'Organization'},{label:'Credits ('+rangeDays+'d)',num:true}],
+    USERS.slice(0,8).map(u=>[u[0],u[1],fmtFull(Math.round(u[2]*(rangeDays/30)))]));
+
+  hBarChart(document.getElementById('deviceChart'),
+    DEVICES.map(d=>({label:d[0], value:d[1], color:'--series-1'})), {unit:'logins', left:150});
+
+  makeTable(document.getElementById('dormantTable'),
+    [{label:'Organization'},{label:'Seats dormant',num:true},{label:'Last login'},{label:'Renewal'}],
+    [
+      ['Apex Engineering Works','9','34 days ago','Oct 12'],
+      ['Balaji Logistics','7','31 days ago','Sep 28'],
+      ['Neelkanth Metals','6','42 days ago','Sep 03'],
+      ['Om Shakti Pharma','5','33 days ago','Nov 19'],
+      ['Shubham Traders','4','19 days ago','Sep 22'],
+    ]);
+
+  /* ---- V3 ---- */
+  const fu = document.getElementById('fu-tiles'); fu.innerHTML='';
+  tile(fu,'Questions asked', fmt(76080*(rangeDays/30)),'','neut');
+  tile(fu,'Pro Search share','11.2%','+1.8 pts','up');
+  tile(fu,'Deep Research runs', fmt(1840*(rangeDays/30)),'','neut');
+  tile(fu,'With file upload','8.4%','','neut');
+  tile(fu,'From mobile','37%','WhatsApp-first India','neut');
+  tile(fu,'Voice minutes', fmt(1117*(rangeDays/30)),'≈ '+fmt(11170*(rangeDays/30))+' credits','up');
+
+  hBarChart(document.getElementById('chatTypeChart'),
+    CHAT_TYPES.map(c=>({label:c[0], value:Math.round(c[1]*(rangeDays/30)), color:'--series-1'})), {unit:'questions', left:210});
+
+  hBarChart(document.getElementById('voiceChart'),
+    VOICE.map(v=>({label:v[0], value:Math.round(v[1]*(rangeDays/30)), color:'--series-4'})), {unit:'minutes', left:180});
+
+  makeTable(document.getElementById('flowTable'),
+    [{label:'Workflow'},{label:'Runs',num:true},{label:'Credits',num:true},{label:'Users',num:true},{label:'Credits / run',num:true}],
+    FLOWS.map(f=>[f[0], fmtFull(Math.round(f[1]*(rangeDays/30))), fmtFull(Math.round(f[2]*(rangeDays/30))), f[3], (f[2]/f[1]).toFixed(1)]));
+
+  /* ---- V4 ---- */
+  const pf = document.getElementById('pf-tiles'); pf.innerHTML='';
+  tile(pf,'Partner-sourced orgs','23','of 33 total (70%)','neut');
+  tile(pf,'Orgs live (partner)','19','83% activation','up');
+  tile(pf,'Waitlist → signup','24%','412 of 1,716','neut');
+  tile(pf,'SDR leads in pipeline','1,240','','neut');
+  tile(pf,'Meetings this month','118','+22%','up');
+  tile(pf,'Lead → customer','4.2%','52 converted','up');
+
+  // funnel — ordinal violet ramp, no step lighter than seq-2
+  const fm = document.getElementById('funnelChart'); fm.innerHTML='';
+  const fW = chartW(fm);
+  const fNarrow = fW < 520;
+  const rowH = fNarrow ? 52 : 40;
+  const LX = fNarrow ? 0 : Math.min(150, Math.round(fW*0.3));   // label gutter
+  const RX = fNarrow ? 96 : 110;                                 // room for value + conv%
+  const fH = SDR.length*rowH+10;
+  const fsvg = el('svg',{width:fW,height:fH,viewBox:`0 0 ${fW} ${fH}`},fm);
+  const fmax = SDR[0][1];
+  const ftrack = Math.max(40, fW - LX - RX);
+  SDR.forEach((s,i)=>{
+    const w = Math.max(30,(s[1]/fmax)*ftrack);
+    const y0 = 5+i*rowH;
+    const barY = fNarrow ? y0+16 : y0;
+    const barH = rowH-(fNarrow?26:10);
+    const stepIdx = 2+Math.min(5,i); // seq-2 .. seq-7
+    el('rect',{x:LX,y:barY,width:w,height:barH,rx:6,fill:css('--seq-'+stepIdx)},fsvg);
+    if (fNarrow) el('text',{x:0,y:y0+11,class:'axis-txt',text:s[0]},fsvg);
+    else el('text',{x:LX-10,y:y0+rowH/2+1,'text-anchor':'end',class:'axis-txt',text:s[0]},fsvg);
+    el('text',{x:LX+w+9,y:barY+barH/2-3,class:'dlabel',text:fmtFull(s[1])},fsvg);
+    if (i>0){
+      const conv = (s[1]/SDR[i-1][1]*100).toFixed(0);
+      el('text',{x:LX+w+9,y:barY+barH/2+11,class:'axis-txt',text:conv+'% of prev'},fsvg);
+    }
+    const hit = el('rect',{x:0,y:y0,width:fW,height:rowH,fill:'transparent'},fsvg);
+    hit.addEventListener('pointermove',ev=>showTip(ev.clientX,ev.clientY,s[0],[{value:fmtFull(s[1]),label:'leads'},...(i>0?[{value:(s[1]/SDR[i-1][1]*100).toFixed(1)+'%',label:'conversion from '+SDR[i-1][0]}]:[])]));
+    hit.addEventListener('pointerleave',hideTip);
+  });
+
+  const sizes = Object.keys(SALES);
+  const sColors = ['--series-1','--series-2','--series-3','--series-4'];
+  barChart(document.getElementById('salesChart'),
+    SALES_MONTHS.map((m,i)=>({label:m, segs: sizes.map((sz,si)=>({name:sz+' employees', v:SALES[sz][i], color:sColors[si]}))})), {});
+  const sleg = document.getElementById('salesLegend'); sleg.innerHTML='';
+  sizes.forEach((sz,si)=>{ const s=document.createElement('span'); s.className='item'; const k=document.createElement('span'); k.className='key-rect'; k.style.background=css(sColors[si]); s.appendChild(k); s.appendChild(document.createTextNode(sz+' emp')); sleg.appendChild(s); });
+
+  /* ---- V5: 1,000-credit grant benchmark ---- */
+  const cg2 = document.getElementById('cg-tiles'); cg2.innerHTML='';
+  tile(cg2,'Grant accounts','412','via 4 partners','neut');
+  tile(cg2,'Grant utilization','58%','of issued credits consumed','neut');
+  tile(cg2,'Median credits used','486','of 1,000','neut');
+  tile(cg2,'Exhausted grant (1,000)','24%','the hottest cohort','up');
+  tile(cg2,'Engaged ≥300 in 14d','46%','target ≥30% ✓','up');
+  tile(cg2,'Credit cost / conversion','₹6,480','21.6K free credits per paid org','neut');
+
+  // Money chart: conversion by usage band
+  barChart(document.getElementById('bandChart'), [
+    {label:'0–99',     value:0.4,  color:'--seq-3'},
+    {label:'100–299',  value:1.5,  color:'--seq-4'},
+    {label:'300–699',  value:4.8,  color:'--seq-5'},
+    {label:'700–999',  value:9.6,  color:'--seq-6'},
+    {label:'1,000 — all', value:18.2, color:'--seq-7'},
+  ], {labels:true, labelFmt:v=>v+'%', unit:'% converted to paid'});
+  document.getElementById('bandNote').textContent =
+    'Read: accounts that exhaust the grant convert at 18.2% — 45× the never-landed band. The grant works; the leak is the 38% of accounts stuck under 300 credits.';
+
+  // Burn milestones
+  hBarChart(document.getElementById('burnMilestones'), [
+    {label:'First 100 credits', value:2,  color:'--series-2'},
+    {label:'Cross 300 (engaged)', value:9, color:'--series-2'},
+    {label:'Cross 700 (hot)',   value:21, color:'--series-2'},
+    {label:'Exhaust 1,000',     value:34, color:'--series-2'},
+  ], {unit:'median days', fmt:v=>v+'d', left:160});
+  document.getElementById('burnNote').textContent =
+    'Read: a median 34 days to exhaustion means the grant sustains ~5 weeks of trial — long enough to form a habit, short enough to force a decision. If median exhaustion drifts past 60 days, the grant is parked, not used.';
+
+  // Feature mix vs conversion
+  makeTable(document.getElementById('featConvTable'),
+    [{label:'Dominant feature'},{label:'Accounts',num:true},{label:'Avg credits on it',num:true},{label:'Conversion',num:true}],
+    [
+      ['Workflow (Studio)','96','612', pill('8.1%','good')],
+      ['Voice agent','44','548', pill('6.0%','good')],
+      ['Agent','71','431', pill('4.4%','neut')],
+      ['Chat / Search','201','322', pill('2.3%','warn')],
+    ]);
+
+  // Right-size card
+  const rs = document.getElementById('rightSize'); rs.innerHTML='';
+  const rsWrap = document.createElement('div');
+  rsWrap.innerHTML = `
+    <div class="rs-big">685</div>
+    <div style="font-size:13px;color:var(--text-secondary);margin-top:2px">median credits consumed at the moment of conversion</div>
+    <div style="display:flex;gap:18px;margin-top:14px;flex-wrap:wrap">
+      <div><div style="font-weight:700;font-size:19px">410</div><div style="font-size:12px;color:var(--text-muted)">25th percentile</div></div>
+      <div><div style="font-weight:700;font-size:19px">685</div><div style="font-size:12px;color:var(--text-muted)">median</div></div>
+      <div><div style="font-weight:700;font-size:19px">940</div><div style="font-size:12px;color:var(--text-muted)">75th percentile</div></div>
+    </div>
+    <div class="note-strip" style="margin-top:14px">Read: half of all buyers decide before using 700 credits — the last 300 credits rarely change the decision. 1,000 is defensible but not sacred: worth an October A/B of 750 vs 1,000 vs 1,250 by segment. If 750 converts the same, the grant budget drops 25%.</div>`;
+  rs.appendChild(rsWrap);
+
+  // Partner grant benchmark
+  makeTable(document.getElementById('grantPartnerTable'),
+    [{label:'Partner'},{label:'Accounts',num:true},{label:'Median used',num:true},{label:'Engaged ≥300',num:true},{label:'Exhausted',num:true},{label:'Conversion',num:true},{label:'Cost / conversion',num:true}],
+    [
+      ['Bharat AI Partners','168','634','58%','31%', pill('6.1%','good'),'₹4,980'],
+      ['Gujarat Digital Co','112','512','49%','26%', pill('4.5%','good'),'₹6,240'],
+      ['Rajasthan TechServe','86','318','34%','14%', pill('2.3%','warn'),'₹9,870'],
+      ['Mumbai ERP Solutions','46','142','17%','4%', pill('0.0%','risk'),'—'],
+    ]);
+
+  /* ---- V6: Search & 360 ---- */
+  renderSearch();
+  makeTable(document.getElementById('zeroAgingTable'),
+    [{label:'Partner'},{label:'0–7d',num:true},{label:'7–14d',num:true},{label:'14–30d',num:true},{label:'30d+',num:true},{label:'Zero-use %',num:true}],
+    DIR_PARTNERS.map(p=>{
+      const z=p.zeroAging;
+      return [p.name, z[0], z[1], z[2],
+        (()=>{const s=document.createElement('strong'); s.textContent=z[3]; s.style.color='var(--danger)'; return s;})(),
+        pill(p.zeroPct+'%', p.zeroPct>35?'risk':p.zeroPct>20?'warn':'good')];
+    }));
+  makeTable(document.getElementById('profileTable'),
+    [{label:'Industry'},{label:'Size'},{label:'Accounts',num:true},{label:'Zero-use',num:true},{label:'Avg credits',num:true},{label:'Conversion',num:true}],
+    [
+      ['Chemicals','51-200','34','9%','688', pill('8.8%','good')],
+      ['Textiles','51-200','41','12%','590', pill('7.3%','good')],
+      ['Agri inputs','51-200','28','11%','565', pill('7.1%','good')],
+      ['FMCG','11-50','52','21%','410', pill('3.8%','neut')],
+      ['Logistics','11-50','38','24%','352', pill('2.6%','neut')],
+      ['Trading','1-10','87','41%','168', pill('1.1%','warn')],
+      ['Services','1-10','64','46%','121', pill('0.0%','risk')],
+    ]);
+  makeTable(document.getElementById('healthTable'),
+    [{label:'Partner'},{label:'Accounts',num:true},{label:'Engagement /30',num:true},{label:'Conversion /30',num:true},{label:'Zero-use /20',num:true},{label:'Velocity /20',num:true},{label:'Score',num:true},{label:'Grade'}],
+    DIR_PARTNERS.map(p=>[p.name, p.accounts, p.score.eng, p.score.conv, p.score.zero, p.score.vel,
+      (()=>{const s=document.createElement('strong'); s.textContent=p.score.total; s.style.fontSize='15px'; return s;})(),
+      pill(p.score.total>=80?'A':p.score.total>=60?'B':p.score.total>=40?'C':'D',
+           p.score.total>=80?'good':p.score.total>=60?'neut':p.score.total>=40?'warn':'risk')]));
+
+  makeTable(document.getElementById('ppsTable'),
+    [{label:'Organization'},{label:'Credits',num:true},{label:'Office days /14',num:true},{label:'Office apps'},{label:'Office chats',num:true},{label:'Momentum'},{label:'PPS',num:true},{label:'Band'},{label:'Next action'}],
+    [
+      ['Sunrise Ceramics','812','9','Excel + Word + PPT','84','Rising','91', pill('A','good'),'Partner call today — close kit sent'],
+      ['Krishna Dairy Foods','745','7','Excel + Word','61','Steady','83', pill('A','good'),'Close kit sent — 72h SLA'],
+      ['Balaji Logistics','389','6','Excel','38','Rising','64', pill('B','neut'),'Push to aha: introduce Word + 2nd user'],
+      ['Om Shakti Pharma','486','4','Excel + PPT','29','Decaying','55', pill('B','neut'),'Momentum break — partner call in 48h'],
+      ['Mehta Trading Co','412','0','—','0 (52 general chats)','Chat only','—', pill('W','warn'),'Wrong lane: re-demo Office on their files'],
+      ['Shreeji Foods','74','2','Excel','6','Active','30', pill('C','warn'),'Re-onboard: workbook exercise on own sheet'],
+      ['Neelkanth Metals','218','1','Excel','4','Silent 9d','22', pill('C','warn'),'Office nudge + workbook page 3'],
+      ['Jain Metals','0','0','—','0','Never started','8', pill('D','risk'),'Automated drip only'],
+      ['Al Madina Traders','0','0','—','0','Never started','4', pill('D','risk'),'Automated drip only'],
+    ]);
+
+  makeTable(document.getElementById('partnerTable'),
+    [{label:'Partner'},{label:'Tier'},{label:'Orgs onboarded',num:true},{label:'Orgs live',num:true},{label:'Credits burned (30d)',num:true},{label:'Rev share (mo)',num:true},{label:'Health'}],
+    PARTNERS.map(p=>[p[0], pill(p[1], p[1]==='Gold'?'good':'neut'), p[2], p[3], fmtFull(p[4]), p[5],
+      p[3]/p[2] > 0.7 ? pill('Strong','good') : p[3]/p[2] > 0.4 ? pill('Coach','warn') : pill('At risk','risk')]));
+}
+
+/* ============================================================
+   SEARCH & 360
+   ============================================================ */
+let searchType = 'all', searchSel = {type:'partner', id:'p1'};
+function searchIndex(){
+  const items = [];
+  DIR_PARTNERS.forEach(p=>items.push({type:'partner', id:p.id, name:p.name, sub:p.tier+' · '+p.region, hay:(p.name+' '+p.email).toLowerCase()}));
+  DIR_ORGS.forEach(o=>items.push({type:'org', id:o.id, name:o.name, sub:o.industry+' · '+o.plan, hay:o.name.toLowerCase()}));
+  DIR_USERS.forEach(u=>items.push({type:'user', id:u.id, name:u.name, sub:u.org, hay:(u.name+' '+u.email+' '+u.org).toLowerCase()}));
+  return items;
+}
+function renderSearch(){
+  const q = (document.getElementById('searchBox').value||'').trim().toLowerCase();
+  const res = document.getElementById('searchResults'); res.innerHTML='';
+  let items = searchIndex().filter(i => (searchType==='all'||i.type===searchType) && (!q || i.hay.includes(q)));
+  items.slice(0,8).forEach(i=>{
+    const row = document.createElement('div'); row.className='sr-item'+(searchSel&&searchSel.id===i.id?' sel':'');
+    const t = document.createElement('span'); t.className='sr-type '+i.type; t.textContent=i.type.toUpperCase(); row.appendChild(t);
+    const n = document.createElement('span'); n.className='sr-name'; n.textContent=i.name; row.appendChild(n);
+    const s = document.createElement('span'); s.className='sr-sub'; s.textContent=i.sub; row.appendChild(s);
+    row.addEventListener('click', ()=>{ searchSel={type:i.type,id:i.id}; renderSearch(); });
+    res.appendChild(row);
+  });
+  if (!items.length){ const e=document.createElement('div'); e.style.cssText='color:var(--text-muted);padding:10px'; e.textContent='No matches.'; res.appendChild(e); }
+  render360();
+}
+function stat(l,v,color){ return `<div class="p360-stat"><div class="l">${l}</div><div class="v"${color?` style="color:${color}"`:''}>${v}</div></div>`; }
+function render360(){
+  const panel = document.getElementById('panel360');
+  if (!searchSel){ panel.style.display='none'; return; }
+  panel.style.display='block'; panel.innerHTML='';
+  if (searchSel.type==='partner'){
+    const p = DIR_PARTNERS.find(x=>x.id===searchSel.id); if(!p) return;
+    const gcol = p.score.total>=80?'var(--good)':p.score.total>=60?'var(--series-1)':p.score.total>=40?'var(--warn)':'var(--danger)';
+    panel.innerHTML = `
+      <h3>Partner 360 — ${p.name}</h3>
+      <div class="sub">${p.tier} partner · ${p.region} · ${p.email}</div>
+      <div class="score-ring">
+        <div class="grade" style="background:${gcol}">${p.score.total>=80?'A':p.score.total>=60?'B':p.score.total>=40?'C':'D'}</div>
+        <div style="min-width:180px">
+          <div style="font:800 30px 'Anek Latin',Arial">${p.score.total}<span style="font-size:15px;color:var(--text-muted)"> /100 health</span></div>
+          <div style="font-size:12.5px;color:var(--text-secondary)">Engagement ${p.score.eng}/30 · Conversion ${p.score.conv}/30 · Zero-use ${p.score.zero}/20 · Velocity ${p.score.vel}/20</div>
+        </div>
+      </div>
+      <div class="p360-grid">
+        ${stat('Grant accounts', p.accounts)}
+        ${stat('Median credits used', p.medianUsed)}
+        ${stat('Engaged ≥300', p.engagedPct+'%')}
+        ${stat('Zero-use', p.zeroPct+'%', p.zeroPct>35?'var(--danger)':p.zeroPct>20?'var(--warn)':'var(--good)')}
+        ${stat('Exhausted grant', p.exhaustedPct+'%')}
+        ${stat('Conversion', p.convPct+'%', p.convPct>=5?'var(--good)':p.convPct>=2?'var(--warn)':'var(--danger)')}
+        ${stat('Start within 48h', p.fast48+'%')}
+      </div>
+      <div style="margin-top:14px"><strong style="font-size:13px">Monthly trend (Jun → Aug)</strong><div id="p360trend" style="margin-top:6px"></div>
+      <div class="legend"><span class="item"><span class="key-rect" style="background:var(--seq-3)"></span>Accounts</span><span class="item"><span class="key-rect" style="background:var(--series-1)"></span>Engaged ≥300</span><span class="item"><span class="key-rect" style="background:var(--series-2)"></span>Converted</span></div></div>`;
+    const months=['Jun','Jul','Aug'];
+    barChart(panel.querySelector('#p360trend'),
+      months.map((m,i)=>({label:m, segs:[
+        {name:'Converted', v:p.monthly.conv[i], color:'--series-2'},
+        {name:'Engaged ≥300', v:p.monthly.engaged[i]-p.monthly.conv[i], color:'--series-1'},
+        {name:'Other accounts', v:p.monthly.accounts[i]-p.monthly.engaged[i], color:'--seq-3'},
+      ]})), {height:190});
+  } else if (searchSel.type==='user'){
+    const u = DIR_USERS.find(x=>x.id===searchSel.id); if(!u) return;
+    panel.innerHTML = `
+      <h3>End-user 360 — ${u.name}</h3>
+      <div class="sub">${u.email}</div>
+      <div style="margin-top:8px">${'<span class="pill '+u.statusCls+'">'+u.status+'</span>'}</div>
+      <div class="p360-grid">
+        ${stat('Organization', u.org)}
+        ${stat('Industry · size', u.industry+' · '+u.size)}
+        ${stat('Channel partner', u.partner)}
+        ${stat('Signed up', u.signed)}
+        ${stat('Language', u.lang)}
+        ${stat('Primary device', u.device)}
+        ${stat('Logins', u.logins)}
+        ${stat('Questions asked', u.questions)}
+        ${stat('Free credits used', u.freeUsed+' / 1,000', u.freeUsed===0?'var(--danger)':u.freeUsed>=700?'var(--good)':undefined)}
+        ${stat('Paid credits used', fmtFull(u.paidUsed))}
+      </div>
+      ${u.freeUsed===0?'<div class="note-strip" style="margin-top:12px">Zero utilization: account created by partner but never activated. Action: partner nudge (7–14d), Pucho Sales call (14–30d). This account counts against the partner’s health score.</div>':''}`;
+  } else {
+    const o = DIR_ORGS.find(x=>x.id===searchSel.id); if(!o) return;
+    const pct = Math.round(o.used/o.alloc*100);
+    panel.innerHTML = `
+      <h3>Organization 360 — ${o.name}</h3>
+      <div class="sub">${o.industry}</div>
+      <div class="p360-grid">
+        ${stat('Plan', o.plan)}
+        ${stat('Channel partner', o.partner||'Direct')}
+        ${stat('Credits allocated', fmtFull(o.alloc))}
+        ${stat('Credits used', fmtFull(o.used))}
+        ${stat('Utilization', pct+'%', pct>85?'var(--warn)':pct<20?'var(--danger)':'var(--good)')}
+      </div>`;
+  }
+}
+
+/* ============================================================
+   WIRING
+   ============================================================ */
+document.getElementById('searchBox').addEventListener('input', renderSearch);
+document.getElementById('searchChips').addEventListener('click', e=>{
+  const c = e.target.closest('.chip'); if(!c) return;
+  document.querySelectorAll('#searchChips .chip').forEach(x=>x.classList.toggle('active',x===c));
+  searchType = c.dataset.t; renderSearch();
+});
+document.getElementById('nav').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#nav button').forEach(x=>x.classList.toggle('active', x===b));
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.id===b.dataset.view));
+  renderAll(); // re-render for correct widths on newly shown view
+});
+document.querySelectorAll('.rangeBtn').forEach(b=>b.addEventListener('click', ()=>{
+  document.querySelectorAll('.rangeBtn').forEach(x=>x.classList.toggle('active', x===b));
+  rangeDays = +b.dataset.days;
+  renderAll();
+}));
+document.getElementById('themeBtn').addEventListener('click', ()=>{
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+  renderAll();
+});
+if (matchMedia('(prefers-color-scheme: dark)').matches) document.documentElement.dataset.theme = 'dark';
+addEventListener('resize', ()=>{ clearTimeout(window.__rz); window.__rz = setTimeout(renderAll, 150); });
+addEventListener('orientationchange', ()=>setTimeout(renderAll, 250));
+// touch: let a tap-away dismiss a sticky tooltip
+addEventListener('touchstart', e=>{ if(!e.target.closest('svg')) hideTip(); }, {passive:true});
+renderAll();
+// second pass once webfonts/layout settle (mobile browsers report width late)
+addEventListener('load', ()=>setTimeout(renderAll, 100));
+</script>
+</body>
+</html>
