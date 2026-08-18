@@ -42,13 +42,21 @@ async function main() {
   console.info('+ fixture schema (production shape)');
 
   const dir = join(process.cwd(), 'db', 'migrations');
-  for (const file of (await readdir(dir)).filter((f) => f.endsWith('.sql')).sort()) {
+  for (const file of (await readdir(dir))
+    // ONLY numbered migrations run — db/rollback.sql lives outside this
+    // directory precisely so it can never be applied as one.
+    .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+    .sort()) {
     await client.query(await readFile(join(dir, file), 'utf8'));
     console.info(`+ ${file}`);
   }
   await client.query(`CREATE TABLE IF NOT EXISTS "PulseMigration" (
       name text PRIMARY KEY, "appliedAt" timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP)`);
-  for (const file of (await readdir(dir)).filter((f) => f.endsWith('.sql')).sort()) {
+  for (const file of (await readdir(dir))
+    // ONLY numbered migrations run — db/rollback.sql lives outside this
+    // directory precisely so it can never be applied as one.
+    .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+    .sort()) {
     await client.query(`INSERT INTO "PulseMigration" (name) VALUES ($1) ON CONFLICT DO NOTHING`, [file]);
   }
 

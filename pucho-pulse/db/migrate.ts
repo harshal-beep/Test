@@ -23,7 +23,11 @@ async function main() {
   const applied = new Set(
     (await client.query<{ name: string }>(`SELECT name FROM "PulseMigration"`)).rows.map((r) => r.name),
   );
-  const files = (await readdir(DIR)).filter((f) => f.endsWith('.sql')).sort();
+  const files = (await readdir(DIR))
+    // ONLY numbered migrations run — db/rollback.sql lives outside this
+    // directory precisely so it can never be applied as one.
+    .filter((f) => /^\d{4}_.*\.sql$/.test(f))
+    .sort();
 
   for (const file of files) {
     if (applied.has(file)) {

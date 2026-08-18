@@ -1,0 +1,142 @@
+// ============================================================
+// Pucho Pulse — Prisma model fragment
+//
+// ⚠ REQUIRED STEP, not optional. Your production database is Prisma-managed.
+//    Pulse's migrations create tables outside Prisma's knowledge, so the next
+//    `prisma migrate dev` will detect them as drift and generate a DROP.
+//
+//    Paste these models into your schema.prisma, add the three marked fields
+//    to your existing Organization model, then run:
+//        npx prisma migrate dev --create-only
+//    Prisma should report NO changes. If it wants to create or drop anything,
+//    stop — the database and this fragment have diverged; reconcile first.
+//
+// Every attribute here (map names, referential actions, index names) matches
+// what db/migrations/0001_pulse_m1.sql and 0002_pulse_inputs.sql actually
+// create, which in turn matches the naming convention already used by every
+// table in your schema.
+// ============================================================
+
+// ── ADD THESE THREE FIELDS TO YOUR EXISTING Organization MODEL ─────────────
+//
+//   model Organization {
+//     ... your existing fields ...
+//
+//     workshopId     String?
+//     signupSegment  String?
+//     signupSource   String?    // 'WORKSHOP' | 'DIRECT' | 'PARTNER'
+//     workshop       Workshop?       @relation(fields: [workshopId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+//     propensityLogs PropensityLog[]
+//     gtmAlerts      GtmAlert[]
+//
+//     @@index([workshopId])
+//     @@index([channelPartnerId])
+//   }
+//
+// ── ADD THESE TO YOUR EXISTING ChannelPartner MODEL ────────────────────────
+//
+//   model ChannelPartner {
+//     ... your existing fields ...
+//
+//     workshops     Workshop[]
+//     gtmAlerts     GtmAlert[]
+//     pulseSettings PulsePartnerSettings?
+//   }
+//
+// ── ADD THIS TO YOUR EXISTING User MODEL ───────────────────────────────────
+//
+//   model User {
+//     ... your existing fields ...
+//
+//     workshopsDelivered Workshop[] @relation("WorkshopDeliveredBy")
+//   }
+
+// ── NEW MODELS ─────────────────────────────────────────────────────────────
+
+model Workshop {
+  id                String   @id
+  workshopDate      DateTime
+  segmentName       String
+  campaignTag       String?
+  channelPartnerId  String?
+  deliveredBy       String?
+  invitedCount      Int      @default(0)
+  attendedCount     Int      @default(0)
+  status            String   @default("SCHEDULED") // SCHEDULED | DELIVERED | CANCELLED
+  registrationToken String?  @unique
+  workbookUrl       String?
+  createdAt         DateTime @default(now())
+
+  channelPartner ChannelPartner? @relation(fields: [channelPartnerId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  deliverer      User?           @relation("WorkshopDeliveredBy", fields: [deliveredBy], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  organizations  Organization[]
+}
+
+/// One row per grant organization per day — the propensity history that
+/// calibration and any future model training read.
+model PropensityLog {
+  id             String   @id
+  organizationId String
+  snapshotDate   DateTime @db.Date
+  pps            Int
+  band           String // A | B | C | D | W
+  components     Json
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([organizationId, snapshotDate])
+}
+
+/// Alert ledger: dedupe, SLA clock and audit trail for every partner nudge.
+/// Outlives the rows it points at, hence SetNull rather than Cascade.
+model GtmAlert {
+  id               String    @id
+  type             String
+  organizationId   String?
+  channelPartnerId String?
+  payload          Json?
+  firedAt          DateTime  @default(now())
+  ackAt            DateTime?
+  escalatedAt      DateTime?
+  slaHours         Int?
+
+  organization   Organization?   @relation(fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  channelPartner ChannelPartner? @relation(fields: [channelPartnerId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  // NOTE: the real dedupe constraint is a PARTIAL unique index that Prisma
+  // cannot express:
+  //   CREATE UNIQUE INDEX "GtmAlert_type_organizationId_key"
+  //     ON "GtmAlert" (type, "organizationId")
+  //     WHERE type NOT IN ('DIGEST','SCORECARD');
+  // Keep it in raw SQL (migration 0001). Do NOT add @@unique([type,
+  // organizationId]) here — that would be a total unique index and would block
+  // recurring digests.
+}
+
+/// Pulse-owned sidecar for data the production schema has no column for:
+/// partner WhatsApp language, number override, digest opt-out.
+model PulsePartnerSettings {
+  channelPartnerId  String   @id
+  preferredLanguage String   @default("en") // en | gu | hi
+  whatsappNumber    String?
+  digestEnabled     Boolean  @default(true)
+  notes             String?
+  updatedAt         DateTime @default(now())
+  updatedBy         String?
+
+  channelPartner ChannelPartner @relation(fields: [channelPartnerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+/// Every scheduled job run, with its outcome. Ops reads this to answer
+/// "did last night's snapshot actually run?"
+model PulseJobRun {
+  id         String    @id
+  job        String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  status     String // RUNNING | OK | FAILED
+  detail     Json?
+
+  @@index([job, startedAt(sort: Desc)])
+}
