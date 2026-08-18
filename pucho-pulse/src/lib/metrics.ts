@@ -15,7 +15,7 @@ const scope = () => grantScope();
 
 // ── Command Center ──────────────────────────────────────────────────────────
 export async function commandCenter(days: Days) {
-  const [burn, signups, featureSplit, dauWau, mrr, failedPayments, hot, stalled, economics] =
+  const [burn, signups, featureSplit, dauWau, mrr, failedPayments, hot, stalled, economics, funnel, movement] =
     await Promise.all([
       readQuery(Q.Q1_DAILY_BURN, [days]),
       readQuery(Q.Q8_SIGNUPS_ACTIVATION),
@@ -26,6 +26,8 @@ export async function commandCenter(days: Days) {
       readQuery(Q.G3_HOT_ACCOUNTS, [scope()]),
       readQuery(Q.G4_STALLED, [scope()]),
       readOne(Q.G5_GTM_ECONOMICS, [scope(), CREDIT_VALUE_INR]),
+      readQuery(Q.G1_WORKSHOP_FUNNEL, [null, null]),
+      readQuery(Q.BAND_MOVEMENT, [7]),
     ]);
 
   const mrrTotal = mrr.reduce((sum, r) => sum + toNum(r.mrr_inr), 0);
@@ -60,6 +62,21 @@ export async function commandCenter(days: Days) {
       stalled: stalled.slice(0, 10),
     },
     economics,
+    headline: (() => {
+      const delivered = funnel.filter((f) => f.status !== 'SCHEDULED');
+      const withClient = delivered.filter((f) => toNum(f.converted_paid) > 0);
+      const conversions = toNum(economics?.conversions);
+      return {
+        workshopsDelivered: delivered.length,
+        workshopsWithClient: withClient.length,
+        conversions,
+        creditCostPerClient: conversions > 0 ? toNum(economics?.credit_cost_inr) / conversions : null,
+      };
+    })(),
+    weekMovement: movement.reduce(
+      (acc, r) => ({ intoA: acc.intoA + toNum(r.into_a), outOfA: acc.outOfA + toNum(r.out_of_a) }),
+      { intoA: 0, outOfA: 0 },
+    ),
   };
 }
 
@@ -118,7 +135,7 @@ export async function partnersFunnel(days: Days) {
 
 // ── Credit Grant Benchmark ──────────────────────────────────────────────────
 export async function creditGrant() {
-  const [moneyChart, burnCurve, featureMix, partnerBenchmark, atConversion, waste, aging, latency] =
+  const [moneyChart, burnCurve, featureMix, partnerBenchmark, atConversion, waste, aging, latency, burndown, expiring] =
     await Promise.all([
       readQuery(Q.B1_MONEY_CHART, [scope()]),
       readOne(Q.B2_BURN_CURVE, [scope()]),
@@ -128,8 +145,10 @@ export async function creditGrant() {
       readOne(Q.B6_GRANT_WASTE, [scope(), CREDIT_VALUE_INR, GRANT_CREDITS]),
       readQuery(Q.Z1_ZERO_USE_AGING, [scope()]),
       readQuery(Q.Z2_ACTIVATION_LATENCY, [scope()]),
+      readQuery(Q.BURNDOWN, [scope(), 45]),
+      readQuery(Q.EXPIRING_GRANTS, [scope(), 14]),
     ]);
-  return { moneyChart, burnCurve, featureMix, partnerBenchmark, atConversion, waste, aging, latency };
+  return { moneyChart, burnCurve, featureMix, partnerBenchmark, atConversion, waste, aging, latency, burndown, expiring };
 }
 
 // ── Workshops ───────────────────────────────────────────────────────────────
@@ -156,6 +175,8 @@ export async function partner360(partnerId: string) {
     readQuery(Q.PPS_OFFICE, [scope(), null]),
   ]);
   const row = health.find((h) => h.partner_id === partnerId) ?? null;
+  // The 360 shows ONLY this partner's portfolio — the global leaderboard was
+  // audit finding F10 (context collapse: global table under a partner header).
   const portfolio = ppsRows.filter((p) => p.channelPartnerId === partnerId);
   return {
     health: row,
@@ -209,6 +230,9 @@ export async function alerts(status: 'open' | 'all' = 'open') {
             o.name AS organization, cp."companyName" AS partner,
             CASE WHEN a."slaHours" IS NULL THEN NULL
                  ELSE a."firedAt" + (a."slaHours" || ' hours')::interval END AS sla_due,
+            CASE WHEN a."slaHours" IS NULL THEN NULL
+                 ELSE ROUND(EXTRACT(epoch FROM (a."firedAt" + (a."slaHours" || ' hours')::interval - now())) / 3600.0, 1)
+            END AS sla_hours_left,
             CASE WHEN a."slaHours" IS NOT NULL AND a."ackAt" IS NULL
                   AND now() > a."firedAt" + (a."slaHours" || ' hours')::interval
                  THEN true ELSE false END AS sla_breached
@@ -218,5 +242,110 @@ export async function alerts(status: 'open' | 'all' = 'open') {
        ${where}
       ORDER BY a."firedAt" DESC
       LIMIT 200`,
+  );
+}
+
+// ── Today (the action queue view — audit F2/F3) ─────────────────────────────
+export async function today() {
+  const [openAlerts, movement, recentWorkshops, expiring, funnel, economics, byBand, quintiles] =
+    await Promise.all([
+      alerts('open'),
+      readQuery(Q.BAND_MOVEMENT, [7]),
+      readQuery(Q.RECENT_WORKSHOPS),
+      readQuery(Q.EXPIRING_GRANTS, [scope(), 14]),
+      readQuery(Q.G1_WORKSHOP_FUNNEL, [null, null]),
+      readOne(Q.G5_GTM_ECONOMICS, [scope(), CREDIT_VALUE_INR]),
+      readQuery(Q.CONVERSION_BY_BAND),
+      readQuery(Q.CALIBRATION_QUINTILES, [scope()]),
+    ]);
+
+  const week = movement.reduce(
+    (acc, r) => ({
+      intoA: acc.intoA + toNum(r.into_a),
+      intoB: acc.intoB + toNum(r.into_b),
+      intoW: acc.intoW + toNum(r.into_w),
+      outOfA: acc.outOfA + toNum(r.out_of_a),
+    }),
+    { intoA: 0, intoB: 0, intoW: 0, outOfA: 0 },
+  );
+
+  const delivered = funnel.filter((f) => f.status !== 'SCHEDULED');
+  const withClient = delivered.filter((f) => toNum(f.converted_paid) > 0);
+  const conversions = toNum(economics?.conversions);
+  const headline = {
+    workshopsDelivered: delivered.length,
+    workshopsWithClient: withClient.length,
+    conversions,
+    creditCostPerClient: conversions > 0 ? toNum(economics?.credit_cost_inr) / conversions : null,
+    revenuePerCreditRupee: toNum(economics?.revenue_per_credit_rupee),
+  };
+
+  return { openAlerts, movement, week, recentWorkshops, expiring, headline, byBand, quintiles };
+}
+
+// ── Workshop detail (audit F7) ──────────────────────────────────────────────
+export async function workshopDetail(id: string) {
+  const [workshop, accounts, funnelRows] = await Promise.all([
+    readOne(Q.WORKSHOP_ONE, [id]),
+    readQuery(Q.WORKSHOP_ACCOUNTS, [id]),
+    readQuery(Q.G1_WORKSHOP_FUNNEL, [null, null]),
+  ]);
+  return {
+    workshop,
+    accounts,
+    funnel: funnelRows.find((f) => f.workshop_id === id) ?? null,
+  };
+}
+
+// ── Missing-data inputs system ──────────────────────────────────────────────
+/**
+ * Data the GTM depends on that production has no home for (or has left empty).
+ * Each gap names its consequence — a gap without a consequence is just noise.
+ */
+export async function dataGaps() {
+  const [partnersNoPhone, partnersNoSettings, orgsNoFirmo, packagesNoQuota, workshopsNoWorkbook, staleAttendance] =
+    await Promise.all([
+      readQuery(
+        `SELECT cp.id, cp."companyName"
+           FROM "ChannelPartner" cp
+           LEFT JOIN "PulsePartnerSettings" s ON s."channelPartnerId" = cp.id
+          WHERE cp.status = 'Active' AND COALESCE(s."whatsappNumber", cp."phoneNumber") IS NULL`,
+      ),
+      readQuery(
+        `SELECT cp.id, cp."companyName"
+           FROM "ChannelPartner" cp
+           LEFT JOIN "PulsePartnerSettings" s ON s."channelPartnerId" = cp.id
+          WHERE cp.status = 'Active' AND s."channelPartnerId" IS NULL`,
+      ),
+      readQuery(
+        `SELECT o.id, o.name,
+                (o.industry IS NULL OR o.industry = '') AS missing_industry,
+                (o."companySize" IS NULL OR o."companySize" = '') AS missing_size
+           FROM "Organization" o
+          WHERE o.status = 'Active'
+            AND (o.industry IS NULL OR o.industry = '' OR o."companySize" IS NULL OR o."companySize" = '')`,
+      ),
+      readQuery(`SELECT id, title FROM "Package" WHERE status = 'Active' AND credit IS NULL`),
+      readQuery(
+        `SELECT id, "segmentName", "workshopDate"::date AS date FROM "Workshop"
+          WHERE "workbookUrl" IS NULL AND status <> 'CANCELLED'`,
+      ),
+      readQuery(
+        `SELECT id, "segmentName", "workshopDate"::date AS date FROM "Workshop"
+          WHERE status = 'SCHEDULED' AND "workshopDate" < now() - interval '1 day'`,
+      ),
+    ]);
+  return { partnersNoPhone, partnersNoSettings, orgsNoFirmo, packagesNoQuota, workshopsNoWorkbook, staleAttendance };
+}
+
+export async function partnerInputs() {
+  return readQuery(
+    `SELECT cp.id, cp."companyName", cp.tier, cp."phoneNumber",
+            s."preferredLanguage", s."whatsappNumber", s."digestEnabled", s.notes, s."updatedAt",
+            (SELECT COUNT(*) FROM "Organization" o WHERE o."channelPartnerId" = cp.id) AS accounts
+       FROM "ChannelPartner" cp
+       LEFT JOIN "PulsePartnerSettings" s ON s."channelPartnerId" = cp.id
+      WHERE cp.status = 'Active'
+      ORDER BY cp."companyName"`,
   );
 }

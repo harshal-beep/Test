@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { inShort, istDate } from '@/lib/format';
+import { inShort, istDate, istMonth } from '@/lib/format';
 
 /**
  * Hand-rolled SVG charts, ported from reference/pucho-pulse-dashboard.html
@@ -451,7 +451,7 @@ export function Heatmap({ rows }: { rows: Datum[] }) {
     <Figure
       rows={rows}
       columns={[
-        { key: 'cohort', label: 'Cohort', format: (v) => istDate(v as string) },
+        { key: 'cohort', label: 'Cohort', format: (v) => istMonth(v as string) },
         { key: 'cohort_size', label: 'Users', format: (v) => inShort(v) },
         { key: 'm1', label: 'M1', format: (v) => inShort(v) },
         { key: 'm2', label: 'M2', format: (v) => inShort(v) },
@@ -474,7 +474,7 @@ export function Heatmap({ rows }: { rows: Datum[] }) {
               const base = num(r.cohort_size);
               return (
                 <tr key={i}>
-                  <td>{istDate(r.cohort as string)}</td>
+                  <td>{istMonth(r.cohort as string)}</td>
                   <td className="num">{inShort(base)}</td>
                   {(['m1', 'm2', 'm3'] as const).map((k) => (
                     <td key={k} className="num">
@@ -491,6 +491,81 @@ export function Heatmap({ rows }: { rows: Datum[] }) {
             })}
           </tbody>
         </table>
+      </div>
+    </Figure>
+  );
+}
+
+// ── Sparkline (Org 360 PPS history — audit F12) ─────────────────────────────
+export function Sparkline({
+  points,
+  height = 36,
+  max = 100,
+}: {
+  points: { value: number; label?: string }[];
+  height?: number;
+  max?: number;
+}) {
+  if (points.length < 2) {
+    return <span className="text-[12px] text-ink-muted">{points.length === 1 ? `1 snapshot (${points[0].value})` : 'no history yet'}</span>;
+  }
+  const W = 160;
+  const H = height;
+  const x = (i: number) => (i / (points.length - 1)) * (W - 6) + 3;
+  const y = (v: number) => H - 4 - (Math.min(max, Math.max(0, v)) / max) * (H - 8);
+  const path = points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ');
+  const last = points[points.length - 1];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: W, height: H }} role="img"
+      aria-label={`trend ending at ${last.value}`}>
+      <polyline points={`${path}`} fill="none" stroke="var(--brand)" strokeWidth={2} strokeLinejoin="round" />
+      <polygon points={`3,${H - 4} ${path} ${x(points.length - 1)},${H - 4}`} fill="var(--brand)" opacity={0.12} />
+      <circle cx={x(points.length - 1)} cy={y(last.value)} r={3} fill="var(--brand)" />
+    </svg>
+  );
+}
+
+// ── Stage funnel with drop % (audit F6/F7 — the PRD's "+% at each step") ────
+export function FunnelBars({ stages }: { stages: { label: string; value: number }[] }) {
+  const max = Math.max(1, ...stages.map((s) => s.value));
+  return (
+    <Figure
+      rows={stages.map((s, i) => ({
+        stage: s.label,
+        value: s.value,
+        carry: i === 0 || stages[i - 1].value === 0 ? null : Math.round((s.value / stages[i - 1].value) * 100),
+      }))}
+      columns={[
+        { key: 'stage', label: 'Stage' },
+        { key: 'value', label: 'Count', format: (v) => inShort(v) },
+        { key: 'carry', label: 'Carried', format: (v) => (v === null ? '—' : `${v}%`) },
+      ]}
+    >
+      <div className="flex flex-col gap-1.5">
+        {stages.map((s, i) => {
+          const prev = i > 0 ? stages[i - 1].value : null;
+          const carry = prev ? Math.round((s.value / prev) * 100) : null;
+          return (
+            <div key={s.label} className="grid grid-cols-[minmax(96px,150px)_1fr_auto] items-center gap-2">
+              <span className="truncate text-[12.5px] text-ink-soft">{s.label}</span>
+              <span className="h-[16px] overflow-hidden rounded-sm bg-surface-2">
+                <span
+                  className="block h-full rounded-r-[4px]"
+                  style={{
+                    width: `${(s.value / max) * 100}%`,
+                    background: `var(--seq-${Math.min(7, 3 + i)})`,
+                  }}
+                />
+              </span>
+              <span className="min-w-[86px] text-right text-[12px] tabular-nums text-ink-soft">
+                {inShort(s.value)}
+                {carry !== null && (
+                  <span className={carry < 50 ? 'ml-1 text-danger' : 'ml-1 text-ink-muted'}> · {carry}%</span>
+                )}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </Figure>
   );

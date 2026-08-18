@@ -1,5 +1,6 @@
 import { commandCenter } from '@/lib/metrics';
 import { parseDays } from '@/lib/scope';
+import Link from 'next/link';
 import { Card, Grid, Tile, Empty, StatusPill } from '@/components/ui';
 import { LineChart, StackedBars, Donut } from '@/components/charts';
 import { inShort, rupees, pct, istDate, toNum } from '@/lib/format';
@@ -21,8 +22,19 @@ export default async function CommandCenterPage({
   const data = await commandCenter(days);
   const t = data.tiles;
 
+  const h = data.headline;
   return (
     <div className="flex flex-col gap-4">
+      {/* Question 1 as a sentence (audit F6) — assembled from G1 + G5. */}
+      <Card>
+        <p className="text-[16px] leading-snug text-ink" style={{ fontFamily: 'var(--font-display), Arial, sans-serif' }}>
+          <strong>{h.workshopsWithClient} of {h.workshopsDelivered}</strong> delivered workshops have produced a paying
+          client{h.creditCostPerClient !== null && <> · credit cost per client <strong>{rupees(h.creditCostPerClient)}</strong></>}
+          {' '}· <strong className={data.weekMovement.intoA > 0 ? 'text-good' : ''}>{data.weekMovement.intoA} climbed into Band A</strong> this week
+          {data.weekMovement.outOfA > 0 && <> · <strong className="text-warn">{data.weekMovement.outOfA} fell out</strong></>}
+          {' '}— <Link href="/today" className="text-brand underline underline-offset-2">run the queue →</Link>
+        </p>
+      </Card>
       <Grid cols={6}>
         <Tile label="MRR" value={rupees(t.mrr_inr)} hint="active subscriptions" href="/credits" />
         <Tile label="Burn 7d MA" value={inShort(t.burn_ma_7d)} hint="credits/day" href="/credits" />
@@ -33,7 +45,7 @@ export default async function CommandCenterPage({
           value={String(t.hot_accounts)}
           hint={`≥${BENCHMARKS.hotThresholdCredits} grant credits`}
           tone={t.hot_accounts > 0 ? 'good' : undefined}
-          href="/search"
+          href="/search?band=A"
         />
         <Tile
           label="Failed payments"
@@ -111,6 +123,7 @@ export default async function CommandCenterPage({
               main: String(r.organization),
               sub: `${r.partner ?? 'No partner'} · ${inShort(r.free_credits_used)} credits`,
               tone: 'good' as const,
+              href: `/search?org=${r.org_id}`,
             }))}
           />
           <AttentionList
@@ -120,6 +133,7 @@ export default async function CommandCenterPage({
               main: String(r.name),
               sub: `${r.partner ?? 'No partner'} · signed up ${istDate(r.created as string)}`,
               tone: 'warn' as const,
+              href: `/search?org=${r.org_id}`,
             }))}
           />
           <AttentionList
@@ -129,6 +143,7 @@ export default async function CommandCenterPage({
               main: String(r.name),
               sub: `${rupees(r.amount)} · ${r.paymentStatus} · ${istDate(r.paymentDate as string)}`,
               tone: 'danger' as const,
+              href: `/search?org=${r.org_id}`,
             }))}
           />
         </div>
@@ -152,26 +167,33 @@ function AttentionList({
   empty,
 }: {
   title: string;
-  rows: { main: string; sub: string; tone: 'good' | 'warn' | 'danger' }[];
+  rows: { main: string; sub: string; tone: 'good' | 'warn' | 'danger'; href: string }[];
   empty: string;
 }) {
+  // Every row is a link (audit F5): seeing that something needs attention and
+  // acting on it must be the same gesture.
   return (
     <div>
       <h3 className="mb-2 text-[13px] font-bold text-ink">{title}</h3>
       {rows.length === 0 ? (
         <Empty message={empty} />
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-1">
           {rows.map((r, i) => (
-            <li key={i} className="flex items-start gap-2 border-b border-line pb-2 last:border-0">
-              <span
-                className="mt-[6px] h-2 w-2 shrink-0 rounded-full"
-                style={{ background: `var(--${r.tone})` }}
-              />
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] text-ink">{r.main}</span>
-                <span className="block truncate text-[12px] text-ink-muted">{r.sub}</span>
-              </span>
+            <li key={i}>
+              <Link
+                href={r.href}
+                className="-mx-2 flex items-start gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-surface-2"
+              >
+                <span
+                  className="mt-[6px] h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: `var(--${r.tone})` }}
+                />
+                <span className="min-w-0">
+                  <span className="block truncate text-[13px] text-ink">{r.main}</span>
+                  <span className="block truncate text-[12px] text-ink-muted">{r.sub}</span>
+                </span>
+              </Link>
             </li>
           ))}
         </ul>

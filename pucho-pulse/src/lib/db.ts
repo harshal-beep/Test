@@ -82,6 +82,7 @@ const WRITABLE = new Set([
   'PropensityLog',
   'GtmAlert',
   'PulseJobRun',
+  'PulsePartnerSettings',
   'Organization',
   'User',
   'OrganizationUser',

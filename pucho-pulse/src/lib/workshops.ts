@@ -176,16 +176,33 @@ export async function register(token: string, input: RegistrationInput): Promise
   const walletId = cuid();
   const [firstName, ...rest] = input.fullName.split(/\s+/);
 
+  // Production User rows need a real preferredLanguageId (NOT NULL, cuid).
+  const lang = await readOne<{ id: string }>(
+    `SELECT id FROM "Language" WHERE code = 'en' OR name ILIKE 'english' ORDER BY code NULLS LAST LIMIT 1`,
+  );
+  if (!lang) throw new RegistrationError('No default language configured', 500);
+
   await withTransaction(async (q) => {
+    // Order matters against the real schema: Organization."userId" is NOT NULL,
+    // so the owner User row is created first. The password is a placeholder —
+    // production auth is Keycloak; this column just has to satisfy NOT NULL
+    // until the existing provisioning path takes over this insert.
+    await q(
+      `INSERT INTO "User" (id, password, "firstName", "lastName", email, "phoneNumber",
+                           "preferredLanguageId", status, "isOnboarded", "createdAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'Active', false, CURRENT_TIMESTAMP)`,
+      [userId, `!pulse-registration:${cuid()}`, firstName, rest.join(' ') || null, input.email, phone, lang.id],
+    );
     await q(
       `INSERT INTO "Organization"
-         (id, name, email, industry, "companySize", "channelPartnerId", "isOnboarded", status,
-          "workshopId", "signupSegment", "signupSource", "createdAt")
-       VALUES ($1, $2, $3, $4, $5, $6, false, 'Active', $7, $8, 'WORKSHOP', CURRENT_TIMESTAMP)`,
+         (id, name, email, status, "userId", industry, "companySize", "channelPartnerId",
+          "isOnboarded", "workshopId", "signupSegment", "signupSource", "createdAt")
+       VALUES ($1, $2, $3, 'Active', $4, $5, $6, $7, false, $8, $9, 'WORKSHOP', CURRENT_TIMESTAMP)`,
       [
         orgId,
         input.companyName,
         input.email,
+        userId,
         input.industry,
         input.companySize,
         workshop.channelPartnerId ?? null,
@@ -194,22 +211,17 @@ export async function register(token: string, input: RegistrationInput): Promise
       ],
     );
     await q(
-      `INSERT INTO "User" (id, "firstName", "lastName", email, "phoneNumber", status, "isOnboarded", "createdAt")
-       VALUES ($1, $2, $3, $4, $5, 'Active', false, CURRENT_TIMESTAMP)`,
-      [userId, firstName, rest.join(' ') || null, input.email, phone],
-    );
-    await q(
       `INSERT INTO "OrganizationUser" (id, "userId", "organizationId", status)
        VALUES ($1, $2, $3, 'Active')`,
       [orgUserId, userId, orgId],
     );
-    // The 1,000-credit grant. In production this call is the existing
-    // provisioning path (PRD F2) rather than a direct insert; the wallet shape
-    // is identical either way.
+    // The 1,000-credit grant. CreditType has no FREE value in production —
+    // partner-grant wallets are BONUS. updatedAt has no default (Prisma-managed).
     await q(
       `INSERT INTO "CreditWallets"
-         (id, "organizationId", type, allocated, used, "isActive", "isAddon", "entityType", "expiryDate")
-       VALUES ($1, $2, 'FREE', $3, 0, true, false, 'ORGANIZATION', now() + interval '90 days')`,
+         (id, "organizationId", type, "entityType", allocated, used, "isActive", "isAddon",
+          "expiryDate", "updatedAt")
+       VALUES ($1, $2, 'BONUS', 'ORGANIZATION', $3, 0, true, false, now() + interval '90 days', now())`,
       [walletId, orgId, GRANT_CREDITS],
     );
   });

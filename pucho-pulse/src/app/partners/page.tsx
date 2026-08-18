@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { partnersFunnel } from '@/lib/metrics';
 import { parseDays } from '@/lib/scope';
 import { Card, Grid, Tile, Empty, StatusPill } from '@/components/ui';
@@ -8,10 +9,16 @@ import { partnerGrade } from '@config/scoring';
 export const dynamic = 'force-dynamic';
 
 /** Partners & Funnel — Q16, Q17, Q18, Q19 + A2 health score. */
+/** The real SDRStatus lifecycle, in journey order — a funnel must read as one. */
+const SDR_ORDER = ['NEW', 'RESEARCHING', 'QUALIFIED', 'CONTACTED', 'RESPONDED', 'MEETING_SCHEDULED', 'MEETING_DONE', 'INTERESTED', 'CONVERTED', 'NOT_INTERESTED', 'DISQUALIFIED', 'ARCHIVED'];
+
 export default async function PartnersPage({ searchParams }: { searchParams: { days?: string } }) {
   const days = parseDays(searchParams.days);
   const d = await partnersFunnel(days);
   const accounts = d.scorecard.reduce((s, r) => s + toNum(r.orgs_onboarded), 0);
+  const orderedLeads = [...d.leads].sort(
+    (a, b) => SDR_ORDER.indexOf(String(a.status)) - SDR_ORDER.indexOf(String(b.status)),
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -22,7 +29,7 @@ export default async function PartnersPage({ searchParams }: { searchParams: { d
         <Tile label="Open leads" value={inShort(d.leads.reduce((s, r) => s + toNum(r.leads), 0))} hint="Q18" />
       </Grid>
 
-      <Card title="Partner health" sub="A2 · engagement 30 + conversion 30 + zero-use control 20 + velocity 20">
+      <Card title="Partner health" sub="Engagement /30 · conversion /30 · zero-use control /20 · velocity /20 — each capped at its maximum" tag="A2">
         {d.health.length === 0 ? (
           <Empty message="No partner has grant accounts yet" />
         ) : (
@@ -46,9 +53,9 @@ export default async function PartnersPage({ searchParams }: { searchParams: { d
                   return (
                     <tr key={i}>
                       <td className="text-ink">
-                        <a className="hover:text-brand" href={`/search?type=partner&q=${encodeURIComponent(String(r.partner))}`}>
+                        <Link className="hover:text-brand" href={`/search?partner=${r.partner_id}`}>
                           {String(r.partner)}
-                        </a>
+                        </Link>
                       </td>
                       <td className="num">{inShort(r.accounts)}</td>
                       <td className="num">{toNum(r.engagement_pts).toFixed(1)}/30</td>
@@ -74,8 +81,8 @@ export default async function PartnersPage({ searchParams }: { searchParams: { d
         <Card title="Partner scorecard" sub={`Q16 · credits burned by their accounts, last ${days} days`}>
           <HBars data={d.scorecard} labelKey="partner" valueKey="credits_burned_30d" valueLabel="Credits" />
         </Card>
-        <Card title="SDR funnel" sub="Q18 · lead status distribution">
-          <HBars data={d.leads} labelKey="status" valueKey="leads" valueLabel="Leads" colorByIndex />
+        <Card title="SDR funnel" sub="Leads by lifecycle stage, in journey order" tag="Q18">
+          <HBars data={orderedLeads} labelKey="status" valueKey="leads" valueLabel="Leads" />
         </Card>
       </div>
 

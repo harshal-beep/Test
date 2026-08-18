@@ -115,12 +115,10 @@ describe('SQL parity — app queries vs docs/SQL_LIBRARY.sql', () => {
     expect(project(actual, columns)).toEqual(project(expected, columns));
   });
 
-  it('A2 partner health matches the library', async () => {
-    const expected = await readQuery(libraryQuery('A2: PARTNER HEALTH SCORE'));
-    const actual = await readQuery(Q.A2_PARTNER_HEALTH, [null]);
-    const columns = Object.keys(expected[0] ?? {});
-    expect(project(actual, columns)).toEqual(project(expected, columns));
-  });
+  // A2 deliberately diverges from the library text: the library omits the
+  // min(1, …) clamp that ALGORITHMS.md §3 specifies, letting components exceed
+  // their caps (audit finding F1). tests/partner-health.test.ts re-validates
+  // the clamped query against the documented formula instead.
 
   it('the 90-day window really is wider than the 7-day one', async () => {
     const [d7, d90] = await Promise.all([readQuery(Q.Q1_DAILY_BURN, [7]), readQuery(Q.Q1_DAILY_BURN, [90])]);

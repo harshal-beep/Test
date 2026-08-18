@@ -330,6 +330,7 @@ ORDER BY 1 DESC`;
 /** Q21: Failed / pending payments needing follow-up. */
 export const Q21_FAILED_PAYMENTS = `
 SELECT
+  o.id AS org_id,
   o.name, pay.amount, pay."paymentMethod", pay."paymentStatus", pay."paymentDate"
 FROM "Payment" pay
 JOIN "Organization" o ON o.id = pay."organizationId"
@@ -854,7 +855,17 @@ FROM accts a JOIN "ChannelPartner" cp ON cp.id=a."channelPartnerId"
 WHERE ($2::text IS NULL OR cp.id = $2::text)
 GROUP BY 1,2,3 ORDER BY 2,3 DESC`;
 
-/** A2: Partner health score. $1 = grant scope. Weights mirror config/scoring.ts PARTNER_HEALTH. */
+/**
+ * A2: Partner health score. $1 = grant scope.
+ *
+ * DELIBERATE DIVERGENCE from SQL_LIBRARY.sql, re-validated per CLAUDE.md:
+ * the library text divides by the full-marks fraction WITHOUT clamping, so a
+ * partner at 13% conversion scores "78/30" on a 30-point component and every
+ * partner saturates to grade A. ALGORITHMS.md §3 — which "governs intent" —
+ * writes every component as `points × min(1, ratio/target)`. This query
+ * implements the documented formula; tests/partner-health.test.ts re-validates
+ * it against a TypeScript implementation of ALGORITHMS §3 on the fixture.
+ */
 export const A2_PARTNER_HEALTH = `
 WITH base AS (
   SELECT o."channelPartnerId" AS cp_id,
@@ -875,21 +886,22 @@ WITH base AS (
   ) u ON true
   WHERE ($1::text IS NULL AND o."channelPartnerId" IS NOT NULL OR o."signupSource" = $1::text)
   GROUP BY 1
+),
+pts AS (
+  SELECT cp_id, accounts,
+    ROUND(30.0 * LEAST(1, b.engaged::numeric / NULLIF(b.accounts,0) / 0.50), 1) AS engagement_pts,
+    ROUND(30.0 * LEAST(1, b.conv::numeric    / NULLIF(b.accounts,0) / 0.05), 1) AS conversion_pts,
+    ROUND(20.0 * LEAST(1, (1 - b.zero_use::numeric / NULLIF(b.accounts,0)) / 0.80), 1) AS zero_use_pts,
+    ROUND(20.0 * LEAST(1, b.fast_start::numeric / NULLIF(b.accounts,0) / 0.40), 1) AS velocity_pts
+  FROM base b
 )
 SELECT
   cp.id            AS partner_id,
   cp."companyName" AS partner,
-  b.accounts,
-  ROUND(30.0 * b.engaged   / NULLIF(b.accounts,0) / 0.50, 1) AS engagement_pts,
-  ROUND(30.0 * b.conv      / NULLIF(b.accounts,0) / 0.05, 1) AS conversion_pts,
-  ROUND(20.0 * (1 - b.zero_use::numeric / NULLIF(b.accounts,0)) / 0.80, 1) AS zero_use_pts,
-  ROUND(20.0 * b.fast_start/ NULLIF(b.accounts,0) / 0.40, 1) AS velocity_pts,
-  LEAST(100, ROUND(
-      30.0 * b.engaged / NULLIF(b.accounts,0) / 0.50
-    + 30.0 * b.conv    / NULLIF(b.accounts,0) / 0.05
-    + 20.0 * (1 - b.zero_use::numeric / NULLIF(b.accounts,0)) / 0.80
-    + 20.0 * b.fast_start / NULLIF(b.accounts,0) / 0.40, 0)) AS health_score
-FROM base b JOIN "ChannelPartner" cp ON cp.id = b.cp_id
+  p.accounts,
+  p.engagement_pts, p.conversion_pts, p.zero_use_pts, p.velocity_pts,
+  LEAST(100, ROUND(p.engagement_pts + p.conversion_pts + p.zero_use_pts + p.velocity_pts, 0)) AS health_score
+FROM pts p JOIN "ChannelPartner" cp ON cp.id = p.cp_id
 ORDER BY health_score DESC`;
 
 /** S1: Universal search. $1 = term, $2 = type filter ('all'|'partner'|'org'|'user'). */
@@ -1109,3 +1121,113 @@ SELECT "snapshotDate" AS day,
   COUNT(*) FILTER (WHERE prev_band = 'A' AND band <> 'A')               AS out_of_a
 FROM snaps
 GROUP BY 1 ORDER BY 1`;
+
+// ############ AUDIT ADDITIONS: burn-down, workshop detail, Today view ############
+
+/**
+ * BURNDOWN: average cumulative grant credits by day-since-signup, per signup
+ * month cohort. The predictive utilization chart — is this month's cohort
+ * landing faster than last month's? $1 = grant scope, $2 = max day offset.
+ */
+export const BURNDOWN = `
+WITH grant_orgs AS (
+  SELECT o.id, o."createdAt", to_char(date_trunc('month', o."createdAt"), 'Mon YYYY') AS cohort,
+         date_trunc('month', o."createdAt") AS cohort_month
+  FROM "Organization" o
+  WHERE ($1::text IS NULL AND o."channelPartnerId" IS NOT NULL OR o."signupSource" = $1::text)
+),
+days AS (SELECT generate_series(0, $2::int) AS day_offset),
+burn AS (
+  SELECT g.cohort, g.cohort_month, d.day_offset, g.id,
+    COALESCE((SELECT SUM(f.credits) FROM "FreeCreditUsage" f
+              WHERE f."organizationId" = g.id
+                AND f."createdAt" <= g."createdAt" + (d.day_offset || ' days')::interval), 0) AS cum
+  FROM grant_orgs g
+  CROSS JOIN days d
+  WHERE g."createdAt" + (d.day_offset || ' days')::interval <= now()
+)
+SELECT cohort, day_offset,
+  ROUND(AVG(cum), 0)        AS avg_credits,
+  COUNT(DISTINCT id)        AS orgs
+FROM burn
+GROUP BY cohort, cohort_month, day_offset
+ORDER BY cohort_month, day_offset`;
+
+/** WORKSHOP_ONE: a single workshop with its funnel row. $1 = workshop id. */
+export const WORKSHOP_ONE = `
+SELECT w.*, cp."companyName" AS partner
+FROM "Workshop" w
+LEFT JOIN "ChannelPartner" cp ON cp.id = w."channelPartnerId"
+WHERE w.id = $1`;
+
+/**
+ * WORKSHOP_ACCOUNTS: every account a workshop produced, with grant burn,
+ * latest PPS band, and conversion state. $1 = workshop id.
+ */
+export const WORKSHOP_ACCOUNTS = `
+SELECT
+  o.id AS org_id,
+  o.name,
+  o."createdAt"::date AS joined,
+  o.industry, o."companySize",
+  COALESCE(f.used, 0) AS credits,
+  f.last_active,
+  EXISTS (SELECT 1 FROM "FreeCreditUsage" fc
+          WHERE fc."organizationId" = o.id
+            AND fc."createdAt" <= o."createdAt" + interval '7 days') AS activated_7d,
+  (SELECT pl.band FROM "PropensityLog" pl
+    WHERE pl."organizationId" = o.id ORDER BY pl."snapshotDate" DESC LIMIT 1) AS band,
+  (SELECT pl.pps FROM "PropensityLog" pl
+    WHERE pl."organizationId" = o.id ORDER BY pl."snapshotDate" DESC LIMIT 1) AS pps,
+  EXISTS (SELECT 1 FROM "OrganizationPackage" op
+          WHERE op."organizationId" = o.id AND op.status = 'Active') AS converted
+FROM "Organization" o
+LEFT JOIN LATERAL (
+  SELECT SUM(fc.credits) AS used, MAX(fc."createdAt") AS last_active
+  FROM "FreeCreditUsage" fc WHERE fc."organizationId" = o.id
+) f ON true
+WHERE o."workshopId" = $1
+ORDER BY credits DESC`;
+
+/**
+ * EXPIRING_GRANTS: active grant wallets expiring inside $2 days with credits
+ * still unused — the window where a partner can still act. $1 = grant scope.
+ */
+export const EXPIRING_GRANTS = `
+SELECT o.id AS org_id, o.name, cp."companyName" AS partner,
+  cw.allocated, cw.used, cw."expiryDate"::date AS expires,
+  ROUND(100.0 * cw.used / NULLIF(cw.allocated, 0), 0) AS util_pct
+FROM "CreditWallets" cw
+JOIN "Organization" o ON o.id = cw."organizationId"
+LEFT JOIN "ChannelPartner" cp ON cp.id = o."channelPartnerId"
+WHERE cw."isActive" AND cw.type = 'BONUS' AND cw."expiryDate" IS NOT NULL
+  AND cw."expiryDate" BETWEEN now() AND now() + (($2)::text || ' days')::interval
+  AND cw.used < cw.allocated
+  AND ($1::text IS NULL AND o."channelPartnerId" IS NOT NULL OR o."signupSource" = $1::text)
+ORDER BY cw."expiryDate"`;
+
+/** RECENT_WORKSHOPS: the last 72h of workshops with registration counts, for the day-after check. */
+export const RECENT_WORKSHOPS = `
+SELECT w.id, w."workshopDate", w."segmentName", w.status, w."attendedCount", w."invitedCount",
+  cp."companyName" AS partner,
+  (SELECT COUNT(*) FROM "Organization" o WHERE o."workshopId" = w.id) AS accounts_created
+FROM "Workshop" w
+LEFT JOIN "ChannelPartner" cp ON cp.id = w."channelPartnerId"
+WHERE w."workshopDate" >= now() - interval '72 hours'
+ORDER BY w."workshopDate" DESC`;
+
+/** CONVERSION_BY_BAND: does the score rank-order reality? From the latest snapshot per org. */
+export const CONVERSION_BY_BAND = `
+WITH latest AS (
+  SELECT DISTINCT ON ("organizationId") "organizationId", band
+  FROM "PropensityLog" ORDER BY "organizationId", "snapshotDate" DESC)
+SELECT l.band,
+  COUNT(*) AS accounts,
+  COUNT(*) FILTER (WHERE EXISTS (
+    SELECT 1 FROM "OrganizationPackage" op
+     WHERE op."organizationId" = l."organizationId" AND op.status = 'Active')) AS converted,
+  ROUND(100.0 * COUNT(*) FILTER (WHERE EXISTS (
+    SELECT 1 FROM "OrganizationPackage" op
+     WHERE op."organizationId" = l."organizationId" AND op.status = 'Active'))
+    / NULLIF(COUNT(*), 0), 1) AS conversion_pct
+FROM latest l GROUP BY 1 ORDER BY 1`;

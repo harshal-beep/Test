@@ -2,6 +2,9 @@
  * CLI runner: `npm run job <name>` (or `npm run job all`).
  * Loads .env.local so the same invocation works locally and from cron.
  */
+import { loadEnv } from '../db/env';
+loadEnv();
+
 import { JOBS, runJob, type JobName } from './index';
 import { closePools } from '../src/lib/db';
 

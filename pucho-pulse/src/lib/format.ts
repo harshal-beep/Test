@@ -69,3 +69,23 @@ export function daysAgo(value: string | Date | null | undefined): number | null 
   if (Number.isNaN(d.getTime())) return null;
   return Math.floor((Date.now() - d.getTime()) / 86_400_000);
 }
+
+/** "Jul 2026" — month buckets must not read as dates (a cohort is not July 1st). */
+export function istMonth(value: string | Date | null | undefined): string {
+  if (!value) return '—';
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return String(value);
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    month: 'short',
+    year: 'numeric',
+  }).format(d);
+}
+
+/** Hours until a timestamp; negative = past. */
+export function hoursUntil(value: string | Date | null | undefined): number | null {
+  if (!value) return null;
+  const d = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(d.getTime())) return null;
+  return (d.getTime() - Date.now()) / 3_600_000;
+}

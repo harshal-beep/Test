@@ -70,7 +70,7 @@ describe('M1 — attribution chain', () => {
     });
 
     const wallet = await readOne(
-      `SELECT allocated, "isActive" FROM "CreditWallets" WHERE "organizationId" = $1 AND type = 'FREE'`,
+      `SELECT allocated, "isActive" FROM "CreditWallets" WHERE "organizationId" = $1 AND type = 'BONUS'`,
       [result.organizationId],
     );
     expect(Number(wallet?.allocated)).toBe(GRANT_CREDITS);

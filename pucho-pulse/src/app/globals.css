@@ -95,6 +95,7 @@ h3 {
   .card {
     @apply rounded-card border border-line bg-surface-1 p-4 sm:p-5;
     min-width: 0;
+    box-shadow: 0 1px 2px rgb(23 19 31 / 0.04);
   }
   .card-title {
     @apply mb-1 text-[15px] font-bold text-ink;
@@ -144,4 +145,34 @@ h3 {
   .label {
     @apply mb-1 block text-[12.5px] font-bold text-ink-soft;
   }
+}
+
+/* Coarse pointers get real touch targets (audit F13 — 33px buttons fail the
+   44px minimum on a phone; hit areas grow, visual size stays calm). */
+@media (pointer: coarse) {
+  .btn,
+  nav a,
+  .rangeBtn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  input.input,
+  select.input {
+    min-height: 44px;
+  }
+}
+
+/* Card corner tag for query provenance — the code moves out of the subtitle
+   (audit F14) but stays one glance away for anyone verifying parity. */
+.card-tag {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 6px;
+  white-space: nowrap;
 }

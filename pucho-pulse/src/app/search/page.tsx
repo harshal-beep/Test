@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { search, ppsLeaderboard, partner360, org360, user360 } from '@/lib/metrics';
-import { Card, Grid, Tile, Empty, BandPill, StatusPill, Meter } from '@/components/ui';
+import { Card, Grid, Tile, Empty, BandPill, StatusPill, Meter, ConfidenceMeter } from '@/components/ui';
+import { Sparkline } from '@/components/charts';
 import { SearchBox } from '@/components/SearchBox';
-import { inShort, pct, istDate, istDateTime, toNum, daysAgo } from '@/lib/format';
+import { inShort, pct, istDate, istDateTime, istMonth, toNum, daysAgo } from '@/lib/format';
 import { BAND_ACTION, partnerGrade, PPS, type PpsBand } from '@config/scoring';
 
 export const dynamic = 'force-dynamic';
@@ -113,11 +114,13 @@ export default async function SearchPage({ searchParams }: Props) {
                       <td className="num">{inShort(r.office_apps)}</td>
                       <td className="num">{inShort(r.office_chats)}</td>
                       <td className="num">{toNum(r.pts_momentum) >= 10 ? '↑' : toNum(r.pts_momentum) > 0 ? '→' : '↓'}</td>
-                      <td className="num font-bold text-ink">{inShort(r.pps)}</td>
+                      <td style={{ minWidth: 120 }}>
+                        <ConfidenceMeter score={toNum(r.pps)} band={band} />
+                      </td>
                       <td>
                         <BandPill band={band} />
                       </td>
-                      <td className="whitespace-normal text-[12.5px]">{BAND_ACTION[band]}</td>
+                      <td className="whitespace-normal text-[12.5px]" style={{ minWidth: 180 }}>{BAND_ACTION[band]}</td>
                     </tr>
                   );
                 })}
@@ -174,10 +177,46 @@ async function Partner360({ id }: { id: string }) {
             <tbody>
               {d.trend.slice(0, 3).map((r, i) => (
                 <tr key={i}>
-                  <td>{istDate(r.month as string)}</td>
+                  <td>{istMonth(r.month as string)}</td>
                   <td className="num">{inShort(r.accounts)}</td>
                   <td className="num">{inShort(r.engaged)}</td>
                   <td className="num">{inShort(r.converted)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* THIS partner's portfolio only (audit F10) — never the global table
+          under a partner's name. */}
+      <h3 className="mb-2 mt-5 text-[13.5px] font-bold text-ink">Their accounts ({d.portfolio.length})</h3>
+      {d.portfolio.length === 0 ? (
+        <Empty message="No grant accounts yet for this partner" />
+      ) : (
+        <div className="table-scroll">
+          <table className="pulse">
+            <thead>
+              <tr>
+                <th>Organization</th>
+                <th className="num">Credits</th>
+                <th style={{ minWidth: 120 }}>PPS</th>
+                <th>Band</th>
+                <th>Next action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {d.portfolio.map((r) => (
+                <tr key={String(r.org_id)}>
+                  <td className="text-ink">
+                    <Link href={`/search?org=${r.org_id}`} className="hover:text-brand">{String(r.name)}</Link>
+                  </td>
+                  <td className="num">{inShort(r.used_total)}</td>
+                  <td><ConfidenceMeter score={toNum(r.pps)} band={String(r.band)} /></td>
+                  <td><BandPill band={String(r.band)} /></td>
+                  <td className="whitespace-normal text-[12.5px]" style={{ minWidth: 160 }}>
+                    {BAND_ACTION[String(r.band) as PpsBand]}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -217,27 +256,36 @@ async function Org360({ id }: { id: string }) {
         </p>
       )}
       {d.history.length > 0 && (
-        <div className="table-scroll mt-4">
-          <table className="pulse">
-            <thead>
-              <tr>
-                <th>Snapshot</th>
-                <th className="num">PPS</th>
-                <th>Band</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.history.slice(0, 10).map((h, i) => (
-                <tr key={i}>
-                  <td>{istDate(h.snapshotDate as string)}</td>
-                  <td className="num">{inShort(h.pps)}</td>
-                  <td>
-                    <BandPill band={String(h.band)} />
-                  </td>
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          <div>
+            <div className="tile-label mb-1">Score trajectory</div>
+            <Sparkline
+              points={d.history
+                .slice()
+                .reverse()
+                .map((s) => ({ value: toNum(s.pps), label: istDate(s.snapshotDate as string) }))}
+            />
+          </div>
+          <div className="table-scroll max-w-[280px]">
+            <table className="pulse">
+              <thead>
+                <tr>
+                  <th>Snapshot</th>
+                  <th className="num">PPS</th>
+                  <th>Band</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {d.history.slice(0, 5).map((h, i) => (
+                  <tr key={i}>
+                    <td>{istDate(h.snapshotDate as string)}</td>
+                    <td className="num">{inShort(h.pps)}</td>
+                    <td><BandPill band={String(h.band)} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </Card>

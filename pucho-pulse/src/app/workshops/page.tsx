@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { listWorkshops } from '@/lib/workshops';
 import { workshopFunnel } from '@/lib/metrics';
 import { readQuery } from '@/lib/db';
@@ -55,61 +56,115 @@ export default async function WorkshopsPage() {
 
       <WorkshopCreator partners={partners.map((p) => ({ id: String(p.id), name: String(p.companyName) }))} />
 
-      <Card title="Workshops" sub="G1 funnel: invited → attended → accounts → activated 7d → engaged ≥300 → converted">
+      <Card
+        title="Workshops"
+        sub="Invited → attended → accounts → activated → engaged → converted. Tap a workshop for its accounts and QR."
+        tag="G1"
+      >
         {workshops.length === 0 ? (
           <Empty message="No workshop data yet — create the first workshop" />
         ) : (
-          <div className="table-scroll">
-            <table className="pulse">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Segment</th>
-                  <th>Campaign</th>
-                  <th>Partner</th>
-                  <th className="num">Invited</th>
-                  <th className="num">Attended</th>
-                  <th className="num">Accounts</th>
-                  <th className="num">Activated 7d</th>
-                  <th className="num">Engaged ≥300</th>
-                  <th className="num">Converted</th>
-                  <th className="num">Conv %</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {workshops.map((w) => {
-                  const f = funnelById.get(String(w.id));
-                  const needsAttendance =
-                    w.status === 'SCHEDULED' && String(w.workshopDate).slice(0, 10) <= today;
-                  return (
-                    <tr key={String(w.id)} className={needsAttendance ? 'bg-[color:var(--danger)]/10' : ''}>
-                      <td>{istDate(w.workshopDate as string)}</td>
-                      <td className="text-ink">{String(w.segmentName)}</td>
-                      <td>{String(w.campaignTag ?? '—')}</td>
-                      <td>{String(w.partner ?? '—')}</td>
-                      <td className="num">{inShort(w.invitedCount)}</td>
-                      <td className="num">{inShort(w.attendedCount)}</td>
-                      <td className="num">{inShort(f?.accounts_created ?? 0)}</td>
-                      <td className="num">{inShort(f?.activated_7d ?? 0)}</td>
-                      <td className="num">{inShort(f?.engaged_300plus ?? 0)}</td>
-                      <td className="num">{inShort(f?.converted_paid ?? 0)}</td>
-                      <td className="num">{f?.conversion_pct === null || f?.conversion_pct === undefined ? '—' : pct(f.conversion_pct)}</td>
-                      <td>
-                        {needsAttendance ? (
-                          <AttendanceEntry workshopId={String(w.id)} />
-                        ) : (
-                          <StatusPill tone={w.status === 'DELIVERED' ? 'good' : w.status === 'CANCELLED' ? 'danger' : 'neutral'}>
-                            {String(w.status)}
-                          </StatusPill>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Mobile (audit F4): the funnel's ANSWER must not hide in a
+                sideways scroll — each workshop collapses to a card with the
+                four numbers that matter. */}
+            <div className="flex flex-col gap-2 md:hidden">
+              {workshops.map((w) => {
+                const f = funnelById.get(String(w.id));
+                const needsAttendance = w.status === 'SCHEDULED' && String(w.workshopDate).slice(0, 10) <= today;
+                return (
+                  <Link
+                    key={String(w.id)}
+                    href={`/workshops/${w.id}`}
+                    className={`rounded-lg border border-line p-3 ${needsAttendance ? 'bg-[color:var(--danger)]/10' : 'bg-surface-1'}`}
+                  >
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <strong className="truncate text-[13.5px] text-ink">{String(w.segmentName)}</strong>
+                      <span className="text-[12px] text-ink-muted">{istDate(w.workshopDate as string)}</span>
+                    </div>
+                    <div className="mb-2 text-[12px] text-ink-muted">
+                      {String(w.partner ?? 'No partner')}{w.campaignTag ? ` · ${w.campaignTag}` : ''}
+                    </div>
+                    <div className="grid grid-cols-4 gap-1 text-center">
+                      {[
+                        { label: 'Attended', v: inShort(w.attendedCount) },
+                        { label: 'Accounts', v: inShort(f?.accounts_created ?? 0) },
+                        { label: 'Engaged', v: inShort(f?.engaged_300plus ?? 0) },
+                        { label: 'Paying', v: inShort(f?.converted_paid ?? 0) },
+                      ].map((cell) => (
+                        <span key={cell.label} className="rounded-md bg-surface-2 py-1">
+                          <span className="block text-[14px] font-bold tabular-nums text-ink">{cell.v}</span>
+                          <span className="block text-[10px] uppercase tracking-wide text-ink-muted">{cell.label}</span>
+                        </span>
+                      ))}
+                    </div>
+                    {needsAttendance && (
+                      <div className="mt-2"><StatusPill tone="danger">attendance missing — tap to enter</StatusPill></div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Desktop keeps the full table. */}
+            <div className="table-scroll hidden md:block">
+              <table className="pulse">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Segment</th>
+                    <th>Campaign</th>
+                    <th>Partner</th>
+                    <th className="num">Invited</th>
+                    <th className="num">Attended</th>
+                    <th className="num">Accounts</th>
+                    <th className="num">Activated 7d</th>
+                    <th className="num">Engaged ≥300</th>
+                    <th className="num">Converted</th>
+                    <th className="num">Conv %</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workshops.map((w) => {
+                    const f = funnelById.get(String(w.id));
+                    const needsAttendance =
+                      w.status === 'SCHEDULED' && String(w.workshopDate).slice(0, 10) <= today;
+                    return (
+                      <tr key={String(w.id)} className={needsAttendance ? 'bg-[color:var(--danger)]/10' : ''}>
+                        <td>
+                          <Link href={`/workshops/${w.id}`} className="text-ink hover:text-brand">
+                            {istDate(w.workshopDate as string)}
+                          </Link>
+                        </td>
+                        <td className="text-ink">
+                          <Link href={`/workshops/${w.id}`} className="hover:text-brand">{String(w.segmentName)}</Link>
+                        </td>
+                        <td>{String(w.campaignTag ?? '—')}</td>
+                        <td>{String(w.partner ?? '—')}</td>
+                        <td className="num">{inShort(w.invitedCount)}</td>
+                        <td className="num">{inShort(w.attendedCount)}</td>
+                        <td className="num">{inShort(f?.accounts_created ?? 0)}</td>
+                        <td className="num">{inShort(f?.activated_7d ?? 0)}</td>
+                        <td className="num">{inShort(f?.engaged_300plus ?? 0)}</td>
+                        <td className="num">{inShort(f?.converted_paid ?? 0)}</td>
+                        <td className="num">{f?.conversion_pct === null || f?.conversion_pct === undefined ? '—' : pct(f.conversion_pct)}</td>
+                        <td>
+                          {needsAttendance ? (
+                            <AttendanceEntry workshopId={String(w.id)} />
+                          ) : (
+                            <StatusPill tone={w.status === 'DELIVERED' ? 'good' : w.status === 'CANCELLED' ? 'danger' : 'neutral'}>
+                              {String(w.status)}
+                            </StatusPill>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
 

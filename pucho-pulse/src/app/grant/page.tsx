@@ -1,6 +1,7 @@
 import { creditGrant } from '@/lib/metrics';
 import { Card, Grid, Tile, Empty, StatusPill } from '@/components/ui';
-import { HBars } from '@/components/charts';
+import { HBars, LineChart } from '@/components/charts';
+import { TaskRow, StatusPill as SP } from '@/components/ui';
 import { inShort, rupees, pct, istDate, toNum } from '@/lib/format';
 import { BENCHMARKS, GRANT_CREDITS } from '@config/scoring';
 
@@ -87,6 +88,33 @@ export default async function GrantPage() {
           </table>
         </div>
       </Card>
+
+      <Card
+        title="Grant burn-down by cohort"
+        sub="Average cumulative credits vs days since signup, per signup month. Steeper is better; a cohort flattening under the 300 line is a cohort that never landed."
+      >
+        <BurndownChart burndown={d.burndown} />
+      </Card>
+
+      {d.expiring.length > 0 && (
+        <Card
+          title={`Grants expiring with credits unused (${d.expiring.length})`}
+          sub="Inside 14 days of expiry — the last window where a partner call still changes the outcome."
+        >
+          <div className="flex flex-col gap-2">
+            {d.expiring.map((g) => (
+              <TaskRow
+                key={String(g.org_id)}
+                href={`/search?org=${g.org_id}`}
+                stripe={toNum(g.util_pct) < 30 ? 'danger' : 'warn'}
+                title={String(g.name)}
+                meta={`${g.partner ?? 'No partner'} · expires ${istDate(g.expires as string)}`}
+                right={<SP tone={toNum(g.util_pct) < 30 ? 'danger' : 'warn'}>{pct(g.util_pct, 0)} used</SP>}
+              />
+            ))}
+          </div>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card title="Burn milestones" sub="B2 · median days to reach each milestone">
@@ -295,5 +323,31 @@ function Percentile({ label, value, strong }: { label: string; value: unknown; s
       <div className="tile-label">{label}</div>
       <div className={strong ? 'tile-value' : 'text-[20px] font-bold text-ink-soft'}>{inShort(value)}</div>
     </div>
+  );
+}
+
+
+/** Pivot the long-format cohort burn-down into one line per cohort. */
+function BurndownChart({ burndown }: { burndown: Record<string, unknown>[] }) {
+  const cohorts = [...new Set(burndown.map((r) => String(r.cohort)))];
+  if (cohorts.length === 0) {
+    return <Empty message="Fills in as grant accounts accumulate usage" />;
+  }
+  const byDay = new Map<number, Record<string, unknown>>();
+  for (const r of burndown) {
+    const day = toNum(r.day_offset);
+    const row = byDay.get(day) ?? { day_offset: day };
+    row[String(r.cohort)] = toNum(r.avg_credits);
+    byDay.set(day, row);
+  }
+  const data = [...byDay.values()].sort((a, b) => toNum(a.day_offset) - toNum(b.day_offset));
+  return (
+    <LineChart
+      data={data}
+      xKey="day_offset"
+      xType="text"
+      lines={cohorts.map((c) => ({ key: c, label: c }))}
+      height={230}
+    />
   );
 }

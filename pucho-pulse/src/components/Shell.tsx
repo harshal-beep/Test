@@ -5,7 +5,12 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useState, Suspense } from 'react';
 import { ALLOWED_DAYS } from '@/lib/scope';
 
+/**
+ * Today leads (audit recommendation): the first tab is the view you RUN the
+ * GTM from; the analytics tabs behind it are the drill-down layer.
+ */
 const NAV = [
+  { href: '/today', label: 'Today' },
   { href: '/', label: 'Command Center' },
   { href: '/credits', label: 'Credits & Revenue' },
   { href: '/engagement', label: 'Users & Engagement' },
@@ -14,10 +19,11 @@ const NAV = [
   { href: '/grant', label: 'Credit Grant' },
   { href: '/search', label: 'Search & 360' },
   { href: '/workshops', label: 'Workshops' },
+  { href: '/inputs', label: 'Inputs' },
 ];
 
-/** Routes whose numbers are not scoped by the global date range. */
-const NO_RANGE = ['/workshops', '/search', '/grant'];
+/** Route prefixes whose numbers are not scoped by the global date range. */
+const NO_RANGE = ['/today', '/workshops', '/search', '/grant', '/inputs', '/kit'];
 
 function ThemeToggle() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -52,7 +58,7 @@ function RangeFilter() {
     [params, pathname, router],
   );
 
-  if (NO_RANGE.includes(pathname)) return null;
+  if (NO_RANGE.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) return null;
 
   return (
     <div className="mx-auto flex max-w-[1280px] items-center gap-2 px-4 pt-4 sm:px-7">
@@ -69,6 +75,28 @@ function RangeFilter() {
       ))}
     </div>
   );
+}
+
+/**
+ * Data-freshness stamp (audit F15 / ROLLOUT risk list). Queries run live
+ * against the replica, so freshness = when this render was requested; when the
+ * matviews land this becomes their refresh timestamp.
+ */
+function Freshness() {
+  const [stamp, setStamp] = useState('');
+  useEffect(() => {
+    setStamp(
+      new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date()),
+    );
+  }, []);
+  return <span>{stamp ? `Data as of ${stamp} IST · live replica queries` : ''}</span>;
 }
 
 export function Shell({ children }: { children: React.ReactNode }) {
@@ -117,8 +145,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <RangeFilter />
       </Suspense>
       <main className="mx-auto max-w-[1280px] px-4 pb-16 pt-4 sm:px-7">{children}</main>
-      <footer className="mx-auto max-w-[1280px] px-4 pb-10 text-[12px] text-ink-muted sm:px-7">
-        Pucho Toh Sahi!
+      <footer className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-2 px-4 pb-10 text-[12px] text-ink-muted sm:px-7">
+        <span>Pucho Toh Sahi!</span>
+        <Freshness />
       </footer>
     </>
   );

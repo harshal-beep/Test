@@ -33,6 +33,25 @@ attribution columns, nothing else.
 Jobs: `npm run job pps-snapshot` (or `all`), or `npx tsx jobs/schedule.ts` for the
 full TRD §5 cron table in `Asia/Kolkata`.
 
+## Validated against the real production schema
+
+`db/fixture/schema.sql` is now **extracted verbatim from the production
+pg_dump** (17 Aug 2026) by `scripts/extract-fixture-schema.py` — real enums
+(`CreditType` has no FREE value; grants are BONUS wallets. `chatType` has no
+GENERAL; general chat is CHAT), real NOT NULLs (User.password,
+Organization.userId, CreditWallets.updatedAt…), real column names
+(`ChannelPartner."phoneNumber"`, not phone). Every insert Pulse makes now
+satisfies production constraints, and re-running the extractor against a fresh
+dump is how the fixture stays honest.
+
+Where the docs require data the production schema cannot hold, the
+**missing-data inputs system** fills the gap: `PulsePartnerSettings` (partner
+language, WhatsApp override, digest opt-out — Pulse-owned sidecar table) plus
+the `/inputs` page, which edits those settings and lists every other data gap
+with its consequence (orgs without industry → 0/8 firmographic points, plans
+without quota → wrong plan pitched, workshops without workbooks → broken
+nudge links).
+
 ## What's here
 
 | Milestone | State |
@@ -41,8 +60,11 @@ full TRD §5 cron table in `Asia/Kolkata`.
 | **M2** dashboard reads | **Complete except matviews** — all seven views + workshop admin, every metric endpoint in TRD §4, RBAC-guarded, date filter, dark mode, 360px clean. Queries run live against the replica; the five materialized views in TRD §6 are not built yet (see below) |
 | **M3** PPS engine | **Complete** — `config/scoring.ts`, canonical `PPS_OFFICE` query, nightly snapshot job, `/api/pps`, band-movement, leaderboard |
 | **M4** notification engine | **Complete except live sending** — GtmAlert ledger, DB-enforced dedupe, all ten templates, quiet hours, per-trigger kill switches, SLA escalation, ack endpoint. The WhatsApp adapter posts to `WHATSAPP_API_URL`; with that unset it logs instead of sending |
-| **M5** search & 360 + close kit | **Partial** — search, Partner/Org/User 360 panels and the close kit are built; the close kit is an HTML page, not yet a rendered PDF |
-| **M6** calibration | **Partial** — `calibration-report` job computes band monotonicity, quintiles and the aha lift from PropensityLog; no UI for it yet |
+| **M5** search & 360 + close kit | **Partial** — search, Partner/Org/User 360 panels (with PPS sparkline + partner-scoped portfolio) and the close kit are built; the close kit is an HTML page, not yet a rendered PDF |
+| **M6** calibration | **Partial** — the "Is the score working?" card on /today renders conversion-by-band live; the full monthly report stays a job |
+| **Today view** | **New** — the action queue: open alerts with DB-computed SLA countdowns, band movement (climbed into/out of A), day-after workshop check, expiring grants, and the workshop→client headline sentence |
+| **/workshops/:id** | **New** — per-workshop drill-down: stage funnel with drop %, every account it produced with band + confidence meter, re-shareable QR |
+| **/inputs** | **New** — the missing-data system (see above) |
 
 ### Known gaps, in priority order
 

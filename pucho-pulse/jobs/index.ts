@@ -46,8 +46,17 @@ async function plans() {
 
 async function partnerContact(partnerId: string | null) {
   if (!partnerId) return null;
-  return readOne<{ id: string; phone: string | null; companyName: string; preferredLanguage: string | null }>(
-    `SELECT id, phone, "companyName", "preferredLanguage" FROM "ChannelPartner" WHERE id = $1`,
+  // ChannelPartner has "phoneNumber" (not phone) and NO language column —
+  // language and the WhatsApp override live in Pulse's own settings table.
+  return readOne<{ id: string; phone: string | null; companyName: string; lang: string; digest: boolean }>(
+    `SELECT cp.id,
+            COALESCE(s."whatsappNumber", cp."phoneNumber") AS phone,
+            cp."companyName",
+            COALESCE(s."preferredLanguage", 'en')          AS lang,
+            COALESCE(s."digestEnabled", true)              AS digest
+       FROM "ChannelPartner" cp
+       LEFT JOIN "PulsePartnerSettings" s ON s."channelPartnerId" = cp.id
+      WHERE cp.id = $1`,
     [partnerId],
   );
 }
@@ -117,7 +126,7 @@ export async function hotScan(): Promise<JobResult> {
         organizationId: r.org_id as string,
         channelPartnerId: partner?.id ?? null,
         to: partner?.phone ?? null,
-        lang: (partner?.preferredLanguage as 'en' | 'gu' | 'hi') ?? 'en',
+        lang: (partner?.lang as 'en' | 'gu' | 'hi') ?? 'en',
         payload: {
           org_name: r.name,
           suggested_plan: plan?.title ?? '—',
@@ -135,7 +144,7 @@ export async function hotScan(): Promise<JobResult> {
       organizationId: r.org_id as string,
       channelPartnerId: partner?.id ?? null,
       to: partner?.phone ?? null,
-      lang: (partner?.preferredLanguage as 'en' | 'gu' | 'hi') ?? 'en',
+      lang: (partner?.lang as 'en' | 'gu' | 'hi') ?? 'en',
       payload: {
         org_name: r.name,
         pps: r.pps,
@@ -328,13 +337,8 @@ export async function partnerDigest(): Promise<JobResult> {
        VALUES ($1, 'DIGEST', NULL, $2, $3::jsonb, NULL)`,
       [cuid(), r.partner_id, JSON.stringify(payload)],
     );
-    if (partner?.phone) {
-      await sendWhatsApp(
-        partner.phone,
-        'T9',
-        payload,
-        (partner.preferredLanguage as 'en' | 'gu' | 'hi') ?? 'en',
-      );
+    if (partner?.phone && partner.digest) {
+      await sendWhatsApp(partner.phone, 'T9', payload, (partner.lang as 'en' | 'gu' | 'hi') ?? 'en');
       sent += 1;
     }
   }
@@ -345,10 +349,11 @@ export async function partnerDigest(): Promise<JobResult> {
 export async function slaEscalation(): Promise<JobResult> {
   const breached = await readQuery(
     `SELECT a.id, a.type, a.payload, a."firedAt", a."slaHours",
-            o.name AS organization, cp."companyName" AS partner, cp.phone AS partner_phone
+            o.name AS organization, cp."companyName" AS partner, COALESCE(ps."whatsappNumber", cp."phoneNumber") AS partner_phone
        FROM "GtmAlert" a
        LEFT JOIN "Organization" o ON o.id = a."organizationId"
        LEFT JOIN "ChannelPartner" cp ON cp.id = a."channelPartnerId"
+       LEFT JOIN "PulsePartnerSettings" ps ON ps."channelPartnerId" = cp.id
       WHERE a."ackAt" IS NULL
         AND a."escalatedAt" IS NULL
         AND a."slaHours" IS NOT NULL
