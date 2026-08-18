@@ -52,8 +52,10 @@ export function WorkshopCreator({ partners }: { partners: { id: string; name: st
       <section className="card">
         <h2 className="card-title">Workshop created — {created.segment}</h2>
         <p className="card-sub">
-          Paste this QR into your last slide. Registering through it is the only way an attendee gets the
-          1,000-credit grant, and it is what stamps the attribution.
+          Open the workshop to add attendees — that is the normal path, and each one gets the
+          1,000-credit grant with this workshop&apos;s attribution stamped on it. The QR below is an
+          optional self-service fallback until Pucho&apos;s own registration system posts to the Pulse
+          webhook.
         </p>
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}

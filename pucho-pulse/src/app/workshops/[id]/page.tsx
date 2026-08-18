@@ -6,6 +6,7 @@ import { Card, Grid, Tile, Empty, StatusPill, BandPill, ConfidenceMeter } from '
 import { FunnelBars } from '@/components/charts';
 import { inShort, pct, istDate, istDateTime, toNum } from '@/lib/format';
 import { AttendanceEntry } from '@/components/AttendanceEntry';
+import { AttendeeEntry } from '@/components/AttendeeEntry';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,26 +70,40 @@ export default async function WorkshopDetailPage({ params }: { params: { id: str
             </p>
           </div>
           {qr && (
-            <div className="flex flex-col items-center gap-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={qr} alt="Registration QR" className="h-36 w-36 rounded-lg border border-line" />
-              <code className="max-w-[190px] break-all text-center text-[10.5px] text-ink-muted">{url}</code>
-              {!w.workbookUrl && <StatusPill tone="warn">no workbook link</StatusPill>}
-            </div>
+            <details className="min-w-[200px]">
+              <summary className="cursor-pointer text-[12.5px] text-ink-muted hover:text-brand">
+                Self-service QR (optional)
+              </summary>
+              <div className="mt-2 flex flex-col items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={qr} alt="Registration QR" className="h-32 w-32 rounded-lg border border-line" />
+                <code className="max-w-[190px] break-all text-center text-[10.5px] text-ink-muted">{url}</code>
+                <p className="max-w-[200px] text-center text-[11.5px] text-ink-muted">
+                  Built-in fallback. Once Pucho&apos;s own registration system is live it posts to the Pulse
+                  webhook instead and this can be ignored.
+                </p>
+              </div>
+            </details>
           )}
         </div>
       </Card>
 
       <Grid cols={4}>
-        <Tile label="Accounts" value={inShort(f?.accounts_created)} hint="via this QR" />
+        <Tile label="Accounts" value={inShort(f?.accounts_created)} hint="from this workshop" />
         <Tile label="Avg credits (14d)" value={inShort(f?.avg_credits_14d)} hint="per account" />
         <Tile label="Band A now" value={String(hot.length)} tone={hot.length ? 'good' : undefined} hint="unconverted hot leads" />
         <Tile label="Conversion" value={f?.conversion_pct === null || f?.conversion_pct === undefined ? '—' : pct(f.conversion_pct)} />
       </Grid>
 
-      <Card title="Every account this workshop produced" sub="Sorted by grant burn. Tap through for the 360 and close kit.">
+      <AttendeeEntry workshopId={String(w.id)} />
+
+      <Card
+        title="Every account this workshop produced"
+        sub="Sorted by grant burn. Tap through for the 360 and close kit."
+        right={!w.workbookUrl ? <StatusPill tone="warn">no workbook link</StatusPill> : undefined}
+      >
         {d.accounts.length === 0 ? (
-          <Empty message="No registrations yet — accounts appear here the moment someone scans the QR" />
+          <Empty message="No accounts yet — add the attendees above and each one gets its 1,000-credit grant" />
         ) : (
           <div className="table-scroll">
             <table className="pulse">

@@ -114,19 +114,36 @@ export async function listWorkshops() {
   );
 }
 
-// ── Registration (the ONLY grant path for workshop accounts) ────────────────
+// ── Attendee provisioning ───────────────────────────────────────────────────
+//
+// One workshop account can be created three ways. All three land on
+// `provisionAttendee` below, so the attribution and the grant are identical
+// whichever door the attendee came through:
+//
+//   1. MANUAL      — Sales/SA types (or pastes) attendees on /workshops/:id.
+//                    This is the primary path today.
+//   2. WEBHOOK     — Pucho's own QR/registration system POSTs to
+//                    /api/webhooks/registration once it is live.
+//   3. SELF-SERVICE— the built-in /r/:token page + OTP. Optional; kept as a
+//                    working reference implementation and a fallback.
 
-export const registrationSchema = z.object({
+/** The attendee fields every path must supply. */
+export const attendeeSchema = z.object({
   companyName: z.string().trim().min(2).max(120),
   fullName: z.string().trim().min(2).max(120),
   phone: z
     .string()
     .trim()
     .regex(/^(\+91)?[6-9]\d{9}$/, 'Enter a valid Indian mobile number'),
-  otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit OTP'),
   email: z.string().trim().email(),
-  industry: z.enum(INDUSTRIES),          // required dropdown (PRD F2 / M1 acceptance)
-  companySize: z.enum(COMPANY_SIZES),    // required dropdown
+  industry: z.enum(INDUSTRIES),          // required: the PPS firmographic prior
+  companySize: z.enum(COMPANY_SIZES),    // required: the PPS firmographic prior
+});
+export type AttendeeInput = z.infer<typeof attendeeSchema>;
+
+/** The self-service page additionally proves the phone with an OTP. */
+export const registrationSchema = attendeeSchema.extend({
+  otp: z.string().trim().regex(/^\d{6}$/, 'Enter the 6-digit OTP'),
 });
 export type RegistrationInput = z.infer<typeof registrationSchema>;
 
@@ -141,17 +158,36 @@ export interface RegistrationResult {
   created: boolean; // false when the same phone re-submits for the same workshop
 }
 
+/** Self-service path: resolve the workshop by its QR token, then provision. */
+export async function register(token: string, input: RegistrationInput): Promise<RegistrationResult> {
+  const workshop = await getWorkshopByToken(token);
+  if (!workshop) throw new RegistrationError('This registration link is not valid', 404);
+  return provisionAttendee(workshop, input);
+}
+
+/** Manual and webhook paths: resolve the workshop by id, then provision. */
+export async function registerToWorkshop(
+  workshopId: string,
+  input: AttendeeInput,
+): Promise<RegistrationResult> {
+  const workshop = await readOne(`SELECT * FROM "Workshop" WHERE id = $1`, [workshopId]);
+  if (!workshop) throw new RegistrationError('Unknown workshop', 404);
+  return provisionAttendee(workshop, input);
+}
+
 /**
  * Creates Organization (with all four attribution fields) + User +
  * OrganizationUser + the 1,000-credit grant wallet, in one transaction.
  *
- * Idempotent per (phone, workshop): a double submit — the common case when an
- * attendee taps twice on a bad conference connection — returns the existing org
- * rather than minting a second one and a second grant.
+ * Idempotent per (phone, workshop): a double submit — an attendee tapping
+ * twice on bad conference wifi, an SA pasting a list that overlaps one already
+ * entered, or a webhook retry — returns the existing org rather than minting a
+ * second one and a second grant.
  */
-export async function register(token: string, input: RegistrationInput): Promise<RegistrationResult> {
-  const workshop = await getWorkshopByToken(token);
-  if (!workshop) throw new RegistrationError('This registration link is not valid', 404);
+export async function provisionAttendee(
+  workshop: Record<string, unknown>,
+  input: AttendeeInput,
+): Promise<RegistrationResult> {
   if (workshop.status === 'CANCELLED') throw new RegistrationError('This workshop was cancelled', 410);
 
   const phone = normalisePhone(input.phone);

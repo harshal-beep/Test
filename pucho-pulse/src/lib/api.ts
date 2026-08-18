@@ -54,10 +54,24 @@ export async function parseBody<T extends z.ZodTypeAny>(
   }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) {
+    // flatten().fieldErrors only reports TOP-LEVEL fields, so a bad value
+    // nested under `attendee` or inside an `attendees[3]` row came back as an
+    // empty object — "Validation failed" with no clue which field. Map the
+    // issues by their full path instead, so a bulk paste can point at the
+    // exact row and column that needs fixing.
+    const errors: Record<string, string[]> = {};
+    for (const issue of parsed.error.issues) {
+      const key = issue.path.length ? issue.path.join('.') : '_';
+      (errors[key] ??= []).push(issue.message);
+    }
+    const first = Object.entries(errors)[0];
     return {
-      error: problem(422, 'Validation failed', 'One or more fields are invalid', {
-        errors: parsed.error.flatten().fieldErrors,
-      }),
+      error: problem(
+        422,
+        'Validation failed',
+        first ? `${first[0]}: ${first[1][0]}` : 'One or more fields are invalid',
+        { errors },
+      ),
     };
   }
   return { data: parsed.data };

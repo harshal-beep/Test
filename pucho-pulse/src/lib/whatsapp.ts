@@ -19,32 +19,79 @@ export interface SendResult {
 }
 
 /**
- * The adapter interface from TRD §2. In production this posts to the existing
- * Pucho WhatsApp integration; here it logs, so jobs and tests exercise the full
- * path (dedupe, ledger, SLA) without sending real messages.
+ * OUTBOUND WEBHOOK — Pulse → Pucho.
+ *
+ * Pulse decides WHO to message, WHEN, in WHICH language, and with which
+ * template + parameters. Pucho owns the actual WhatsApp delivery. So this is a
+ * webhook post, not a WhatsApp API call: Pulse hands over a rendered decision
+ * and Pucho sends it.
+ *
+ * Contract
+ * --------
+ *   POST $PULSE_OUTBOUND_WEBHOOK_URL
+ *   Header: x-pulse-webhook-secret: <PULSE_OUTBOUND_WEBHOOK_SECRET>
+ *   Body:
+ *   {
+ *     "to":        "9812300001",     // partner WhatsApp number, 10-digit
+ *     "template":  "T1",             // T1..T10, see docs/NOTIFICATIONS.md §2
+ *     "language":  "gu",             // en | gu | hi
+ *     "params":    { ... },          // template placeholders, already resolved
+ *     "text":      "🔥 HOT LEAD — …",// the fully rendered English master,
+ *                                    // usable directly if Pucho has no
+ *                                    // template registered for this type yet
+ *     "alertId":   "cuid",           // echo back to /api/alerts/:id/ack
+ *     "ackUrl":    "https://pulse…/api/alerts/<id>/ack"
+ *   }
+ *
+ *   Expected response: 2xx. Optionally { "id": "<provider-message-id>" },
+ *   which Pulse stores on the alert for tracing.
+ *
+ * With PULSE_OUTBOUND_WEBHOOK_URL unset the call is a dry run that logs the
+ * exact payload — jobs, dedupe, SLA and the ledger all still exercise fully,
+ * which is how the whole notification engine is testable before Pucho's
+ * sender exists.
  */
 export async function sendWhatsApp(
   to: string,
   template: string,
   params: Record<string, unknown>,
   lang: Lang = 'en',
+  alertId?: string,
 ): Promise<SendResult> {
-  const endpoint = process.env.WHATSAPP_API_URL;
+  const endpoint = process.env.PULSE_OUTBOUND_WEBHOOK_URL ?? process.env.WHATSAPP_API_URL;
+  const payload = {
+    to,
+    template,
+    language: lang,
+    params,
+    text: renderTemplate(template, params),
+    ...(alertId
+      ? { alertId, ackUrl: `${process.env.PULSE_BASE_URL ?? ''}/api/alerts/${alertId}/ack` }
+      : {}),
+  };
+
   if (!endpoint) {
-    console.info(`[pulse:whatsapp:dry-run] ${template}/${lang} → ${to}`, params);
+    console.info(`[pulse:whatsapp:dry-run] ${template}/${lang} → ${to}`, payload.text);
     return { ok: true, providerId: 'dry-run' };
   }
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      authorization: `Bearer ${process.env.WHATSAPP_API_TOKEN ?? ''}`,
-    },
-    body: JSON.stringify({ to, template, language: lang, params }),
-  });
-  if (!res.ok) return { ok: false, reason: `provider ${res.status}` };
-  const body = (await res.json().catch(() => ({}))) as { id?: string };
-  return { ok: true, providerId: body.id };
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-pulse-webhook-secret': process.env.PULSE_OUTBOUND_WEBHOOK_SECRET ?? '',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return { ok: false, reason: `webhook ${res.status}` };
+    const body = (await res.json().catch(() => ({}))) as { id?: string };
+    return { ok: true, providerId: body.id };
+  } catch (err) {
+    // A send failure must never lose the alert: it is already ledgered, so the
+    // SLA clock keeps running and ops sees it unsent.
+    return { ok: false, reason: (err as Error).message };
+  }
 }
 
 /** IST hour, regardless of where the process runs. */
@@ -114,7 +161,7 @@ export async function fireAlert(input: FireAlertInput): Promise<FireOutcome> {
     return { fired: true, alertId: id, queued: true };
   }
 
-  const result = await sendWhatsApp(input.to, trigger.template, input.payload, input.lang ?? 'en');
+  const result = await sendWhatsApp(input.to, trigger.template, input.payload, input.lang ?? 'en', id);
   if (result.ok) {
     await writeQuery(
       `UPDATE "GtmAlert" SET payload = payload || jsonb_build_object('sentAt', now()::text, 'providerId', $2::text)
