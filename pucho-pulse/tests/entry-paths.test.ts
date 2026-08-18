@@ -1,8 +1,8 @@
-import { describe, it, expect, afterAll } from 'vitest';
+import { describe, it, expect, afterAll, beforeAll } from 'vitest';
 import { loadEnv } from '../db/env';
 loadEnv();
 
-import { readOne, closePools } from '../src/lib/db';
+import { readOne, closePools, primaryPool } from '../src/lib/db';
 import { registerToWorkshop, register, RegistrationError } from '../src/lib/workshops';
 import { GRANT_CREDITS } from '../config/scoring';
 
@@ -32,6 +32,28 @@ async function attribution(orgId: string) {
 }
 
 describe('Attendee entry paths', () => {
+  beforeAll(async () => {
+    // These tests assert `created: true`, which only holds against accounts
+    // that do not exist yet — so they must clear their own rows rather than
+    // assuming a freshly seeded fixture. Without this, `npm test` passes once
+    // and fails on every subsequent run.
+    const pool = primaryPool();
+    const orgs = await pool.query<{ id: string }>(
+      `SELECT DISTINCT o.id FROM "Organization" o
+         JOIN "OrganizationUser" ou ON ou."organizationId" = o.id
+         JOIN "User" u ON u.id = ou."userId"
+        WHERE u.email LIKE '%@entry-test.in'`,
+    );
+    const ids = orgs.rows.map((r) => r.id);
+    if (!ids.length) return;
+    await pool.query(`DELETE FROM "CreditWallets" WHERE "organizationId" = ANY($1)`, [ids]);
+    await pool.query(
+      `DELETE FROM "User" WHERE id IN (
+         SELECT "userId" FROM "OrganizationUser" WHERE "organizationId" = ANY($1))`, [ids]);
+    await pool.query(`DELETE FROM "OrganizationUser" WHERE "organizationId" = ANY($1)`, [ids]);
+    await pool.query(`DELETE FROM "Organization" WHERE id = ANY($1)`, [ids]);
+  });
+
   it('manual entry stamps full attribution and the grant', async () => {
     const r = await registerToWorkshop('ws_chem_01', attendee('Manual', '9871100001'));
     expect(r.created).toBe(true);
