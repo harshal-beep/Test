@@ -12,6 +12,7 @@ Internal analytics + GTM platform for Pucho.ai: 7-view dashboard, workshop attri
 6. `docs/NOTIFICATIONS.md` — WhatsApp triggers, templates, SLAs
 7. `docs/UI_SPEC.md` + `reference/pucho-pulse-dashboard.html` — the working visual spec (open the HTML in a browser)
 8. `docs/ROLLOUT.md` — build order M1→M6 with acceptance criteria per milestone
+9. `docs/Pucho-Pulse-Guide.pdf` — the feature reference and operating guide handed to the team
 
 ## Ground rules
 

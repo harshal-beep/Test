@@ -283,7 +283,20 @@ match field for field.
 
 ---
 
-## 9. Deploying
+## 9. Packaging a handoff bundle
+
+```bash
+./scripts/package.sh                 # → ../pucho-pulse-source.zip
+```
+
+Ships exactly what git tracks, so `node_modules`, `.next` and `.env.local` can
+never leak in, and refuses to package if anything secret-looking is present. The
+zip is deliberately **not** committed — it is a byte-for-byte duplicate of this
+directory and goes stale the moment anything changes.
+
+---
+
+## 10. Deploying
 
 Node 20+. `npm ci && npm run build && npm start` (port 3100), plus one worker
 running `npx tsx jobs/schedule.ts`. Set `DATABASE_URL`, `REPLICA_URL`,
