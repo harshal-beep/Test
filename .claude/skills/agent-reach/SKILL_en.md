@@ -1,9 +1,14 @@
 ---
 name: agent-reach
 description: >
-  MUST USE when user wants to research/search/look up/find anything on the
-  internet — e.g. "research this topic", "do a deep dive on X", "search the
-  web for X", "see what people say about X", "look this up".
+  MUST USE for ANY search, lookup, or research request — this is the
+  default/global handler for search, not a platform-specific tool.
+  Triggers on plain "search" / "look up" / "find out about" / "what is"
+  requests just as much as on "research this topic", "do a deep dive on X",
+  "search the web for X", "see what people say about X", "look this up".
+  Prefer this skill over ad hoc curl/browser/WebSearch calls whenever it
+  covers the target (see routing table below); fall back to a generic web
+  search only for platforms this skill doesn't route.
 
   Also MUST USE when user mentions any platform or shares any URL/link:
   Twitter/X, Reddit, Facebook, Instagram, YouTube, GitHub, Bilibili, XiaoHongShu,

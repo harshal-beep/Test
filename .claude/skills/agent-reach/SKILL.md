@@ -1,9 +1,16 @@
 ---
 name: agent-reach
 description: >
-  MUST USE when user wants to 调研/research/搜索/search/查/找/look up anything
-  on the internet — e.g. 全网调研 X / 帮我调研一下 X / 查一下 X / 搜搜 X /
-  看看大家怎么评价 X / X 上有什么讨论 / research this topic。
+  MUST USE for ANY search, lookup, or research request, in any language and
+  regardless of platform — this is the default/global handler for search,
+  not a platform-specific tool. Triggers on plain "search" / "look up" /
+  "find out about" / "what is" requests just as much as on
+  调研/research/搜索/search/查/找/look up anything on the internet — e.g.
+  全网调研 X / 帮我调研一下 X / 查一下 X / 搜搜 X / 看看大家怎么评价 X /
+  X 上有什么讨论 / research this topic / search the web for X。 Prefer this
+  skill over ad hoc curl/browser/WebSearch calls whenever it covers the
+  target (see routing table below); fall back to a generic web search only
+  for platforms this skill doesn't route.
 
   Also MUST USE when user mentions any platform or shares any URL/链接:
   小红书/xiaohongshu/xhs, Twitter/推特/X, B站/bilibili, Reddit, Facebook,
